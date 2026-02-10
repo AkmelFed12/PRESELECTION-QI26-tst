@@ -20,3 +20,9 @@ python3 app.py
 ```
 
 Puis ouvrir: http://localhost:3000
+
+## Deployer sur Render
+
+- Type: Web Service
+- Build: `pip install -r requirements.txt`
+- Start: `python app.py`
