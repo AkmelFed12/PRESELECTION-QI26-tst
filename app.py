@@ -1,11 +1,12 @@
 import base64
-import cgi
 import hashlib
 import json
 import os
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from email import policy
+from email.parser import BytesParser
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -159,12 +160,32 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def _read_body(self):
+        length = int(self.headers.get("Content-Length", 0))
+        return self.rfile.read(length) if length else b""
+
     def _parse_multipart(self):
-        ctype, _ = cgi.parse_header(self.headers.get("Content-Type", ""))
-        if ctype != "multipart/form-data":
+        content_type = self.headers.get("Content-Type", "")
+        if "multipart/form-data" not in content_type:
             return None
-        environ = {"REQUEST_METHOD": "POST", "CONTENT_TYPE": self.headers.get("Content-Type")}
-        return cgi.FieldStorage(fp=self.rfile, headers=self.headers, environ=environ)
+        body = self._read_body()
+        parser = BytesParser(policy=policy.default)
+        msg = parser.parsebytes(
+            b"Content-Type: " + content_type.encode("utf-8") + b"\r\nMIME-Version: 1.0\r\n\r\n" + body
+        )
+        fields = {}
+        for part in msg.iter_parts():
+            if part.get_content_disposition() != "form-data":
+                continue
+            name = part.get_param("name", header="content-disposition")
+            filename = part.get_filename()
+            payload = part.get_payload(decode=True)
+            fields[name] = {
+                "filename": filename,
+                "content_type": part.get_content_type(),
+                "data": payload,
+            }
+        return fields
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -262,11 +283,11 @@ class Handler(BaseHTTPRequestHandler):
             if not form or "photo" not in form:
                 return self._send_json({"message": "Fichier photo requis."}, 400)
             photo_item = form["photo"]
-            if not photo_item.filename:
+            if not photo_item["filename"]:
                 return self._send_json({"message": "Nom de fichier invalide."}, 400)
 
-            raw = photo_item.file.read()
-            ext = Path(photo_item.filename).suffix.lower().strip(".") or "jpg"
+            raw = photo_item["data"]
+            ext = Path(photo_item["filename"]).suffix.lower().strip(".") or "jpg"
             safe_ext = ext if ext in {"jpg", "jpeg", "png", "webp"} else "jpg"
             public_id = f"{CLD_FOLDER}/{uuid.uuid4().hex}"
 
@@ -290,7 +311,7 @@ class Handler(BaseHTTPRequestHandler):
                     "public_id": params["public_id"],
                     "signature": signature,
                 },
-                files={"file": (f"upload.{safe_ext}", raw)},
+                files={"file": (f"upload.{safe_ext}", raw, photo_item["content_type"] or "application/octet-stream")},
                 timeout=20,
             )
             if upload_res.status_code >= 300:
