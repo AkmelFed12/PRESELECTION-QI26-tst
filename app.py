@@ -59,6 +59,7 @@ def init_db():
                   photoUrl text,
                   quranLevel text,
                   motivation text,
+                  status text default 'pending',
                   createdAt timestamp with time zone default now()
                 );
 
@@ -92,6 +93,7 @@ def init_db():
                   finalistsFromBestSecond integer default 2,
                   totalFinalists integer default 10,
                   votingEnabled integer default 0,
+                  registrationLocked integer default 0,
                   updatedAt timestamp with time zone default now()
                 );
 
@@ -99,6 +101,10 @@ def init_db():
                 values (1)
                 on conflict (id) do nothing;
                 """
+            )
+            cur.execute("alter table candidates add column if not exists status text default 'pending'")
+            cur.execute(
+                "alter table tournament_settings add column if not exists registrationLocked integer default 0"
             )
             cur.execute("create index if not exists idx_votes_candidate on votes(candidateId)")
             cur.execute("create index if not exists idx_scores_candidate on scores(candidateId)")
@@ -210,9 +216,13 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/public-settings":
                 with get_conn() as conn:
                     with conn.cursor(row_factory=dict_row) as cur:
-                        cur.execute("select votingEnabled from tournament_settings where id = 1")
+                        cur.execute(
+                            "select votingEnabled, registrationLocked from tournament_settings where id = 1"
+                        )
                         row = cur.fetchone()
-                return self._send_json(row or {"votingEnabled": 0})
+                return self._send_json(
+                    row or {"votingEnabled": 0, "registrationLocked": 0}
+                )
 
             if not self._is_admin():
                 return self._send_json({"message": "Accès non autorisé"}, 401)
@@ -332,6 +342,10 @@ class Handler(BaseHTTPRequestHandler):
 
             with get_conn() as conn:
                 with conn.cursor() as cur:
+                    cur.execute("select registrationLocked from tournament_settings where id = 1")
+                    locked = cur.fetchone()
+                    if locked and int(locked[0]) == 1:
+                        return self._send_json({"message": "Inscriptions fermées."}, 403)
                     cur.execute(
                         "select id from candidates where lower(fullName) = lower(%s) and whatsapp = %s",
                         (payload.get("fullName"), payload.get("whatsapp")),
@@ -341,8 +355,8 @@ class Handler(BaseHTTPRequestHandler):
                     cur.execute(
                         """
                         insert into candidates
-                        (fullName, age, city, country, email, phone, whatsapp, photoUrl, quranLevel, motivation)
-                        values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        (fullName, age, city, country, email, phone, whatsapp, photoUrl, quranLevel, motivation, status)
+                        values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         returning id
                         """,
                         (
@@ -356,6 +370,7 @@ class Handler(BaseHTTPRequestHandler):
                             payload.get("photoUrl"),
                             payload.get("quranLevel"),
                             payload.get("motivation"),
+                            payload.get("status") or "pending",
                         ),
                     )
                     candidate_id = cur.fetchone()[0]
@@ -412,6 +427,7 @@ class Handler(BaseHTTPRequestHandler):
                 "photoUrl": payload.get("photoUrl"),
                 "quranLevel": payload.get("quranLevel"),
                 "motivation": payload.get("motivation"),
+                "status": payload.get("status"),
             }
             clean = {k: v for k, v in data.items() if v not in [None, ""]}
 
@@ -457,8 +473,8 @@ class Handler(BaseHTTPRequestHandler):
                     cur.execute(
                         """
                         insert into candidates
-                        (fullName, age, city, country, email, phone, whatsapp, photoUrl, quranLevel, motivation)
-                        values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        (fullName, age, city, country, email, phone, whatsapp, photoUrl, quranLevel, motivation, status)
+                        values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         returning id
                         """,
                         (
@@ -472,6 +488,7 @@ class Handler(BaseHTTPRequestHandler):
                             payload.get("photoUrl"),
                             payload.get("quranLevel"),
                             payload.get("motivation"),
+                            payload.get("status") or "pending",
                         ),
                     )
                     new_id = cur.fetchone()[0]
@@ -532,6 +549,7 @@ class Handler(BaseHTTPRequestHandler):
             "finalistsFromBestSecond": p.get("finalistsFromBestSecond", 2),
             "totalFinalists": p.get("totalFinalists", 10),
             "votingEnabled": p.get("votingEnabled", 0),
+            "registrationLocked": p.get("registrationLocked", 0),
         }
         set_parts = ", ".join([f"{k} = %s" for k in payload.keys()])
         values = list(payload.values())

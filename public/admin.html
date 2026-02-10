@@ -46,9 +46,38 @@
             <input name="votingEnabled" type="checkbox" />
             <span>Ouvrir les votes au public</span>
           </label>
+          <label class="toggle">
+            <input name="registrationLocked" type="checkbox" />
+            <span>Verrouiller les inscriptions</span>
+          </label>
           <button type="submit">Mettre à jour</button>
         </form>
         <p id="settingsMsg"></p>
+      </section>
+
+      <section class="card accent-slate hidden" id="dashboardPanel">
+        <h2>Tableau de bord</h2>
+        <div class="dash-grid">
+          <div class="dash-card">
+            <span>Candidats inscrits</span>
+            <strong id="statCandidates">0</strong>
+          </div>
+          <div class="dash-card">
+            <span>Votes exprimés</span>
+            <strong id="statVotes">0</strong>
+          </div>
+          <div class="dash-card">
+            <span>Passages notés</span>
+            <strong id="statScores">0</strong>
+          </div>
+          <div class="dash-card full">
+            <span>Progression des inscriptions</span>
+            <div class="progress">
+              <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <em id="progressText">0%</em>
+          </div>
+        </div>
       </section>
 
       <section class="card accent-olive hidden" id="candidatesPanel">
@@ -59,6 +88,12 @@
             <option value="id-desc">Tri: ID (desc)</option>
             <option value="name-asc">Tri: Nom (A-Z)</option>
             <option value="country-asc">Tri: Pays (A-Z)</option>
+          </select>
+          <select id="candidateStatusFilter">
+            <option value="">Statut: tous</option>
+            <option value="pending">En attente</option>
+            <option value="approved">Validé</option>
+            <option value="eliminated">Éliminé</option>
           </select>
         </div>
         <form id="candidateForm" class="grid-form two-col">
@@ -76,6 +111,11 @@
             <option>Intermédiaire</option>
             <option>Avancé</option>
           </select>
+          <select name="status">
+            <option value="pending">Statut: en attente</option>
+            <option value="approved">Statut: validé</option>
+            <option value="eliminated">Statut: éliminé</option>
+          </select>
           <textarea name="motivation" placeholder="Motivation (facultatif)"></textarea>
           <input name="photoFile" type="file" accept="image/*" />
           <div class="photo-preview">
@@ -88,7 +128,7 @@
         <div class="table-wrap">
           <h3>Liste des candidats</h3>
           <table id="adminCandidatesTable">
-            <thead><tr><th>Photo</th><th>ID</th><th>Nom</th><th>Pays</th><th>WhatsApp</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Photo</th><th>ID</th><th>Nom</th><th>Pays</th><th>Statut</th><th>WhatsApp</th><th>Actions</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -133,6 +173,7 @@
           <h3>Classement des notes</h3>
           <div class="table-actions">
             <button class="small-btn" id="exportRanking" type="button">Exporter CSV</button>
+            <button class="small-btn" id="exportRankingPdf" type="button">Exporter PDF</button>
           </div>
           <table id="rankingTable">
             <thead><tr><th>Candidat</th><th>Moyenne /30</th><th>Passages notés</th></tr></thead>

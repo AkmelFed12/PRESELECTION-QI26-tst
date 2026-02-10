@@ -5,6 +5,7 @@ const voteMsg = document.getElementById('voteMsg');
 const voteStatus = document.getElementById('voteStatus');
 const candidatesGrid = document.getElementById('candidatesGrid');
 const voteStatusBadge = document.getElementById('voteStatusBadge');
+const registerStatusBadge = document.getElementById('registerStatusBadge');
 
 registrationForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -51,6 +52,19 @@ async function loadPublicCandidates() {
 
   const settings = await settingsRes.json();
   const candidates = await candidatesRes.json();
+
+  if (registerStatusBadge) {
+    const locked = Number(settings.registrationLocked || 0) === 1;
+    registerStatusBadge.textContent = locked ? 'Inscriptions fermées' : 'Inscriptions ouvertes';
+    registerStatusBadge.classList.toggle('open', !locked);
+  }
+
+  if (Number(settings.registrationLocked || 0) === 1 && registrationForm) {
+    registrationForm.querySelectorAll('input, select, textarea, button').forEach((el) => {
+      el.disabled = true;
+    });
+    registerMsg.textContent = 'Inscriptions temporairement fermées.';
+  }
 
   if (!settings.votingEnabled) {
     if (voteStatusBadge) {
