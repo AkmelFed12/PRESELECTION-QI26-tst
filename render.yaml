@@ -6,3 +6,10 @@ services:
     buildCommand: "python -m pip install --upgrade pip && pip install -r requirements.txt"
     startCommand: "python app.py"
     autoDeploy: true
+  - type: cron
+    name: preselection-qi26-backup
+    env: python
+    plan: free
+    schedule: "0 2 * * *"
+    buildCommand: "apt-get update && apt-get install -y postgresql-client rclone"
+    startCommand: "bash scripts/backup_db.sh"

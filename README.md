@@ -38,3 +38,11 @@ Variables d'environnement a configurer:
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
 - `CLOUDINARY_FOLDER` (optionnel, defaut: `quiz-islamique`)
+
+## Sauvegarde automatique (Google Drive)
+
+Un cron job Render peut exporter la base et envoyer un dump quotidien sur Google Drive.
+Variables d'environnement pour le cron:
+- `DATABASE_URL`
+- `RCLONE_CONFIG` (contenu du fichier rclone.conf)
+- `GDRIVE_FOLDER` (optionnel, defaut: `QI26-Backups`)
