@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Présélection Quiz Islamique 2026</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
+      <div>
+        <h1>Association des Serviteurs d'Allah Azawajal</h1>
+        <p class="slogan">« La formation, c'est notre priorité. »</p>
+        <p class="subtitle">Plateforme officielle de présélection — Quiz Islamique 2026</p>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Inscription des candidats</h2>
+        <p>Remplissez le formulaire pour rejoindre la présélection.</p>
+        <form id="registrationForm" class="grid-form">
+          <input name="fullName" placeholder="Nom complet" required />
+          <input name="age" type="number" placeholder="Âge" min="10" max="99" />
+          <input name="city" placeholder="Ville" />
+          <input name="country" placeholder="Pays" />
+          <input name="email" type="email" placeholder="Email" />
+          <input name="phone" placeholder="Téléphone" />
+          <input name="whatsapp" placeholder="WhatsApp (obligatoire)" required />
+          <select name="quranLevel">
+            <option value="">Niveau en récitation</option>
+            <option>Débutant</option>
+            <option>Intermédiaire</option>
+            <option>Avancé</option>
+          </select>
+          <textarea name="motivation" placeholder="Motivation"></textarea>
+          <button type="submit">S'inscrire</button>
+        </form>
+        <p id="registerMsg"></p>
+      </section>
+
+      <section class="card">
+        <h2>Vote du public</h2>
+        <p>Votez pour les candidats de votre choix.</p>
+        <form id="voteForm" class="grid-form">
+          <input name="candidateId" type="number" placeholder="ID candidat" required />
+          <input name="voterName" placeholder="Votre nom (optionnel)" />
+          <input name="voterContact" placeholder="Votre contact (optionnel)" />
+          <button type="submit">Voter</button>
+        </form>
+        <p id="voteMsg"></p>
+      </section>
+
+      <section class="card notice">
+        <h2>Accès administration</h2>
+        <p>Cette section est réservée à l'administrateur.</p>
+        <a href="admin.html" class="btn-link">Ouvrir l'espace admin</a>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

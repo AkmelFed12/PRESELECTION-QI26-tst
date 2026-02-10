@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Administration | Quiz Islamique 2026</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero compact">
+      <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
+      <div>
+        <h1>Espace Administrateur</h1>
+        <p class="subtitle">Gestion des inscriptions, votes, notations et parcours de compétition.</p>
+      </div>
+    </header>
+
+    <main class="layout admin-layout">
+      <section class="card">
+        <h2>Connexion admin</h2>
+        <form id="loginForm" class="grid-form">
+          <input name="username" placeholder="Identifiant" required />
+          <input name="password" type="password" placeholder="Mot de passe" required />
+          <button type="submit">Se connecter</button>
+        </form>
+        <p id="loginMsg"></p>
+      </section>
+
+      <section class="card hidden" id="adminPanel">
+        <h2>Paramètres du tournoi</h2>
+        <form id="settingsForm" class="grid-form two-col">
+          <label>Nombre maximal de candidats <input name="maxCandidates" type="number" /></label>
+          <label>Qualifiés directs (groupe unique) <input name="directQualified" type="number" /></label>
+          <label>Participants barrages <input name="playoffParticipants" type="number" /></label>
+          <label>Vainqueurs barrages <input name="playoffWinners" type="number" /></label>
+          <label>Nombre de groupes <input name="groupsCount" type="number" /></label>
+          <label>Candidats par groupe <input name="candidatesPerGroup" type="number" /></label>
+          <label>Finalistes (1ers de groupe) <input name="finalistsFromWinners" type="number" /></label>
+          <label>Finalistes (meilleurs 2èmes) <input name="finalistsFromBestSecond" type="number" /></label>
+          <label>Total finalistes <input name="totalFinalists" type="number" /></label>
+          <button type="submit">Mettre à jour</button>
+        </form>
+        <p id="settingsMsg"></p>
+      </section>
+
+      <section class="card hidden" id="scorePanel">
+        <h2>Noter un candidat après passage</h2>
+        <form id="scoreForm" class="grid-form two-col">
+          <input name="candidateId" type="number" placeholder="ID candidat" required />
+          <input name="judgeName" placeholder="Nom du juge" required />
+          <input name="tajwidScore" type="number" step="0.1" placeholder="Tajwid /10" />
+          <input name="memorizationScore" type="number" step="0.1" placeholder="Mémorisation /10" />
+          <input name="presenceScore" type="number" step="0.1" placeholder="Prestance /10" />
+          <textarea name="notes" placeholder="Notes complémentaires"></textarea>
+          <button type="submit">Enregistrer la note</button>
+        </form>
+        <p id="scoreMsg"></p>
+      </section>
+
+      <section class="card hidden" id="tablesPanel">
+        <h2>Tableaux de suivi</h2>
+        <div class="table-wrap">
+          <h3>Inscriptions</h3>
+          <table id="candidatesTable">
+            <thead><tr><th>ID</th><th>Nom</th><th>WhatsApp</th><th>Pays</th><th>Date</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-wrap">
+          <h3>Classement des votes</h3>
+          <table id="votesTable">
+            <thead><tr><th>Candidat</th><th>Total votes</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-wrap">
+          <h3>Classement des notes</h3>
+          <table id="rankingTable">
+            <thead><tr><th>Candidat</th><th>Moyenne</th><th>Passages notés</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>
