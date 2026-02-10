@@ -9,14 +9,18 @@
   <body>
     <header class="hero compact">
       <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
-      <div>
+      <div class="hero-content">
         <h1>Espace Administrateur</h1>
         <p class="subtitle">Gestion des inscriptions, votes, notations et déroulé de la compétition.</p>
+      </div>
+      <div class="hero-actions">
+        <a href="index.html" class="btn-link outline">Accueil</a>
+        <button id="logoutBtn" class="btn-link outline hidden" type="button">Déconnexion</button>
       </div>
     </header>
 
     <main class="layout admin-layout">
-      <section class="card">
+      <section class="card accent-gold">
         <h2>Connexion administrateur</h2>
         <form id="loginForm" class="grid-form">
           <input name="username" placeholder="Identifiant" required />
@@ -26,7 +30,7 @@
         <p id="loginMsg"></p>
       </section>
 
-      <section class="card hidden" id="adminPanel">
+      <section class="card accent-emerald hidden" id="adminPanel">
         <h2>Paramètres du tournoi</h2>
         <form id="settingsForm" class="grid-form two-col">
           <label>Nombre maximal de candidats <input name="maxCandidates" type="number" /></label>
@@ -38,12 +42,59 @@
           <label>Finalistes (1ers de groupe) <input name="finalistsFromWinners" type="number" /></label>
           <label>Finalistes (meilleurs 2èmes) <input name="finalistsFromBestSecond" type="number" /></label>
           <label>Total finalistes <input name="totalFinalists" type="number" /></label>
+          <label class="toggle">
+            <input name="votingEnabled" type="checkbox" />
+            <span>Ouvrir les votes au public</span>
+          </label>
           <button type="submit">Mettre à jour</button>
         </form>
         <p id="settingsMsg"></p>
       </section>
 
-      <section class="card hidden" id="scorePanel">
+      <section class="card accent-olive hidden" id="candidatesPanel">
+        <h2>Gestion des candidats</h2>
+        <div class="toolbar">
+          <input id="candidateSearch" type="search" placeholder="Rechercher un candidat (nom, pays, WhatsApp)" />
+          <select id="candidateSort">
+            <option value="id-desc">Tri: ID (desc)</option>
+            <option value="name-asc">Tri: Nom (A-Z)</option>
+            <option value="country-asc">Tri: Pays (A-Z)</option>
+          </select>
+        </div>
+        <form id="candidateForm" class="grid-form two-col">
+          <input name="candidateId" type="number" placeholder="ID candidat (pour modifier)" />
+          <input name="fullName" placeholder="Nom complet" required />
+          <input name="age" type="number" placeholder="Âge" min="10" max="99" />
+          <input name="city" placeholder="Ville" />
+          <input name="country" placeholder="Pays" />
+          <input name="email" type="email" placeholder="Email" />
+          <input name="phone" placeholder="Téléphone" />
+          <input name="whatsapp" placeholder="WhatsApp *" required />
+          <select name="quranLevel">
+            <option value="">Niveau en culture islamique</option>
+            <option>Débutant</option>
+            <option>Intermédiaire</option>
+            <option>Avancé</option>
+          </select>
+          <textarea name="motivation" placeholder="Motivation (facultatif)"></textarea>
+          <input name="photoFile" type="file" accept="image/*" />
+          <div class="photo-preview">
+            <img id="candidatePreview" alt="Aperçu du candidat" />
+          </div>
+          <input name="photoUrl" type="text" placeholder="Lien photo (auto après upload)" readonly />
+          <button type="submit">Enregistrer le candidat</button>
+        </form>
+        <p id="candidateMsg"></p>
+        <div class="table-wrap">
+          <h3>Liste des candidats</h3>
+          <table id="adminCandidatesTable">
+            <thead><tr><th>Photo</th><th>ID</th><th>Nom</th><th>Pays</th><th>WhatsApp</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card accent-sand hidden" id="scorePanel">
         <h2>Noter un candidat après son passage</h2>
         <form id="scoreForm" class="grid-form two-col">
           <input name="candidateId" type="number" placeholder="ID candidat" required />
@@ -56,10 +107,13 @@
         <p id="scoreMsg"></p>
       </section>
 
-      <section class="card hidden" id="tablesPanel">
+      <section class="card accent-slate hidden" id="tablesPanel">
         <h2>Tableaux de suivi</h2>
         <div class="table-wrap">
           <h3>Inscriptions</h3>
+          <div class="table-actions">
+            <button class="small-btn" id="exportCandidates" type="button">Exporter CSV</button>
+          </div>
           <table id="candidatesTable">
             <thead><tr><th>ID</th><th>Nom</th><th>WhatsApp</th><th>Pays</th><th>Date</th></tr></thead>
             <tbody></tbody>
@@ -67,6 +121,9 @@
         </div>
         <div class="table-wrap">
           <h3>Classement des votes</h3>
+          <div class="table-actions">
+            <button class="small-btn" id="exportVotes" type="button">Exporter CSV</button>
+          </div>
           <table id="votesTable">
             <thead><tr><th>Candidat</th><th>Total votes</th></tr></thead>
             <tbody></tbody>
@@ -74,6 +131,9 @@
         </div>
         <div class="table-wrap">
           <h3>Classement des notes</h3>
+          <div class="table-actions">
+            <button class="small-btn" id="exportRanking" type="button">Exporter CSV</button>
+          </div>
           <table id="rankingTable">
             <thead><tr><th>Candidat</th><th>Moyenne /30</th><th>Passages notés</th></tr></thead>
             <tbody></tbody>

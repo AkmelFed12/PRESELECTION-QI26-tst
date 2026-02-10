@@ -9,10 +9,17 @@
   <body>
     <header class="hero">
       <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
-      <div>
+      <div class="hero-content">
         <h1>Association des Serviteurs d'Allah Azawajal</h1>
         <p class="slogan">« La formation, c'est notre priorité. »</p>
         <p class="subtitle">Plateforme officielle de présélection — Quiz Islamique 2026</p>
+        <div class="hero-badges">
+          <span class="status-pill open">Inscriptions ouvertes</span>
+          <span class="status-pill" id="voteStatusBadge">Votes fermés</span>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <a href="admin.html" class="btn-link outline">Espace administrateur</a>
       </div>
     </header>
 
@@ -20,14 +27,15 @@
       <section class="card">
         <h2>Inscription des candidats</h2>
         <p>Remplissez le formulaire pour rejoindre la présélection officielle.</p>
+        <p class="muted-note">Les champs marqués d'une étoile sont obligatoires. Vos informations restent confidentielles.</p>
         <form id="registrationForm" class="grid-form">
-          <input name="fullName" placeholder="Nom complet" required />
+          <input name="fullName" placeholder="Nom complet *" required />
           <input name="age" type="number" placeholder="Âge" min="10" max="99" />
-          <input name="city" placeholder="Ville" required />
-          <input name="country" placeholder="Pays" required />
+          <input name="city" placeholder="Ville *" required />
+          <input name="country" placeholder="Pays *" required />
           <input name="email" type="email" placeholder="Email" />
           <input name="phone" placeholder="Téléphone" />
-          <input name="whatsapp" placeholder="WhatsApp (ex: +2250150070082)" required />
+          <input name="whatsapp" placeholder="WhatsApp * (ex: +2250150070082)" required />
           <select name="quranLevel">
             <option value="">Niveau en culture islamique</option>
             <option>Débutant</option>
@@ -42,13 +50,13 @@
 
       <section class="card">
         <h2>Vote du public</h2>
-        <p>Votez pour les candidats de votre choix.</p>
-        <form id="voteForm" class="grid-form">
-          <input name="candidateId" type="number" placeholder="ID candidat" required />
+        <p>Choisissez un candidat et confirmez votre vote.</p>
+        <div id="voteStatus" class="status"></div>
+        <form id="voterInfoForm" class="grid-form">
           <input name="voterName" placeholder="Votre nom (optionnel)" />
           <input name="voterContact" placeholder="Votre contact (optionnel)" />
-          <button type="submit">Voter</button>
         </form>
+        <div id="candidatesGrid" class="candidates-grid"></div>
         <p id="voteMsg"></p>
       </section>
 

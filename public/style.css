@@ -40,6 +40,14 @@ h1, h2, h3 {
   position: relative;
   overflow: hidden;
 }
+.hero-content {
+  flex: 1;
+}
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .hero::after {
   content: "";
   position: absolute;
@@ -61,6 +69,30 @@ h1, h2, h3 {
 }
 .slogan { font-weight: 700; margin: 8px 0; color: var(--accent-soft); }
 .subtitle { margin: 6px 0 0; opacity: 0.95; }
+.hero-badges {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.status-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: 1px solid rgba(255,255,255,0.35);
+}
+.status-pill.open {
+  background: rgba(197, 155, 63, 0.35);
+  border-color: rgba(197, 155, 63, 0.6);
+}
+.muted-note {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
 .layout {
   max-width: 1180px;
   margin: 28px auto 40px;
@@ -77,6 +109,58 @@ h1, h2, h3 {
   padding: 20px;
   border: 1px solid rgba(197, 155, 63, 0.12);
   animation: rise 0.6s ease both;
+}
+.admin-layout .card {
+  padding: 22px;
+}
+.accent-gold { border-left: 5px solid #c59b3f; }
+.accent-emerald { border-left: 5px solid #0b6f4f; }
+.accent-olive { border-left: 5px solid #4b6b3b; }
+.accent-sand { border-left: 5px solid #b68d4c; }
+.accent-slate { border-left: 5px solid #2f4f6c; }
+.admin-layout .card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-layout .card h2::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+.admin-layout .table-wrap h3 {
+  font-family: "Cinzel", "Georgia", serif;
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+.toolbar, .table-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 8px 0 12px;
+  flex-wrap: wrap;
+}
+.toolbar input, .toolbar select {
+  max-width: 320px;
+}
+.photo-preview {
+  border: 1px dashed rgba(197, 155, 63, 0.5);
+  border-radius: 12px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: #fffaf0;
+}
+.photo-preview img {
+  max-height: 110px;
+  max-width: 100%;
+  border-radius: 10px;
+  display: none;
 }
 .card:nth-child(2) { animation-delay: 0.05s; }
 .card:nth-child(3) { animation-delay: 0.1s; }
@@ -112,11 +196,87 @@ button, .btn-link {
   border-radius: 10px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+button.outline, .btn-link.outline {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.7);
+  color: white;
+}
+button.outline:hover, .btn-link.outline:hover {
+  background: rgba(255,255,255,0.12);
+  box-shadow: none;
+}
 button:hover, .btn-link:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 22px rgba(11, 111, 79, 0.25);
 }
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: var(--text);
+}
+.toggle input { width: auto; }
 .hidden { display: none; }
+.status {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff7e2;
+  color: #6b4d0a;
+  font-weight: 600;
+}
+.candidates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+.candidate-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 10px 22px rgba(12, 21, 36, 0.1);
+  border: 1px solid rgba(197, 155, 63, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.candidate-card .photo {
+  width: 100%;
+  height: 190px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(140deg, #f2e7c9, #d6efe4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.candidate-card .photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.candidate-card .photo .placeholder {
+  font-family: "Cinzel", "Georgia", serif;
+  font-size: 2.2rem;
+  color: #6b4d0a;
+}
+.candidate-info h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.candidate-info p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.vote-btn {
+  background: linear-gradient(120deg, #c59b3f, #a8781a);
+  margin-top: auto;
+}
+.vote-btn:disabled {
+  background: #9fb2a6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 .table-wrap { margin-top: 16px; overflow: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
 th, td {
@@ -126,6 +286,28 @@ th, td {
 }
 th { background: #fbf6ea; color: #5a4a1f; font-weight: 600; }
 tbody tr:hover { background: #fffaf0; }
+.mini-photo {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.small-btn {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.small-btn.danger {
+  background: #9c2b2b;
+}
+.small-btn.danger:hover {
+  background: #7c2020;
+}
+.empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+}
 @keyframes rise {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -133,4 +315,6 @@ tbody tr:hover { background: #fffaf0; }
 @media (max-width: 720px) {
   .hero { flex-direction: column; align-items: flex-start; }
   .logo { width: 90px; height: 90px; }
+  .candidate-card .photo { height: 160px; }
+  .vote-btn { font-size: 1rem; padding: 12px 14px; }
 }

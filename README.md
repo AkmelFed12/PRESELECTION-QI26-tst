@@ -26,3 +26,15 @@ Puis ouvrir: http://localhost:3000
 - Type: Web Service
 - Build: `pip install -r requirements.txt`
 - Start: `python app.py`
+
+## Base de donnees et photos
+
+- Base: PostgreSQL Render (variable `DATABASE_URL`)
+- Photos: Cloudinary
+
+Variables d'environnement a configurer:
+- `DATABASE_URL`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_FOLDER` (optionnel, defaut: `quiz-islamique`)
