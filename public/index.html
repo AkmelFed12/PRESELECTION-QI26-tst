@@ -4,9 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Présélection Quiz Islamique 2026</title>
+    <meta
+      name="description"
+      content="Plateforme officielle de présélection du Quiz Islamique 2026 : inscriptions, calendrier, votes et informations pratiques."
+    />
+    <meta property="og:title" content="Présélection Quiz Islamique 2026" />
+    <meta
+      property="og:description"
+      content="Inscrivez-vous, consultez le calendrier et suivez la présélection officielle du Quiz Islamique 2026."
+    />
+    <meta property="og:image" content="assets/logo-association.svg" />
+    <link rel="icon" href="assets/logo-association.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <a class="skip-link" href="#mainContent">Aller au contenu</a>
     <header class="hero">
       <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
       <div class="hero-content">
@@ -23,7 +35,17 @@
       </div>
     </header>
 
-    <main class="layout">
+    <main id="mainContent" class="layout">
+      <section class="card notice">
+        <h2>Infos clés</h2>
+        <ul class="key-list">
+          <li><strong>Inscriptions :</strong> en ligne via ce formulaire</li>
+          <li><strong>Public cible :</strong> passionnés de culture islamique</li>
+          <li><strong>Contact :</strong> WhatsApp +225 01 50 07 00 83</li>
+          <li><strong>Suivi :</strong> calendrier et annonces mis à jour sur cette page</li>
+        </ul>
+      </section>
+
       <section class="card notice hidden" id="announcementCard">
         <h2>Annonce</h2>
         <p id="announcementText"></p>
@@ -32,37 +54,68 @@
       <section class="card">
         <h2>Inscription des candidats</h2>
         <p>Remplissez le formulaire pour rejoindre la présélection officielle.</p>
-        <p class="muted-note">Les champs marqués d'une étoile sont obligatoires. Vos informations restent confidentielles.</p>
+        <p class="muted-note" id="registrationHelp">
+          Les champs marqués d'une étoile sont obligatoires. Vos informations restent confidentielles.
+        </p>
         <form id="registrationForm" class="grid-form">
-          <input name="fullName" placeholder="Nom complet *" required />
-          <input name="age" type="number" placeholder="Âge" min="10" max="99" />
-          <input name="city" placeholder="Ville *" required />
-          <input name="country" placeholder="Pays *" required />
-          <input name="email" type="email" placeholder="Email" />
-          <input name="phone" placeholder="Téléphone" />
-          <input name="whatsapp" placeholder="WhatsApp * (ex: +2250150070082)" required />
-          <select name="quranLevel">
-            <option value="">Niveau en culture islamique</option>
+          <label for="fullName">Nom complet *</label>
+          <input id="fullName" name="fullName" placeholder="Nom complet" required aria-required="true" aria-describedby="registrationHelp" />
+          <label for="age">Âge</label>
+          <input id="age" name="age" type="number" placeholder="Âge" min="10" max="99" />
+          <label for="city">Ville *</label>
+          <input id="city" name="city" placeholder="Ville" required aria-required="true" />
+          <label for="country">Pays *</label>
+          <input id="country" name="country" placeholder="Pays" required aria-required="true" />
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" placeholder="Email" />
+          <label for="phone">Téléphone</label>
+          <input id="phone" name="phone" placeholder="Téléphone" />
+          <label for="whatsapp">WhatsApp *</label>
+          <input id="whatsapp" name="whatsapp" placeholder="Ex: +2250150070083" required aria-required="true" />
+          <label for="quranLevel">Niveau en culture islamique</label>
+          <select id="quranLevel" name="quranLevel">
+            <option value="">Sélectionner un niveau</option>
             <option>Débutant</option>
             <option>Intermédiaire</option>
             <option>Avancé</option>
           </select>
-          <textarea name="motivation" placeholder="Motivation (facultatif)"></textarea>
+          <label for="motivation">Motivation (facultatif)</label>
+          <textarea id="motivation" name="motivation" placeholder="Motivation"></textarea>
           <button type="submit">S'inscrire</button>
         </form>
-        <p id="registerMsg"></p>
+        <p id="registerMsg" role="status" aria-live="polite"></p>
       </section>
 
       <section class="card">
         <h2>Vote du public</h2>
         <p>Choisissez un candidat et confirmez votre vote.</p>
-        <div id="voteStatus" class="status"></div>
+        <div id="voteStatus" class="status" role="status" aria-live="polite"></div>
         <form id="voterInfoForm" class="grid-form">
-          <input name="voterName" placeholder="Votre nom (optionnel)" />
-          <input name="voterContact" placeholder="Votre contact (optionnel)" />
+          <label for="voterName">Votre nom (optionnel)</label>
+          <input id="voterName" name="voterName" placeholder="Votre nom" />
+          <label for="voterContact">Votre contact (optionnel)</label>
+          <input id="voterContact" name="voterContact" placeholder="Votre contact" />
         </form>
         <div id="candidatesGrid" class="candidates-grid"></div>
-        <p id="voteMsg"></p>
+        <p id="voteMsg" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
+        <h2>Candidats inscrits</h2>
+        <p>Consultez la liste publique des candidats et filtrez par pays ou ville.</p>
+        <div class="toolbar">
+          <label class="sr-only" for="candidateSearchPublic">Recherche</label>
+          <input id="candidateSearchPublic" type="search" placeholder="Rechercher un candidat" />
+          <label class="sr-only" for="candidateCountryFilter">Pays</label>
+          <select id="candidateCountryFilter">
+            <option value="">Tous les pays</option>
+          </select>
+          <label class="sr-only" for="candidateCityFilter">Ville</label>
+          <select id="candidateCityFilter">
+            <option value="">Toutes les villes</option>
+          </select>
+        </div>
+        <div id="publicCandidatesGrid" class="candidates-grid"></div>
       </section>
 
       <section class="card notice">
@@ -87,6 +140,26 @@
         <a href="faq.html" class="btn-link">Ouvrir la FAQ</a>
       </section>
 
+      <section class="card">
+        <h2>Contact & assistance</h2>
+        <p>Une question sur votre inscription ou la présélection ?</p>
+        <div class="contact-grid">
+          <div>
+            <strong>WhatsApp</strong>
+            <p>+225 01 50 07 00 83</p>
+          </div>
+          <div>
+            <strong>Email</strong>
+            <p>ouattaral2@student.iugb.edu.ci</p>
+          </div>
+          <div>
+            <strong>Horaires</strong>
+            <p>Lundi - Vendredi, 9h à 18h</p>
+          </div>
+        </div>
+        <a href="contact.html" class="btn-link">Contacter l'organisation</a>
+      </section>
+
       <section class="card notice">
         <h2>Règlement officiel</h2>
         <p>Consultez les règles et précisions pour la présélection 2026.</p>
@@ -108,7 +181,19 @@
       </section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="app.js"></script>
+    <footer class="site-footer">
+      <div>
+        <strong>Association des Serviteurs d'Allah Azawajal</strong>
+        <p>Plateforme officielle de présélection du Quiz Islamique 2026.</p>
+      </div>
+      <div class="footer-links">
+        <a href="contact.html">Contact</a>
+        <a href="confidentialite.html">Politique de confidentialité</a>
+        <a href="mentions-legales.html">Mentions légales</a>
+      </div>
+    </footer>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script defer src="app.js"></script>
   </body>
 </html>

@@ -22,6 +22,9 @@ const exportCandidates = document.getElementById('exportCandidates');
 const exportVotes = document.getElementById('exportVotes');
 const exportRanking = document.getElementById('exportRanking');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
+const exportContacts = document.getElementById('exportContacts');
+const contactTableBody = document.querySelector('#contactTable tbody');
+const contactFilter = document.getElementById('contactFilter');
 const statCandidates = document.getElementById('statCandidates');
 const statVotes = document.getElementById('statVotes');
 const statScores = document.getElementById('statScores');
@@ -34,6 +37,7 @@ let votesCache = [];
 let rankingCache = [];
 let settingsCache = {};
 let scoresByCandidate = {};
+let contactsCache = [];
 
 function toBasic(username, password) {
   return 'Basic ' + btoa(`${username}:${password}`);
@@ -52,14 +56,15 @@ async function authedFetch(url, options = {}) {
 }
 
 async function loadDashboard() {
-  const [candidatesRes, votesRes, rankingRes, settingsRes] = await Promise.all([
+  const [candidatesRes, votesRes, rankingRes, settingsRes, contactsRes] = await Promise.all([
     authedFetch('/api/candidates'),
     authedFetch('/api/votes/summary'),
     authedFetch('/api/scores/ranking'),
     authedFetch('/api/tournament-settings'),
+    authedFetch('/api/contact-messages'),
   ]);
 
-  if ([candidatesRes, votesRes, rankingRes, settingsRes].some((r) => r.status === 401)) {
+  if ([candidatesRes, votesRes, rankingRes, settingsRes, contactsRes].some((r) => r.status === 401)) {
     loginMsg.textContent = 'Session invalide.';
     return;
   }
@@ -68,10 +73,12 @@ async function loadDashboard() {
   const votes = await votesRes.json();
   const ranking = await rankingRes.json();
   const settings = await settingsRes.json();
+  const contacts = await contactsRes.json();
   candidatesCache = Array.isArray(candidates) ? candidates : [];
   votesCache = Array.isArray(votes) ? votes : [];
   rankingCache = Array.isArray(ranking) ? ranking : [];
   settingsCache = settings || {};
+  contactsCache = Array.isArray(contacts) ? contacts : [];
   scoresByCandidate = rankingCache.reduce((acc, row) => {
     acc[row.id] = row;
     return acc;
@@ -91,6 +98,10 @@ async function loadDashboard() {
   rankingBody.innerHTML = rankingCache
     .map((r) => `<tr><td>${r.fullName}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
     .join('');
+
+  if (contactTableBody) {
+    renderContactsTable();
+  }
 
   Object.keys(settings).forEach((key) => {
     const field = settingsForm.elements[key];
@@ -432,4 +443,82 @@ exportRankingPdf?.addEventListener('click', () => {
   win.document.close();
   win.focus();
   win.print();
+});
+
+exportContacts?.addEventListener('click', () => {
+  const rows = contactsCache.map((c) => ({
+    id: c.id,
+    createdAt: c.createdAt,
+    fullName: c.fullName,
+    email: c.email,
+    subject: c.subject,
+    message: c.message,
+    ip: c.ip,
+    archived: Number(c.archived || 0) === 1 ? 'oui' : 'non',
+  }));
+  downloadCSV('contacts.csv', rows);
+});
+
+function renderContactsTable() {
+  if (!contactTableBody) return;
+  const filter = contactFilter?.value || 'active';
+  const list = contactsCache.filter((c) => {
+    const isArchived = Number(c.archived || 0) === 1;
+    if (filter === 'archived') return isArchived;
+    if (filter === 'active') return !isArchived;
+    return true;
+  });
+  contactTableBody.innerHTML = list
+    .map((c) => {
+      const archiveLabel = Number(c.archived || 0) === 1 ? 'Désarchiver' : 'Archiver';
+      const archiveValue = Number(c.archived || 0) === 1 ? 0 : 1;
+      return `<tr>
+        <td>${c.createdAt}</td>
+        <td>${c.fullName}</td>
+        <td>${c.email}</td>
+        <td>${c.subject}</td>
+        <td>${c.message}</td>
+        <td>${c.ip || ''}</td>
+        <td>
+          <button class="small-btn" data-contact-action="archive" data-id="${c.id}" data-value="${archiveValue}">${archiveLabel}</button>
+          <button class="small-btn danger" data-contact-action="delete" data-id="${c.id}">Supprimer</button>
+        </td>
+      </tr>`;
+    })
+    .join('');
+}
+
+contactFilter?.addEventListener('change', renderContactsTable);
+
+contactTableBody?.addEventListener('click', async (e) => {
+  const button = e.target.closest('button[data-contact-action]');
+  if (!button) return;
+  const messageId = button.dataset.id;
+  const action = button.dataset.contactAction;
+  if (action === 'delete') {
+    if (!confirm('Supprimer ce message ?')) return;
+    const res = await authedFetch(`/api/contact-messages/${messageId}`, { method: 'DELETE' });
+    const data = await res.json();
+    settingsMsg.textContent = data.message || 'Message supprimé.';
+    if (res.ok) {
+      contactsCache = contactsCache.filter((c) => String(c.id) !== String(messageId));
+      renderContactsTable();
+    }
+    return;
+  }
+  if (action === 'archive') {
+    const archivedValue = Number(button.dataset.value || 0);
+    const res = await authedFetch(`/api/contact-messages/${messageId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ archived: archivedValue }),
+    });
+    const data = await res.json();
+    settingsMsg.textContent = data.message || 'Message mis à jour.';
+    if (res.ok) {
+      contactsCache = contactsCache.map((c) =>
+        String(c.id) === String(messageId) ? { ...c, archived: archivedValue } : c,
+      );
+      renderContactsTable();
+    }
+  }
 });

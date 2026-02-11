@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <a class="skip-link" href="#mainContent">Aller au contenu</a>
     <header class="hero compact">
       <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
       <div class="hero-content">
@@ -18,7 +19,7 @@
       </div>
     </header>
 
-    <main class="layout admin-layout">
+    <main id="mainContent" class="layout admin-layout">
       <section class="card">
         <h2>Inscription</h2>
         <details>
@@ -28,6 +29,14 @@
         <details>
           <summary>Quels champs sont obligatoires ?</summary>
           <p>Nom complet, ville, pays et WhatsApp.</p>
+        </details>
+        <details>
+          <summary>Comment saisir le WhatsApp ?</summary>
+          <p>Utilisez le format international, par exemple : +2250150070083.</p>
+        </details>
+        <details>
+          <summary>Mes données sont-elles protégées ?</summary>
+          <p>Oui. Consultez la politique de confidentialité pour comprendre l'usage des données collectées.</p>
         </details>
       </section>
 
@@ -51,7 +60,8 @@
         </details>
         <details>
           <summary>Où se renseigner ?</summary>
-          <p>Contactez l'association via les canaux officiels.</p>
+          <p>Contactez l'association via les canaux officiels ou la page dédiée.</p>
+          <a href="contact.html" class="btn-link small-btn">Page contact</a>
         </details>
       </section>
     </main>

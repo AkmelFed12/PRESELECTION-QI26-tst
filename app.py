@@ -2,6 +2,8 @@ import base64
 import hashlib
 import json
 import os
+import re
+import smtplib
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -17,16 +19,48 @@ import requests
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
 
-ADMIN_USERNAME = "ASAAQI"
-ADMIN_PASSWORD = "2026ASAA"
-ADMIN_WHATSAPP = "2250150070082"
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_WHATSAPP = os.environ.get("ADMIN_WHATSAPP", "2250150070083")
 CODE_PREFIX = "QI26"
+MAX_UPLOAD_BYTES = 3 * 1024 * 1024
+RATE_LIMIT_RULES = {
+    "register": {"limit": 10, "window": 300},
+    "vote": {"limit": 30, "window": 300},
+    "contact": {"limit": 8, "window": 300},
+}
+RATE_LIMITS = {}
+ALLOWED_STATUSES = {"pending", "approved", "eliminated"}
+ALLOWED_LEVELS = {"", "Débutant", "Intermédiaire", "Avancé"}
+MAX_LENGTHS = {
+    "fullName": 120,
+    "city": 60,
+    "country": 60,
+    "email": 120,
+    "phone": 30,
+    "whatsapp": 20,
+    "quranLevel": 20,
+    "motivation": 800,
+    "status": 20,
+    "judgeName": 80,
+    "notes": 800,
+    "contactName": 120,
+    "contactEmail": 120,
+    "contactSubject": 140,
+    "contactMessage": 1200,
+}
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 CLD_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
 CLD_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "")
 CLD_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
 CLD_FOLDER = os.environ.get("CLOUDINARY_FOLDER", "quiz-islamique")
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_FROM = os.environ.get("SMTP_FROM", "")
+SMTP_TO = os.environ.get("SMTP_TO", "")
 
 
 def db_ready():
@@ -102,6 +136,25 @@ def init_db():
                   updatedAt timestamp with time zone default now()
                 );
 
+                create table if not exists admin_audit (
+                  id bigserial primary key,
+                  action text not null,
+                  payload text,
+                  ip text,
+                  createdAt timestamp with time zone default now()
+                );
+
+                create table if not exists contact_messages (
+                  id bigserial primary key,
+                  fullName text not null,
+                  email text not null,
+                  subject text not null,
+                  message text not null,
+                  ip text,
+                  archived integer default 0,
+                  createdAt timestamp with time zone default now()
+                );
+
                 insert into tournament_settings (id)
                 values (1)
                 on conflict (id) do nothing;
@@ -126,6 +179,10 @@ def init_db():
             )
             cur.execute("create index if not exists idx_votes_candidate on votes(candidateId)")
             cur.execute("create index if not exists idx_scores_candidate on scores(candidateId)")
+            try:
+                cur.execute("create unique index if not exists uniq_candidates_whatsapp on candidates(whatsapp)")
+            except Exception:
+                pass
         conn.commit()
 
 
@@ -144,11 +201,43 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(raw.decode("utf-8") or "{}")
 
     def _is_admin(self):
+        if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+            return False
         auth = self.headers.get("Authorization", "")
         if not auth.startswith("Basic "):
             return False
         expected = base64.b64encode(f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}".encode()).decode()
         return auth == f"Basic {expected}"
+
+    def _is_https(self):
+        forwarded = self.headers.get("X-Forwarded-Proto", "")
+        if forwarded:
+            return forwarded.lower() == "https"
+        host = self.headers.get("Host", "")
+        return any(value in host for value in ["localhost", "127.0.0.1", "0.0.0.0"])
+
+    def _require_admin(self):
+        if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+            self._send_json({"message": "Administration non configurée."}, 500)
+            return False
+        if not self._is_https():
+            self._send_json({"message": "HTTPS requis pour l'administration."}, 403)
+            return False
+        if not self._is_admin():
+            self._send_json({"message": "Accès non autorisé"}, 401)
+            return False
+        return True
+
+    def _audit(self, action, payload=None):
+        if not db_ready():
+            return
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "insert into admin_audit (action, payload, ip) values (%s, %s, %s)",
+                    (action, json.dumps(payload or {}), get_client_ip(self)),
+                )
+            conn.commit()
 
     def _serve_file(self, rel_path):
         path = (PUBLIC_DIR / rel_path.lstrip("/")).resolve()
@@ -174,6 +263,10 @@ class Handler(BaseHTTPRequestHandler):
         content = path.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", content_types.get(ext, "application/octet-stream"))
+        if ext in {".css", ".js", ".svg", ".png", ".jpg", ".jpeg"}:
+            self.send_header("Cache-Control", "public, max-age=86400")
+        elif ext == ".html":
+            self.send_header("Cache-Control", "no-cache")
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
         self.wfile.write(content)
@@ -222,11 +315,14 @@ class Handler(BaseHTTPRequestHandler):
             if not self._require_db():
                 return
 
+            if path == "/api/health":
+                return self._send_json({"status": "ok"})
+
             if path == "/api/public-candidates":
                 with get_conn() as conn:
                     with conn.cursor(row_factory=dict_row) as cur:
                         cur.execute(
-                            "select id, candidateCode, fullName, country, photoUrl from candidates order by id asc"
+                            "select id, candidateCode, fullName, city, country, photoUrl from candidates order by id asc"
                         )
                         rows = cur.fetchall()
                 return self._send_json(rows)
@@ -253,8 +349,8 @@ class Handler(BaseHTTPRequestHandler):
                     }
                 )
 
-            if not self._is_admin():
-                return self._send_json({"message": "Accès non autorisé"}, 401)
+            if not self._require_admin():
+                return
 
             if path == "/api/candidates":
                 with get_conn() as conn:
@@ -304,6 +400,20 @@ class Handler(BaseHTTPRequestHandler):
                         row = cur.fetchone()
                 return self._send_json(row or {})
 
+            if path == "/api/contact-messages":
+                with get_conn() as conn:
+                    with conn.cursor(row_factory=dict_row) as cur:
+                        cur.execute(
+                            """
+                            select id, fullName, email, subject, message, ip, archived, createdAt
+                            from contact_messages
+                            order by id desc
+                            limit 500
+                            """
+                        )
+                        rows = cur.fetchall()
+                return self._send_json(rows)
+
             return self._send_json({"message": "Not found"}, 404)
 
         return self._serve_file(path)
@@ -313,8 +423,8 @@ class Handler(BaseHTTPRequestHandler):
         path = parsed.path
 
         if path == "/api/admin/upload-photo":
-            if not self._is_admin():
-                return self._send_json({"message": "Accès non autorisé"}, 401)
+            if not self._require_admin():
+                return
             if not cloudinary_ready():
                 return self._send_json({"message": "Cloudinary non configuré."}, 500)
 
@@ -326,6 +436,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_json({"message": "Nom de fichier invalide."}, 400)
 
             raw = photo_item["data"]
+            if raw and len(raw) > MAX_UPLOAD_BYTES:
+                return self._send_json({"message": "Fichier trop volumineux (max 3 Mo)."}, 413)
+            if photo_item["content_type"] not in {"image/jpeg", "image/png", "image/webp"}:
+                return self._send_json({"message": "Format de fichier non supporté."}, 400)
             ext = Path(photo_item["filename"]).suffix.lower().strip(".") or "jpg"
             safe_ext = ext if ext in {"jpg", "jpeg", "png", "webp"} else "jpg"
             public_id = f"{CLD_FOLDER}/{uuid.uuid4().hex}"
@@ -363,11 +477,55 @@ class Handler(BaseHTTPRequestHandler):
 
         payload = self._get_json()
 
+        if path == "/api/contact":
+            if not self._require_db():
+                return
+            if not check_rate_limit(get_client_ip(self), "contact"):
+                return self._send_json({"message": "Trop de tentatives, réessayez plus tard."}, 429)
+            full_name = (payload.get("fullName") or "").strip()
+            email = (payload.get("email") or "").strip()
+            subject = (payload.get("subject") or "").strip()
+            message = (payload.get("message") or "").strip()
+            if not full_name or not email or not subject or not message:
+                return self._send_json({"message": "Tous les champs sont obligatoires."}, 400)
+            if not validate_lengths(
+                {
+                    "contactName": full_name,
+                    "contactEmail": email,
+                    "contactSubject": subject,
+                    "contactMessage": message,
+                }
+            ):
+                return self._send_json({"message": "Message trop long."}, 400)
+            if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email):
+                return self._send_json({"message": "Email invalide."}, 400)
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        insert into contact_messages (fullName, email, subject, message, ip)
+                        values (%s, %s, %s, %s, %s)
+                        """,
+                        (full_name, email, subject, message, get_client_ip(self)),
+                    )
+                conn.commit()
+            send_contact_email(full_name, email, subject, message)
+            return self._send_json({"message": "Message envoyé. Nous vous répondrons rapidement."}, 201)
+
         if path == "/api/register":
             if not self._require_db():
                 return
+            if not check_rate_limit(get_client_ip(self), "register"):
+                return self._send_json({"message": "Trop de tentatives, réessayez plus tard."}, 429)
             if not payload.get("fullName") or not payload.get("whatsapp"):
                 return self._send_json({"message": "Nom complet et WhatsApp obligatoires."}, 400)
+            normalized = normalize_whatsapp(payload.get("whatsapp"))
+            if not normalized:
+                return self._send_json({"message": "Numéro WhatsApp invalide."}, 400)
+            if not validate_lengths(payload):
+                return self._send_json({"message": "Certains champs dépassent la taille maximale."}, 400)
+            if payload.get("quranLevel", "") not in ALLOWED_LEVELS:
+                return self._send_json({"message": "Niveau invalide."}, 400)
 
             with get_conn() as conn:
                 with conn.cursor() as cur:
@@ -379,10 +537,13 @@ class Handler(BaseHTTPRequestHandler):
                         return self._send_json({"message": "Inscriptions fermées."}, 403)
                     cur.execute(
                         "select id from candidates where lower(fullName) = lower(%s) and whatsapp = %s",
-                        (payload.get("fullName"), payload.get("whatsapp")),
+                        (payload.get("fullName"), normalized),
                     )
                     if cur.fetchone():
                         return self._send_json({"message": "Utilisateur déjà enregistré."}, 409)
+                    cur.execute("select id from candidates where whatsapp = %s", (normalized,))
+                    if cur.fetchone():
+                        return self._send_json({"message": "WhatsApp déjà utilisé."}, 409)
                     cur.execute(
                         """
                         insert into candidates
@@ -397,7 +558,7 @@ class Handler(BaseHTTPRequestHandler):
                             payload.get("country"),
                             payload.get("email"),
                             payload.get("phone"),
-                            payload.get("whatsapp"),
+                            normalized,
                             payload.get("photoUrl"),
                             payload.get("quranLevel"),
                             payload.get("motivation"),
@@ -428,6 +589,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/votes":
             if not self._require_db():
                 return
+            if not check_rate_limit(get_client_ip(self), "vote"):
+                return self._send_json({"message": "Trop de votes, réessayez plus tard."}, 429)
             candidate_id = payload.get("candidateId")
             if not candidate_id:
                 return self._send_json({"message": "Candidate ID requis."}, 400)
@@ -451,8 +614,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json({"message": "Vote enregistré."}, 201)
 
         if path == "/api/admin/candidates":
-            if not self._is_admin():
-                return self._send_json({"message": "Accès non autorisé"}, 401)
+            if not self._require_admin():
+                return
             if not self._require_db():
                 return
 
@@ -471,6 +634,17 @@ class Handler(BaseHTTPRequestHandler):
                 "status": payload.get("status"),
             }
             clean = {k: v for k, v in data.items() if v not in [None, ""]}
+            if not validate_lengths(clean):
+                return self._send_json({"message": "Certains champs dépassent la taille maximale."}, 400)
+            if "quranLevel" in clean and clean["quranLevel"] not in ALLOWED_LEVELS:
+                return self._send_json({"message": "Niveau invalide."}, 400)
+            if "status" in clean and clean["status"] not in ALLOWED_STATUSES:
+                return self._send_json({"message": "Statut invalide."}, 400)
+            if "whatsapp" in clean:
+                normalized = normalize_whatsapp(clean["whatsapp"])
+                if not normalized:
+                    return self._send_json({"message": "Numéro WhatsApp invalide."}, 400)
+                clean["whatsapp"] = normalized
 
             with get_conn() as conn:
                 with conn.cursor() as cur:
@@ -493,24 +667,44 @@ class Handler(BaseHTTPRequestHandler):
                             )
                             if cur.fetchone():
                                 return self._send_json({"message": "Utilisateur déjà enregistré."}, 409)
+                        if "whatsapp" in clean:
+                            cur.execute(
+                                "select id from candidates where whatsapp = %s and id != %s",
+                                (clean["whatsapp"], candidate_id),
+                            )
+                            if cur.fetchone():
+                                return self._send_json({"message": "WhatsApp déjà utilisé."}, 409)
                         set_parts = ", ".join([f"{k} = %s" for k in clean.keys()])
                         params = list(clean.values()) + [candidate_id]
                         cur.execute(f"update candidates set {set_parts} where id = %s", params)
                         if cur.rowcount == 0:
                             return self._send_json({"message": "Candidat introuvable."}, 404)
                         conn.commit()
+                        self._audit("candidate_update", {"id": candidate_id, "fields": list(clean.keys())})
                         return self._send_json({"message": "Candidat mis à jour."})
 
                     if not payload.get("fullName"):
                         return self._send_json({"message": "Nom complet requis."}, 400)
                     if not payload.get("whatsapp"):
                         return self._send_json({"message": "WhatsApp requis."}, 400)
+                    normalized = normalize_whatsapp(payload.get("whatsapp"))
+                    if not normalized:
+                        return self._send_json({"message": "Numéro WhatsApp invalide."}, 400)
+                    if not validate_lengths(payload):
+                        return self._send_json({"message": "Certains champs dépassent la taille maximale."}, 400)
+                    if payload.get("quranLevel", "") not in ALLOWED_LEVELS:
+                        return self._send_json({"message": "Niveau invalide."}, 400)
+                    if payload.get("status", "pending") not in ALLOWED_STATUSES:
+                        return self._send_json({"message": "Statut invalide."}, 400)
                     cur.execute(
                         "select id from candidates where lower(fullName) = lower(%s) and whatsapp = %s",
-                        (payload.get("fullName"), payload.get("whatsapp")),
+                        (payload.get("fullName"), normalized),
                     )
                     if cur.fetchone():
                         return self._send_json({"message": "Utilisateur déjà enregistré."}, 409)
+                    cur.execute("select id from candidates where whatsapp = %s", (normalized,))
+                    if cur.fetchone():
+                        return self._send_json({"message": "WhatsApp déjà utilisé."}, 409)
                     cur.execute(
                         """
                         insert into candidates
@@ -525,7 +719,7 @@ class Handler(BaseHTTPRequestHandler):
                             payload.get("country"),
                             payload.get("email"),
                             payload.get("phone"),
-                            payload.get("whatsapp"),
+                            normalized,
                             payload.get("photoUrl"),
                             payload.get("quranLevel"),
                             payload.get("motivation"),
@@ -538,17 +732,20 @@ class Handler(BaseHTTPRequestHandler):
                         (f"{CODE_PREFIX}-{str(new_id).zfill(3)}", new_id),
                     )
                 conn.commit()
+            self._audit("candidate_create", {"id": new_id})
             return self._send_json({"message": "Candidat ajouté.", "candidateId": new_id}, 201)
 
         if path == "/api/scores":
-            if not self._is_admin():
-                return self._send_json({"message": "Accès non autorisé"}, 401)
+            if not self._require_admin():
+                return
             if not self._require_db():
                 return
             candidate_id = payload.get("candidateId")
             judge = payload.get("judgeName")
             if not candidate_id or not judge:
                 return self._send_json({"message": "Candidate ID et nom du juge requis."}, 400)
+            if not validate_lengths(payload):
+                return self._send_json({"message": "Certains champs dépassent la taille maximale."}, 400)
 
             with get_conn() as conn:
                 with conn.cursor() as cur:
@@ -569,16 +766,36 @@ class Handler(BaseHTTPRequestHandler):
                         ),
                     )
                 conn.commit()
+            self._audit("score_create", {"candidateId": candidate_id, "judgeName": judge})
             return self._send_json({"message": "Notation enregistrée."}, 201)
 
         return self._send_json({"message": "Not found"}, 404)
 
     def do_PUT(self):
         path = urlparse(self.path).path
+        if path.startswith("/api/contact-messages/"):
+            if not self._require_admin():
+                return
+            message_id = path.rsplit("/", 1)[-1]
+            if not message_id.isdigit():
+                return self._send_json({"message": "ID message invalide."}, 400)
+            payload = self._get_json()
+            archived = 1 if int(payload.get("archived", 0)) == 1 else 0
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "update contact_messages set archived = %s where id = %s",
+                        (archived, message_id),
+                    )
+                    if cur.rowcount == 0:
+                        return self._send_json({"message": "Message introuvable."}, 404)
+                conn.commit()
+            self._audit("contact_archive", {"id": message_id, "archived": archived})
+            return self._send_json({"message": "Message mis à jour."})
         if path != "/api/tournament-settings":
             return self._send_json({"message": "Not found"}, 404)
-        if not self._is_admin():
-            return self._send_json({"message": "Accès non autorisé"}, 401)
+        if not self._require_admin():
+            return
         if not self._require_db():
             return
 
@@ -608,14 +825,29 @@ class Handler(BaseHTTPRequestHandler):
                     values,
                 )
             conn.commit()
+        self._audit("settings_update", {"fields": list(payload.keys())})
         return self._send_json({"message": "Paramètres du tournoi mis à jour."})
 
     def do_DELETE(self):
         path = urlparse(self.path).path
+        if path.startswith("/api/contact-messages/"):
+            if not self._require_admin():
+                return
+            message_id = path.rsplit("/", 1)[-1]
+            if not message_id.isdigit():
+                return self._send_json({"message": "ID message invalide."}, 400)
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("delete from contact_messages where id = %s", (message_id,))
+                    if cur.rowcount == 0:
+                        return self._send_json({"message": "Message introuvable."}, 404)
+                conn.commit()
+            self._audit("contact_delete", {"id": message_id})
+            return self._send_json({"message": "Message supprimé."})
         if not path.startswith("/api/admin/candidates/"):
             return self._send_json({"message": "Not found"}, 404)
-        if not self._is_admin():
-            return self._send_json({"message": "Accès non autorisé"}, 401)
+        if not self._require_admin():
+            return
         if not self._require_db():
             return
 
@@ -629,7 +861,79 @@ class Handler(BaseHTTPRequestHandler):
                 if cur.rowcount == 0:
                     return self._send_json({"message": "Candidat introuvable."}, 404)
             conn.commit()
+        self._audit("candidate_delete", {"id": candidate_id})
         return self._send_json({"message": "Candidat supprimé."})
+
+
+def get_client_ip(handler):
+    forwarded = handler.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return handler.client_address[0] if handler.client_address else "unknown"
+
+
+def check_rate_limit(ip, action):
+    rule = RATE_LIMIT_RULES.get(action)
+    if not rule:
+        return True
+    now = time.time()
+    entries = RATE_LIMITS.get(ip, {}).get(action, [])
+    window = rule["window"]
+    entries = [t for t in entries if now - t < window]
+    if len(entries) >= rule["limit"]:
+        RATE_LIMITS.setdefault(ip, {})[action] = entries
+        return False
+    entries.append(now)
+    RATE_LIMITS.setdefault(ip, {})[action] = entries
+    return True
+
+
+def normalize_whatsapp(value):
+    if not value:
+        return ""
+    raw = re.sub(r"[^\d+]", "", str(value).strip())
+    raw = raw.replace("00", "+", 1) if raw.startswith("00") else raw
+    if not re.fullmatch(r"\+?[1-9]\d{6,14}", raw):
+        return ""
+    if not raw.startswith("+"):
+        raw = f"+{raw}"
+    return raw
+
+
+def validate_lengths(payload):
+    for key, max_len in MAX_LENGTHS.items():
+        if key in payload and payload[key] is not None:
+            if len(str(payload[key])) > max_len:
+                return False
+    return True
+
+
+def send_contact_email(full_name, email, subject, message):
+    if not (SMTP_HOST and SMTP_FROM and SMTP_TO):
+        return
+    body = (
+        "Nouveau message de contact\n\n"
+        f"Nom: {full_name}\n"
+        f"Email: {email}\n"
+        f"Sujet: {subject}\n\n"
+        f"Message:\n{message}\n"
+    )
+    headers = [
+        f"From: {SMTP_FROM}",
+        f"To: {SMTP_TO}",
+        f"Subject: [QI26] {subject}",
+        "Content-Type: text/plain; charset=utf-8",
+    ]
+    msg = "\r\n".join(headers) + "\r\n\r\n" + body
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.ehlo()
+            server.starttls()
+            if SMTP_USER and SMTP_PASSWORD:
+                server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, [SMTP_TO], msg.encode("utf-8"))
+    except Exception:
+        return
 
 
 if __name__ == "__main__":

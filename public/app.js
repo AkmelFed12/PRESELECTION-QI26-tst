@@ -10,6 +10,12 @@ const announcementCard = document.getElementById('announcementCard');
 const announcementText = document.getElementById('announcementText');
 const qrCode = document.getElementById('qrCode');
 const scheduleList = document.getElementById('scheduleList');
+const publicCandidatesGrid = document.getElementById('publicCandidatesGrid');
+const candidateSearchPublic = document.getElementById('candidateSearchPublic');
+const candidateCountryFilter = document.getElementById('candidateCountryFilter');
+const candidateCityFilter = document.getElementById('candidateCityFilter');
+
+let cachedCandidates = [];
 
 registrationForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -106,6 +112,9 @@ async function loadPublicCandidates() {
       : 'Inscriptions temporairement fermées.';
   }
 
+  cachedCandidates = Array.isArray(candidates) ? candidates : [];
+  renderPublicCandidatesList();
+
   if (!settings.votingEnabled || Number(settings.competitionClosed || 0) === 1) {
     if (voteStatusBadge) {
       voteStatusBadge.textContent = Number(settings.competitionClosed || 0) === 1 ? 'Compétition clôturée' : 'Votes fermés';
@@ -137,13 +146,81 @@ async function loadPublicCandidates() {
           <div class="photo">${photo}</div>
           <div class="candidate-info">
             <h3>${c.fullName}</h3>
-            <p>${c.country || ''}</p>
+            <p>${c.city ? `${c.city}, ` : ''}${c.country || ''}</p>
           </div>
           <button class="vote-btn" data-id="${c.id}" data-name="${c.fullName}">Voter</button>
         </article>
       `;
     })
     .join('');
+}
+
+function renderPublicCandidatesList() {
+  if (!publicCandidatesGrid) return;
+  const searchTerm = (candidateSearchPublic?.value || '').trim().toLowerCase();
+  const country = (candidateCountryFilter?.value || '').toLowerCase();
+  const city = (candidateCityFilter?.value || '').toLowerCase();
+
+  const filtered = cachedCandidates.filter((candidate) => {
+    const haystack = `${candidate.fullName || ''} ${candidate.city || ''} ${candidate.country || ''}`.toLowerCase();
+    const matchesSearch = !searchTerm || haystack.includes(searchTerm);
+    const matchesCountry = !country || (candidate.country || '').toLowerCase() === country;
+    const matchesCity = !city || (candidate.city || '').toLowerCase() === city;
+    return matchesSearch && matchesCountry && matchesCity;
+  });
+
+  hydratePublicFilters();
+
+  publicCandidatesGrid.innerHTML = filtered.length
+    ? filtered
+        .map((c) => {
+          const initials = getInitials(c.fullName);
+          const photo = c.photoUrl
+            ? `<img src="${c.photoUrl}" alt="${c.fullName}" />`
+            : `<div class="placeholder">${initials || 'QI'}</div>`;
+          return `
+            <article class="candidate-card">
+              <div class="photo">${photo}</div>
+              <div class="candidate-info">
+                <h3>${c.fullName}</h3>
+                <p>${c.city ? `${c.city}, ` : ''}${c.country || ''}</p>
+              </div>
+            </article>
+          `;
+        })
+        .join('')
+    : '<div class="empty">Aucun candidat ne correspond à ces filtres.</div>';
+}
+
+function hydratePublicFilters() {
+  if (!candidateCountryFilter || !candidateCityFilter) return;
+  const countries = Array.from(
+    new Set(cachedCandidates.map((c) => (c.country || '').trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b, 'fr'));
+  const cities = Array.from(
+    new Set(cachedCandidates.map((c) => (c.city || '').trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b, 'fr'));
+
+  const currentCountry = candidateCountryFilter.value;
+  const currentCity = candidateCityFilter.value;
+
+  candidateCountryFilter.innerHTML = '<option value="">Tous les pays</option>';
+  countries.forEach((value) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    candidateCountryFilter.appendChild(option);
+  });
+  candidateCountryFilter.value = currentCountry;
+
+  candidateCityFilter.innerHTML = '<option value="">Toutes les villes</option>';
+  cities.forEach((value) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    candidateCityFilter.appendChild(option);
+  });
+  candidateCityFilter.value = currentCity;
 }
 
 candidatesGrid?.addEventListener('click', async (e) => {
@@ -169,6 +246,10 @@ candidatesGrid?.addEventListener('click', async (e) => {
     button.disabled = true;
   }
 });
+
+candidateSearchPublic?.addEventListener('input', renderPublicCandidatesList);
+candidateCountryFilter?.addEventListener('change', renderPublicCandidatesList);
+candidateCityFilter?.addEventListener('change', renderPublicCandidatesList);
 
 if (qrCode && window.QRCode) {
   const url = `${window.location.origin}/`;

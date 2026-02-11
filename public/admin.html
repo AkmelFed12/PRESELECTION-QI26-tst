@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <a class="skip-link" href="#mainContent">Aller au contenu</a>
     <header class="hero compact">
       <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
       <div class="hero-content">
@@ -19,15 +20,17 @@
       </div>
     </header>
 
-    <main class="layout admin-layout">
+    <main id="mainContent" class="layout admin-layout">
       <section class="card accent-gold">
         <h2>Connexion administrateur</h2>
         <form id="loginForm" class="grid-form">
-          <input name="username" placeholder="Identifiant" required />
-          <input name="password" type="password" placeholder="Mot de passe" required />
+          <label for="adminUsername">Identifiant</label>
+          <input id="adminUsername" name="username" placeholder="Identifiant" required />
+          <label for="adminPassword">Mot de passe</label>
+          <input id="adminPassword" name="password" type="password" placeholder="Mot de passe" required />
           <button type="submit">Se connecter</button>
         </form>
-        <p id="loginMsg"></p>
+        <p id="loginMsg" role="status" aria-live="polite"></p>
       </section>
 
       <section class="card accent-emerald hidden" id="adminPanel">
@@ -66,7 +69,7 @@
           </label>
           <button type="submit">Mettre à jour</button>
         </form>
-        <p id="settingsMsg"></p>
+        <p id="settingsMsg" role="status" aria-live="polite"></p>
       </section>
 
       <section class="card accent-slate hidden" id="dashboardPanel">
@@ -115,35 +118,49 @@
           </label>
         </div>
         <form id="candidateForm" class="grid-form two-col">
-          <input name="candidateId" type="number" placeholder="ID candidat (pour modifier)" />
-          <input name="candidateCode" placeholder="Code candidat (auto)" readonly />
-          <input name="fullName" placeholder="Nom complet" required />
-          <input name="age" type="number" placeholder="Âge" min="10" max="99" />
-          <input name="city" placeholder="Ville" />
-          <input name="country" placeholder="Pays" />
-          <input name="email" type="email" placeholder="Email" />
-          <input name="phone" placeholder="Téléphone" />
-          <input name="whatsapp" placeholder="WhatsApp *" required />
-          <select name="quranLevel">
+          <label for="candidateId">ID candidat (pour modifier)</label>
+          <input id="candidateId" name="candidateId" type="number" placeholder="ID candidat" />
+          <label for="candidateCode">Code candidat (auto)</label>
+          <input id="candidateCode" name="candidateCode" placeholder="Code candidat" readonly />
+          <label for="candidateFullName">Nom complet</label>
+          <input id="candidateFullName" name="fullName" placeholder="Nom complet" required />
+          <label for="candidateAge">Âge</label>
+          <input id="candidateAge" name="age" type="number" placeholder="Âge" min="10" max="99" />
+          <label for="candidateCity">Ville</label>
+          <input id="candidateCity" name="city" placeholder="Ville" />
+          <label for="candidateCountry">Pays</label>
+          <input id="candidateCountry" name="country" placeholder="Pays" />
+          <label for="candidateEmail">Email</label>
+          <input id="candidateEmail" name="email" type="email" placeholder="Email" />
+          <label for="candidatePhone">Téléphone</label>
+          <input id="candidatePhone" name="phone" placeholder="Téléphone" />
+          <label for="candidateWhatsapp">WhatsApp *</label>
+          <input id="candidateWhatsapp" name="whatsapp" placeholder="WhatsApp" required />
+          <label for="candidateLevel">Niveau en culture islamique</label>
+          <select id="candidateLevel" name="quranLevel">
             <option value="">Niveau en culture islamique</option>
             <option>Débutant</option>
             <option>Intermédiaire</option>
             <option>Avancé</option>
           </select>
-          <select name="status">
+          <label for="candidateStatus">Statut</label>
+          <select id="candidateStatus" name="status">
             <option value="pending">Statut: en attente</option>
             <option value="approved">Statut: validé</option>
             <option value="eliminated">Statut: éliminé</option>
           </select>
-          <textarea name="motivation" placeholder="Motivation (facultatif)"></textarea>
-          <input name="photoFile" type="file" accept="image/*" />
+          <label for="candidateMotivation">Motivation (facultatif)</label>
+          <textarea id="candidateMotivation" name="motivation" placeholder="Motivation"></textarea>
+          <label for="candidatePhotoFile">Photo du candidat</label>
+          <input id="candidatePhotoFile" name="photoFile" type="file" accept="image/*" />
           <div class="photo-preview">
             <img id="candidatePreview" alt="Aperçu du candidat" />
           </div>
-          <input name="photoUrl" type="text" placeholder="Lien photo (auto après upload)" readonly />
+          <label for="candidatePhotoUrl">Lien photo (auto après upload)</label>
+          <input id="candidatePhotoUrl" name="photoUrl" type="text" placeholder="Lien photo" readonly />
           <button type="submit">Enregistrer le candidat</button>
         </form>
-        <p id="candidateMsg"></p>
+        <p id="candidateMsg" role="status" aria-live="polite"></p>
         <div class="table-wrap">
           <h3>Liste des candidats</h3>
           <table id="adminCandidatesTable">
@@ -156,14 +173,19 @@
       <section class="card accent-sand hidden" id="scorePanel">
         <h2>Noter un candidat après son passage</h2>
         <form id="scoreForm" class="grid-form two-col">
-          <input name="candidateId" type="number" placeholder="ID candidat" required />
-          <input name="judgeName" placeholder="Nom du juge" required />
-          <input name="themeChosenScore" type="number" step="0.1" placeholder="Thème au choix /15" />
-          <input name="themeImposedScore" type="number" step="0.1" placeholder="Thème imposé /15" />
-          <textarea name="notes" placeholder="Notes complémentaires"></textarea>
+          <label for="scoreCandidateId">ID candidat</label>
+          <input id="scoreCandidateId" name="candidateId" type="number" placeholder="ID candidat" required />
+          <label for="scoreJudgeName">Nom du juge</label>
+          <input id="scoreJudgeName" name="judgeName" placeholder="Nom du juge" required />
+          <label for="scoreChosen">Thème au choix /15</label>
+          <input id="scoreChosen" name="themeChosenScore" type="number" step="0.1" placeholder="Thème au choix /15" />
+          <label for="scoreImposed">Thème imposé /15</label>
+          <input id="scoreImposed" name="themeImposedScore" type="number" step="0.1" placeholder="Thème imposé /15" />
+          <label for="scoreNotes">Notes complémentaires</label>
+          <textarea id="scoreNotes" name="notes" placeholder="Notes complémentaires"></textarea>
           <button type="submit">Enregistrer la note</button>
         </form>
-        <p id="scoreMsg"></p>
+        <p id="scoreMsg" role="status" aria-live="polite"></p>
       </section>
 
       <section class="card accent-slate hidden" id="tablesPanel">
@@ -196,6 +218,21 @@
           </div>
           <table id="rankingTable">
             <thead><tr><th>Candidat</th><th>Moyenne /30</th><th>Passages notés</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-wrap">
+          <h3>Messages de contact</h3>
+          <div class="table-actions">
+            <select id="contactFilter">
+              <option value="active">Actifs</option>
+              <option value="archived">Archivés</option>
+              <option value="all">Tous</option>
+            </select>
+            <button class="small-btn" id="exportContacts" type="button">Exporter CSV</button>
+          </div>
+          <table id="contactTable">
+            <thead><tr><th>Date</th><th>Nom</th><th>Email</th><th>Objet</th><th>Message</th><th>IP</th><th>Actions</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>

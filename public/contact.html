@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact | Quiz Islamique 2026</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#mainContent">Aller au contenu</a>
+    <header class="hero compact">
+      <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
+      <div class="hero-content">
+        <h1>Contact</h1>
+        <p class="subtitle">Nous sommes disponibles pour vous aider.</p>
+      </div>
+      <div class="hero-actions">
+        <a href="index.html" class="btn-link outline">Accueil</a>
+      </div>
+    </header>
+
+    <main id="mainContent" class="layout admin-layout">
+      <section class="card">
+        <h2>Coordonnées</h2>
+        <div class="contact-grid">
+          <div>
+            <strong>Email</strong>
+            <p>ouattaral2@student.iugb.edu.ci</p>
+          </div>
+          <div>
+            <strong>WhatsApp</strong>
+            <p>+225 01 50 07 00 83</p>
+          </div>
+          <div>
+            <strong>Horaires</strong>
+            <p>Lundi - Vendredi, 9h à 18h</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Envoyer un message</h2>
+        <form id="contactForm" class="grid-form">
+          <label for="contactName">Nom complet</label>
+          <input id="contactName" name="fullName" placeholder="Votre nom" required />
+          <label for="contactEmail">Email</label>
+          <input id="contactEmail" name="email" type="email" placeholder="Votre email" required />
+          <label for="contactSubject">Objet</label>
+          <input id="contactSubject" name="subject" placeholder="Sujet du message" required />
+          <label for="contactMessage">Message</label>
+          <textarea id="contactMessage" name="message" placeholder="Votre message" required></textarea>
+          <button type="submit">Envoyer</button>
+        </form>
+        <p id="contactMsg" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+    <script defer src="contact.js"></script>
+  </body>
+</html>

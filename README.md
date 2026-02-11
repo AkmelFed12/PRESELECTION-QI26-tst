@@ -27,6 +27,8 @@ Puis ouvrir: http://localhost:3000
 - Build: `pip install -r requirements.txt`
 - Start: `python app.py`
 
+Pour un usage production, placez le service derriere un proxy HTTPS (Caddy/Nginx/Render).
+
 ## Base de donnees et photos
 
 - Base: PostgreSQL Render (variable `DATABASE_URL`)
@@ -34,10 +36,21 @@ Puis ouvrir: http://localhost:3000
 
 Variables d'environnement a configurer:
 - `DATABASE_URL`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `ADMIN_WHATSAPP` (optionnel)
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
 - `CLOUDINARY_FOLDER` (optionnel, defaut: `quiz-islamique`)
+
+Notifications email (optionnel):
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASSWORD`
+- `SMTP_FROM`
+- `SMTP_TO`
 
 ## Sauvegarde automatique (Google Drive)
 
