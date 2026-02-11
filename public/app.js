@@ -20,6 +20,21 @@ const publicStatCities = document.getElementById('publicStatCities');
 
 let cachedCandidates = [];
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function safeUrl(value) {
+  const url = String(value ?? '').trim();
+  if (!url) return '';
+  return /^https?:\/\//i.test(url) ? url : '';
+}
+
 registrationForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const submitBtn = registrationForm.querySelector('button[type="submit"]');
@@ -105,9 +120,9 @@ async function loadPublicCandidates() {
           .map(
             (item) => `
               <div class="schedule-item">
-                <strong>${item.title || 'Événement'}</strong>
-                <span>${item.date || ''} ${item.time || ''}</span>
-                <span>${item.place || ''}</span>
+                <strong>${escapeHtml(item.title || 'Événement')}</strong>
+                <span>${escapeHtml(`${item.date || ''} ${item.time || ''}`.trim())}</span>
+                <span>${escapeHtml(item.place || '')}</span>
               </div>
             `,
           )
@@ -151,17 +166,20 @@ async function loadPublicCandidates() {
   candidatesGrid.innerHTML = candidates
     .map((c) => {
       const initials = getInitials(c.fullName);
-      const photo = c.photoUrl
-        ? `<img src="${c.photoUrl}" alt="${c.fullName}" loading="lazy" decoding="async" />`
+      const photoUrl = safeUrl(c.photoUrl);
+      const name = escapeHtml(c.fullName);
+      const location = escapeHtml(`${c.city ? `${c.city}, ` : ''}${c.country || ''}`.trim());
+      const photo = photoUrl
+        ? `<img src="${photoUrl}" alt="${name}" loading="lazy" decoding="async" />`
         : `<div class="placeholder">${initials || 'QI'}</div>`;
       return `
         <article class="candidate-card">
           <div class="photo">${photo}</div>
           <div class="candidate-info">
-            <h3>${c.fullName}</h3>
-            <p>${c.city ? `${c.city}, ` : ''}${c.country || ''}</p>
+            <h3>${name}</h3>
+            <p>${location}</p>
           </div>
-          <button class="vote-btn" data-id="${c.id}" data-name="${c.fullName}">Voter</button>
+          <button class="vote-btn" data-id="${c.id}" data-name="${name}">Voter</button>
         </article>
       `;
     })
@@ -188,15 +206,18 @@ function renderPublicCandidatesList() {
     ? filtered
         .map((c) => {
           const initials = getInitials(c.fullName);
-          const photo = c.photoUrl
-            ? `<img src="${c.photoUrl}" alt="${c.fullName}" loading="lazy" decoding="async" />`
+          const photoUrl = safeUrl(c.photoUrl);
+          const name = escapeHtml(c.fullName);
+          const location = escapeHtml(`${c.city ? `${c.city}, ` : ''}${c.country || ''}`.trim());
+          const photo = photoUrl
+            ? `<img src="${photoUrl}" alt="${name}" loading="lazy" decoding="async" />`
             : `<div class="placeholder">${initials || 'QI'}</div>`;
           return `
             <article class="candidate-card">
               <div class="photo">${photo}</div>
               <div class="candidate-info">
-                <h3>${c.fullName}</h3>
-                <p>${c.city ? `${c.city}, ` : ''}${c.country || ''}</p>
+                <h3>${name}</h3>
+                <p>${location}</p>
               </div>
             </article>
           `;

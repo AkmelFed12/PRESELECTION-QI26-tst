@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Résultats | Quiz Islamique 2026</title>
+    <meta name="description" content="Résultats officiels et statistiques du Quiz Islamique 2026." />
+    <meta property="og:title" content="Résultats | Quiz Islamique 2026" />
+    <meta property="og:description" content="Résultats officiels et statistiques du Quiz Islamique 2026." />
+    <link rel="icon" href="assets/logo-association.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#mainContent">Aller au contenu</a>
+    <header class="hero compact">
+      <img src="assets/logo-association.svg" alt="Logo Les Serviteurs d'Allah" class="logo" />
+      <div class="hero-content">
+        <h1>Résultats officiels</h1>
+        <p class="subtitle">Classement public du Quiz Islamique 2026.</p>
+      </div>
+      <div class="hero-actions">
+        <a href="index.html" class="btn-link outline">Accueil</a>
+      </div>
+    </header>
+
+    <main id="mainContent" class="layout admin-layout">
+      <section class="card accent-emerald">
+        <h2>Statistiques globales</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span>Candidats</span>
+            <strong id="resultStatCandidates">0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Votes</span>
+            <strong id="resultStatVotes">0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Pays</span>
+            <strong id="resultStatCountries">0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Villes</span>
+            <strong id="resultStatCities">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Classement public</h2>
+        <div class="toolbar">
+          <label class="sr-only" for="resultsSearch">Recherche</label>
+          <input id="resultsSearch" type="search" placeholder="Rechercher un candidat" />
+        </div>
+        <div id="resultsGrid" class="candidates-grid"></div>
+      </section>
+    </main>
+
+    <script defer src="resultats.js"></script>
+  </body>
+</html>

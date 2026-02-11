@@ -375,6 +375,39 @@ class Handler(BaseHTTPRequestHandler):
                     }
                 )
 
+            if path == "/api/public-results":
+                with get_conn() as conn:
+                    with conn.cursor(row_factory=dict_row) as cur:
+                        cur.execute(
+                            """
+                            select c.id,
+                                   c.fullName,
+                                   c.city,
+                                   c.country,
+                                   c.photoUrl,
+                                   count(v.id) as totalVotes
+                            from candidates c
+                            left join votes v on c.id = v.candidateId
+                            group by c.id, c.fullName, c.city, c.country, c.photoUrl
+                            order by totalVotes desc, c.fullName asc
+                            """
+                        )
+                        rows = cur.fetchall()
+                countries = {str(r.get("country", "")).strip().lower() for r in rows if r.get("country")}
+                cities = {str(r.get("city", "")).strip().lower() for r in rows if r.get("city")}
+                total_votes = sum(int(r.get("totalVotes") or 0) for r in rows)
+                return self._send_json(
+                    {
+                        "candidates": rows,
+                        "stats": {
+                            "totalCandidates": len(rows),
+                            "totalVotes": total_votes,
+                            "countries": len(countries),
+                            "cities": len(cities),
+                        },
+                    }
+                )
+
             if not self._require_admin():
                 return
 
@@ -833,6 +866,8 @@ class Handler(BaseHTTPRequestHandler):
             if not message_id.isdigit():
                 return self._send_json({"message": "ID message invalide."}, 400)
             payload = self._get_json()
+            if payload is None:
+                return
             archived = 1 if int(payload.get("archived", 0)) == 1 else 0
             with get_conn() as conn:
                 with conn.cursor() as cur:

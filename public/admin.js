@@ -45,6 +45,21 @@ let scoresByCandidate = {};
 let contactsCache = [];
 let auditCache = [];
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function safeUrl(value) {
+  const url = String(value ?? '').trim();
+  if (!url) return '';
+  return /^https?:\/\//i.test(url) ? url : '';
+}
+
 function toBasic(username, password) {
   return 'Basic ' + btoa(`${username}:${password}`);
 }
@@ -96,16 +111,21 @@ async function loadDashboard() {
   const candidatesBody = document.querySelector('#candidatesTable tbody');
   candidatesBody.innerHTML = candidates
     .map(
-      (c) => `<tr><td>${c.id}</td><td>${c.fullName}</td><td>${c.whatsapp || ''}</td><td>${c.country || ''}</td><td>${c.createdAt}</td></tr>`,
+      (c) =>
+        `<tr><td>${c.id}</td><td>${escapeHtml(c.fullName)}</td><td>${escapeHtml(c.whatsapp || '')}</td><td>${escapeHtml(
+          c.country || '',
+        )}</td><td>${escapeHtml(c.createdAt || '')}</td></tr>`,
     )
     .join('');
 
   const votesBody = document.querySelector('#votesTable tbody');
-  votesBody.innerHTML = votesCache.map((v) => `<tr><td>${v.fullName}</td><td>${v.totalVotes}</td></tr>`).join('');
+  votesBody.innerHTML = votesCache
+    .map((v) => `<tr><td>${escapeHtml(v.fullName)}</td><td>${v.totalVotes}</td></tr>`)
+    .join('');
 
   const rankingBody = document.querySelector('#rankingTable tbody');
   rankingBody.innerHTML = rankingCache
-    .map((r) => `<tr><td>${r.fullName}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
+    .map((r) => `<tr><td>${escapeHtml(r.fullName)}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
     .join('');
 
   if (contactTableBody) {
@@ -114,7 +134,12 @@ async function loadDashboard() {
 
   if (auditTableBody) {
     auditTableBody.innerHTML = auditCache
-      .map((a) => `<tr><td>${a.createdAt}</td><td>${a.action}</td><td>${a.payload || ''}</td><td>${a.ip || ''}</td></tr>`)
+      .map(
+        (a) =>
+          `<tr><td>${escapeHtml(a.createdAt)}</td><td>${escapeHtml(a.action)}</td><td>${escapeHtml(
+            a.payload || '',
+          )}</td><td>${escapeHtml(a.ip || '')}</td></tr>`,
+      )
       .join('');
   }
 
@@ -162,13 +187,15 @@ function renderCandidatesTable() {
     .map(
       (c) => `
         <tr>
-          <td>${c.photoUrl ? `<img src="${c.photoUrl}" alt="${c.fullName}" class="mini-photo" />` : '-'}</td>
-          <td>${c.candidateCode || '-'}</td>
-          <td>${c.fullName}</td>
-          <td>${c.country || ''}</td>
+          <td>${
+            c.photoUrl ? `<img src="${safeUrl(c.photoUrl)}" alt="${escapeHtml(c.fullName)}" class="mini-photo" />` : '-'
+          }</td>
+          <td>${escapeHtml(c.candidateCode || '-')}</td>
+          <td>${escapeHtml(c.fullName)}</td>
+          <td>${escapeHtml(c.country || '')}</td>
           <td>${formatStatus(c.status)}</td>
           <td>${formatTotalScore(c.id)}</td>
-          <td>${c.whatsapp || ''}</td>
+          <td>${escapeHtml(c.whatsapp || '')}</td>
           <td>
             <button class="small-btn" data-action="edit" data-id="${c.id}">Modifier</button>
             <button class="small-btn danger" data-action="delete" data-id="${c.id}">Supprimer</button>
@@ -546,12 +573,12 @@ function renderContactsTable() {
       const archiveLabel = Number(c.archived || 0) === 1 ? 'Désarchiver' : 'Archiver';
       const archiveValue = Number(c.archived || 0) === 1 ? 0 : 1;
       return `<tr>
-        <td>${c.createdAt}</td>
-        <td>${c.fullName}</td>
-        <td>${c.email}</td>
-        <td>${c.subject}</td>
-        <td>${c.message}</td>
-        <td>${c.ip || ''}</td>
+        <td>${escapeHtml(c.createdAt)}</td>
+        <td>${escapeHtml(c.fullName)}</td>
+        <td>${escapeHtml(c.email)}</td>
+        <td>${escapeHtml(c.subject)}</td>
+        <td>${escapeHtml(c.message)}</td>
+        <td>${escapeHtml(c.ip || '')}</td>
         <td>
           <button class="small-btn" data-contact-action="archive" data-id="${c.id}" data-value="${archiveValue}">${archiveLabel}</button>
           <button class="small-btn danger" data-contact-action="delete" data-id="${c.id}">Supprimer</button>
