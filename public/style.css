@@ -951,6 +951,55 @@ button:disabled {
   text-align: center;
   padding: 12px 14px;
 }
+.media-grid {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+.media-card {
+  border: 1px solid rgba(197, 155, 63, 0.2);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.media-card.is-active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(11, 111, 79, 0.15);
+}
+.media-preview {
+  background: #111;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.media-preview img,
+.media-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.media-name {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-actions {
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+.media-actions .small-btn {
+  width: 100%;
+}
 
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 720px) {
@@ -967,6 +1016,9 @@ button:disabled {
   }
   .slideshow-stage {
     min-height: 220px;
+  }
+  .media-grid {
+    grid-template-columns: 1fr;
   }
   
   #toast-container {
