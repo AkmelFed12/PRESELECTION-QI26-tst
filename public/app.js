@@ -71,8 +71,8 @@ async function loadPublicCandidates() {
   let candidates;
   try {
     const [settingsRes, candidatesRes] = await Promise.all([
-      fetch('/api/public-settings'),
-      fetch('/api/public-candidates'),
+      fetch('/api/public-settings', { cache: 'no-store' }),
+      fetch('/api/public-candidates', { cache: 'no-store' }),
     ]);
     if (!settingsRes.ok || !candidatesRes.ok) {
       throw new Error('Erreur lors du chargement des données publiques.');
@@ -141,9 +141,11 @@ async function loadPublicCandidates() {
   updatePublicStats();
   renderPublicCandidatesList();
 
-  if (!settings.votingEnabled || Number(settings.competitionClosed || 0) === 1) {
+  const votingEnabled = Number(settings.votingEnabled || 0) === 1;
+  const competitionClosed = Number(settings.competitionClosed || 0) === 1;
+  if (!votingEnabled || competitionClosed) {
     if (voteStatusBadge) {
-      voteStatusBadge.textContent = Number(settings.competitionClosed || 0) === 1 ? 'Compétition clôturée' : 'Votes fermés';
+      voteStatusBadge.textContent = competitionClosed ? 'Compétition clôturée' : 'Votes fermés';
       voteStatusBadge.classList.remove('open');
     }
     voteStatus.textContent = 'Les votes seront ouverts prochainement.';

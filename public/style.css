@@ -1015,10 +1015,11 @@ button:disabled {
     min-width: 0;
   }
   .slideshow-stage {
-    min-height: 180px;
+    min-height: 140px;
+    max-height: 34vh;
   }
   .slide-media {
-    max-height: 52vh;
+    max-height: 34vh;
   }
   .media-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
