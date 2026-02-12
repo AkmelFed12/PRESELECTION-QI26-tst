@@ -44,6 +44,8 @@ let settingsCache = {};
 let scoresByCandidate = {};
 let contactsCache = [];
 let auditCache = [];
+let dashboardTimer = null;
+let dashboardLoading = false;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -77,84 +79,91 @@ async function authedFetch(url, options = {}) {
 }
 
 async function loadDashboard() {
-  const [candidatesRes, votesRes, rankingRes, settingsRes, contactsRes, auditRes] = await Promise.all([
-    authedFetch('/api/candidates'),
-    authedFetch('/api/votes/summary'),
-    authedFetch('/api/scores/ranking'),
-    authedFetch('/api/tournament-settings'),
-    authedFetch('/api/contact-messages'),
-    authedFetch('/api/admin-audit'),
-  ]);
+  if (dashboardLoading) return;
+  dashboardLoading = true;
+  try {
+    const [candidatesRes, votesRes, rankingRes, settingsRes, contactsRes, auditRes] = await Promise.all([
+      authedFetch('/api/candidates'),
+      authedFetch('/api/votes/summary'),
+      authedFetch('/api/scores/ranking'),
+      authedFetch('/api/tournament-settings'),
+      authedFetch('/api/contact-messages'),
+      authedFetch('/api/admin-audit'),
+    ]);
 
-  if ([candidatesRes, votesRes, rankingRes, settingsRes, contactsRes, auditRes].some((r) => r.status === 401)) {
-    loginMsg.textContent = 'Session invalide.';
-    return;
-  }
-
-  const candidates = await candidatesRes.json();
-  const votes = await votesRes.json();
-  const ranking = await rankingRes.json();
-  const settings = await settingsRes.json();
-  const contacts = await contactsRes.json();
-  const audit = await auditRes.json();
-  candidatesCache = Array.isArray(candidates) ? candidates : [];
-  votesCache = Array.isArray(votes) ? votes : [];
-  rankingCache = Array.isArray(ranking) ? ranking : [];
-  settingsCache = settings || {};
-  contactsCache = Array.isArray(contacts) ? contacts : [];
-  auditCache = Array.isArray(audit) ? audit : [];
-  scoresByCandidate = rankingCache.reduce((acc, row) => {
-    acc[row.id] = row;
-    return acc;
-  }, {});
-
-  const candidatesBody = document.querySelector('#candidatesTable tbody');
-  candidatesBody.innerHTML = candidates
-    .map(
-      (c) =>
-        `<tr><td>${c.id}</td><td>${escapeHtml(c.fullName)}</td><td>${escapeHtml(c.whatsapp || '')}</td><td>${escapeHtml(
-          c.country || '',
-        )}</td><td>${escapeHtml(c.createdAt || '')}</td></tr>`,
-    )
-    .join('');
-
-  const votesBody = document.querySelector('#votesTable tbody');
-  votesBody.innerHTML = votesCache
-    .map((v) => `<tr><td>${escapeHtml(v.fullName)}</td><td>${v.totalVotes}</td></tr>`)
-    .join('');
-
-  const rankingBody = document.querySelector('#rankingTable tbody');
-  rankingBody.innerHTML = rankingCache
-    .map((r) => `<tr><td>${escapeHtml(r.fullName)}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
-    .join('');
-
-  if (contactTableBody) {
-    renderContactsTable();
-  }
-
-  if (auditTableBody) {
-    auditTableBody.innerHTML = auditCache
-      .map(
-        (a) =>
-          `<tr><td>${escapeHtml(a.createdAt)}</td><td>${escapeHtml(a.action)}</td><td>${escapeHtml(
-            a.payload || '',
-          )}</td><td>${escapeHtml(a.ip || '')}</td></tr>`,
-      )
-      .join('');
-  }
-
-  Object.keys(settings).forEach((key) => {
-    const field = settingsForm.elements[key];
-    if (!field) return;
-    if (field.type === 'checkbox') {
-      field.checked = Number(settings[key]) === 1;
+    if ([candidatesRes, votesRes, rankingRes, settingsRes, contactsRes, auditRes].some((r) => r.status === 401)) {
+      loginMsg.textContent = 'Session invalide.';
+      stopAutoRefresh();
       return;
     }
-    field.value = settings[key];
-  });
 
-  renderCandidatesTable();
-  updateDashboard();
+    const candidates = await candidatesRes.json();
+    const votes = await votesRes.json();
+    const ranking = await rankingRes.json();
+    const settings = await settingsRes.json();
+    const contacts = await contactsRes.json();
+    const audit = await auditRes.json();
+    candidatesCache = Array.isArray(candidates) ? candidates : [];
+    votesCache = Array.isArray(votes) ? votes : [];
+    rankingCache = Array.isArray(ranking) ? ranking : [];
+    settingsCache = settings || {};
+    contactsCache = Array.isArray(contacts) ? contacts : [];
+    auditCache = Array.isArray(audit) ? audit : [];
+    scoresByCandidate = rankingCache.reduce((acc, row) => {
+      acc[row.id] = row;
+      return acc;
+    }, {});
+
+    const candidatesBody = document.querySelector('#candidatesTable tbody');
+    candidatesBody.innerHTML = candidates
+      .map(
+        (c) =>
+          `<tr><td>${c.id}</td><td>${escapeHtml(c.fullName)}</td><td>${escapeHtml(
+            c.whatsapp || '',
+          )}</td><td>${escapeHtml(c.country || '')}</td><td>${escapeHtml(c.createdAt || '')}</td></tr>`,
+      )
+      .join('');
+
+    const votesBody = document.querySelector('#votesTable tbody');
+    votesBody.innerHTML = votesCache
+      .map((v) => `<tr><td>${escapeHtml(v.fullName)}</td><td>${v.totalVotes}</td></tr>`)
+      .join('');
+
+    const rankingBody = document.querySelector('#rankingTable tbody');
+    rankingBody.innerHTML = rankingCache
+      .map((r) => `<tr><td>${escapeHtml(r.fullName)}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
+      .join('');
+
+    if (contactTableBody) {
+      renderContactsTable();
+    }
+
+    if (auditTableBody) {
+      auditTableBody.innerHTML = auditCache
+        .map(
+          (a) =>
+            `<tr><td>${escapeHtml(a.createdAt)}</td><td>${escapeHtml(a.action)}</td><td>${escapeHtml(
+              a.payload || '',
+            )}</td><td>${escapeHtml(a.ip || '')}</td></tr>`,
+        )
+        .join('');
+    }
+
+    Object.keys(settings).forEach((key) => {
+      const field = settingsForm.elements[key];
+      if (!field) return;
+      if (field.type === 'checkbox') {
+        field.checked = Number(settings[key]) === 1;
+        return;
+      }
+      field.value = settings[key];
+    });
+
+    renderCandidatesTable();
+    updateDashboard();
+  } finally {
+    dashboardLoading = false;
+  }
 }
 
 function renderCandidatesTable() {
@@ -245,6 +254,20 @@ function updateDashboard() {
   }
 }
 
+function startAutoRefresh() {
+  if (dashboardTimer) clearInterval(dashboardTimer);
+  dashboardTimer = setInterval(() => {
+    loadDashboard();
+  }, 20000);
+}
+
+function stopAutoRefresh() {
+  if (dashboardTimer) {
+    clearInterval(dashboardTimer);
+    dashboardTimer = null;
+  }
+}
+
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const { username, password } = Object.fromEntries(new FormData(loginForm).entries());
@@ -264,6 +287,7 @@ loginForm.addEventListener('submit', async (e) => {
   tablesPanel.classList.remove('hidden');
   logoutBtn.classList.remove('hidden');
   await loadDashboard();
+  startAutoRefresh();
 });
 
 settingsForm.addEventListener('submit', async (e) => {
@@ -441,6 +465,7 @@ logoutBtn?.addEventListener('click', () => {
   scorePanel.classList.add('hidden');
   tablesPanel.classList.add('hidden');
   logoutBtn.classList.add('hidden');
+  stopAutoRefresh();
 });
 
 function downloadCSV(filename, rows) {
