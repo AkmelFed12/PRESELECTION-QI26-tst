@@ -72,15 +72,27 @@ function toBasic(username, password) {
 }
 
 async function authedFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: authHeader,
-      ...(options.headers || {}),
-    },
-  });
-  return res;
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+        ...(options.headers || {}),
+      },
+    });
+    
+    // Vérifier si la réponse est OK
+    if (!res.ok && res.status !== 401) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.error || error.message || `HTTP ${res.status}`);
+    }
+    
+    return res;
+  } catch (error) {
+    console.error(`Fetch error (${url}):`, error);
+    throw error;
+  }
 }
 
 async function loadDashboard() {
@@ -280,92 +292,112 @@ function stopAutoRefresh() {
 
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const { username, password } = Object.fromEntries(new FormData(loginForm).entries());
-  
-  if (!username || !password) {
-    loginMsg.textContent = 'Identifiant et mot de passe requis.';
-    return;
-  }
-  
-  authHeader = toBasic(username, password);
+  try {
+    setFormLoading(loginForm, true);
+    
+    const { username, password } = Object.fromEntries(new FormData(loginForm).entries());
+    
+    if (!username || !password) {
+      throw new Error('Identifiant et mot de passe requis.');
+    }
+    
+    authHeader = toBasic(username, password);
 
-  const res = await authedFetch('/api/candidates');
-  if (res.status === 401) {
-    loginMsg.textContent = 'Identifiants incorrects.';
-    authHeader = ''; // réinitialiser
-    return;
-  }
+    const res = await authedFetch('/api/candidates');
+    if (res.status === 401) {
+      authHeader = ''; // réinitialiser
+      throw new Error('Identifiants incorrects.');
+    }
 
-  loginMsg.textContent = 'Connexion réussie ✓';
-  adminPanel.classList.remove('hidden');
-  dashboardPanel.classList.remove('hidden');
-  candidatesPanel.classList.remove('hidden');
-  scorePanel.classList.remove('hidden');
-  tablesPanel.classList.remove('hidden');
-  securityPanel.classList.remove('hidden');
-  logoutBtn.classList.remove('hidden');
-  loginForm.reset();
-  await loadDashboard();
-  startAutoRefresh();
+    showToast('✓ Connexion réussie', 'success');
+    adminPanel.classList.remove('hidden');
+    dashboardPanel.classList.remove('hidden');
+    candidatesPanel.classList.remove('hidden');
+    scorePanel.classList.remove('hidden');
+    tablesPanel.classList.remove('hidden');
+    securityPanel.classList.remove('hidden');
+    logoutBtn.classList.remove('hidden');
+    loginForm.reset();
+    await loadDashboard();
+    startAutoRefresh();
+  } catch (error) {
+    showToast(error.message || 'Erreur lors de la connexion', 'error');
+    authHeader = '';
+  } finally {
+    setFormLoading(loginForm, false);
+  }
 });
 
 settingsForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const payload = Object.fromEntries(new FormData(settingsForm).entries());
-  // Convertir les champs numériques en nombres, sauf les textes
-  const stringFields = ['announcementText', 'scheduleJson'];
-  Object.keys(payload).forEach((k) => {
-    if (!stringFields.includes(k)) {
-      payload[k] = Number(payload[k]);
-    }
-  });
-  payload.votingEnabled = settingsForm.elements.votingEnabled.checked ? 1 : 0;
-  payload.registrationLocked = settingsForm.elements.registrationLocked.checked ? 1 : 0;
-  payload.competitionClosed = settingsForm.elements.competitionClosed.checked ? 1 : 0;
+  try {
+    setFormLoading(settingsForm, true);
+    const payload = Object.fromEntries(new FormData(settingsForm).entries());
+    const stringFields = ['announcementText', 'scheduleJson'];
+    Object.keys(payload).forEach((k) => {
+      if (!stringFields.includes(k)) {
+        payload[k] = Number(payload[k]);
+      }
+    });
+    payload.votingEnabled = settingsForm.elements.votingEnabled.checked ? 1 : 0;
+    payload.registrationLocked = settingsForm.elements.registrationLocked.checked ? 1 : 0;
+    payload.competitionClosed = settingsForm.elements.competitionClosed.checked ? 1 : 0;
 
-  const res = await authedFetch('/api/tournament-settings', {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  settingsMsg.textContent = data.message || 'Mise à jour effectuée.';
+    const res = await authedFetch('/api/tournament-settings', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Erreur lors de la mise à jour');
+    }
+    
+    const data = await res.json();
+    showToast('✓ Paramètres mis à jour', 'success');
+  } catch (error) {
+    showToast(error.message || 'Erreur lors de la mise à jour', 'error');
+  } finally {
+    setFormLoading(settingsForm, false);
+  }
 });
 
 passwordForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const { currentPassword, newPassword, confirmPassword } = Object.fromEntries(new FormData(passwordForm).entries());
-  
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    passwordMsg.textContent = 'Tous les champs sont requis.';
-    return;
-  }
-  
-  if (newPassword !== confirmPassword) {
-    passwordMsg.textContent = 'Les mots de passe ne correspondent pas.';
-    return;
-  }
-  
-  if (newPassword.length < 8) {
-    passwordMsg.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
-    return;
-  }
+  try {
+    setFormLoading(passwordForm, true);
+    const { currentPassword, newPassword, confirmPassword } = Object.fromEntries(new FormData(passwordForm).entries());
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      throw new Error('Tous les champs sont requis.');
+    }
+    
+    if (newPassword !== confirmPassword) {
+      throw new Error('Les mots de passe ne correspondent pas.');
+    }
+    
+    if (newPassword.length < 8) {
+      throw new Error('Le mot de passe doit contenir au moins 8 caractères.');
+    }
 
-  const res = await authedFetch('/api/admin/change-password', {
-    method: 'POST',
-    body: JSON.stringify({
-      currentPassword,
-      newPassword,
-    }),
-  });
-  const data = await res.json();
-  
-  if (res.ok) {
-    passwordMsg.textContent = '✓ Mot de passe changé avec succès. Vous devez vous reconnecter.';
+    const res = await authedFetch('/api/admin/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || data.message || 'Erreur lors du changement de mot de passe');
+    }
+    
+    showToast('✓ Mot de passe changé avec succès. Vous devez vous reconnecter.', 'success');
     setTimeout(() => {
       logoutBtn.click();
     }, 1500);
-  } else {
-    passwordMsg.textContent = data.message || 'Erreur lors du changement de mot de passe.';
+  } catch (error) {
+    showToast(error.message || 'Erreur lors du changement de mot de passe', 'error');
+  } finally {
+    setFormLoading(passwordForm, false);
   }
 });
 
@@ -516,20 +548,31 @@ adminCandidatesTable?.addEventListener('click', async (e) => {
 
 scoreForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const payload = Object.fromEntries(new FormData(scoreForm).entries());
-  ['candidateId', 'themeChosenScore', 'themeImposedScore'].forEach((k) => {
-    payload[k] = Number(payload[k] || 0);
-  });
+  try {
+    setFormLoading(scoreForm, true);
+    const payload = Object.fromEntries(new FormData(scoreForm).entries());
+    ['candidateId', 'themeChosenScore', 'themeImposedScore'].forEach((k) => {
+      payload[k] = Number(payload[k] || 0);
+    });
 
-  const res = await authedFetch('/api/scores', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  scoreMsg.textContent = data.message || 'Notation enregistrée.';
-  if (res.ok) {
+    const res = await authedFetch('/api/scores', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || data.message || 'Erreur lors de la notation');
+    }
+    
+    const data = await res.json();
+    showToast('✓ Notation enregistrée', 'success');
     scoreForm.reset();
     await loadDashboard();
+  } catch (error) {
+    showToast(error.message || 'Erreur lors de la notation', 'error');
+  } finally {
+    setFormLoading(scoreForm, false);
   }
 });
 

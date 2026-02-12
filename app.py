@@ -6,6 +6,8 @@ import re
 import smtplib
 import time
 import uuid
+import html
+import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from email import policy
 from email.parser import BytesParser
@@ -18,6 +20,15 @@ import requests
 
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
+
+# ==================== GESTION D'ERREURS ====================
+class APIError(Exception):
+    """Exception personnalisée pour les erreurs API"""
+    def __init__(self, message, status_code=400, details=None):
+        self.message = message
+        self.status_code = status_code
+        self.details = details or {}
+        super().__init__(self.message)
 
 # Admin credentials - utiliser des variables d'environnement en production
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
@@ -194,21 +205,49 @@ def init_db():
 
 class Handler(BaseHTTPRequestHandler):
     def _set_security_headers(self):
+        # Sécurité standard
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-XSS-Protection", "1; mode=block")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        
+        # CORS - Accepter les requêtes du même domaine et locales
+        origin = self.headers.get("Origin", "")
+        if not origin or origin.endswith(("localhost", ".local", "127.0.0.1")):
+            self.send_header("Access-Control-Allow-Origin", origin or "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Max-Age", "3600")
+        
         if self._is_https():
             self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 
     def _send_json(self, payload, status=200):
-        data = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self._set_security_headers()
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        """Envoie une réponse JSON avec gestion d'erreurs"""
+        try:
+            # S'assurer que payload est un dict
+            if not isinstance(payload, dict):
+                payload = {"data": payload}
+            
+            data = json.dumps(payload).encode("utf-8")
+            self.send_response(status)
+            self._set_security_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception as e:
+            print(f"Error sending JSON response: {e}")
+            try:
+                fallback = json.dumps({"error": "Erreur serveur interne"}).encode("utf-8")
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(fallback)))
+                self.end_headers()
+                self.wfile.write(fallback)
+            except:
+                pass
 
     def _get_json(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -329,14 +368,32 @@ class Handler(BaseHTTPRequestHandler):
             }
         return fields
 
+    def do_OPTIONS(self):
+        """Gérer les requêtes OPTIONS pour CORS preflight"""
+        self.send_response(200)
+        self._set_security_headers()
+        self.end_headers()
+
+    def _handle_api_error(self, error):
+        """Gère une erreur API et envoie la réponse appropriée"""
+        if isinstance(error, APIError):
+            self._send_json({"error": error.message, **error.details}, error.status_code)
+        else:
+            # Erreur non prévue
+            error_msg = str(error)
+            print(f"Unexpected error: {error_msg}")
+            print(traceback.format_exc())
+            self._send_json({"error": "Erreur serveur interne"}, 500)
+
     def do_GET(self):
-        parsed = urlparse(self.path)
-        path = parsed.path
+        try:
+            parsed = urlparse(self.path)
+            path = parsed.path
 
-        if path == "/":
-            return self._serve_file("index.html")
+            if path == "/":
+                return self._serve_file("index.html")
 
-        if path.startswith("/api/"):
+            if path.startswith("/api/"):
             if not self._require_db():
                 return
 
@@ -510,9 +567,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json({"message": "Not found"}, 404)
 
         return self._serve_file(path)
+        except APIError as error:
+            self._handle_api_error(error)
+        except Exception as error:
+            self._handle_api_error(error)
 
     def do_POST(self):
-        parsed = urlparse(self.path)
+        try:
+            parsed = urlparse(self.path)
         path = parsed.path
 
         if path == "/api/admin/change-password":
@@ -982,9 +1044,14 @@ class Handler(BaseHTTPRequestHandler):
             conn.commit()
         self._audit("settings_update", {"fields": list(payload.keys())})
         return self._send_json({"message": "Paramètres du tournoi mis à jour."})
+        except APIError as error:
+            self._handle_api_error(error)
+        except Exception as error:
+            self._handle_api_error(error)
 
     def do_DELETE(self):
-        path = urlparse(self.path).path
+        try:
+            path = urlparse(self.path).path
         if path.startswith("/api/contact-messages/"):
             if not self._require_admin():
                 return
@@ -1018,6 +1085,10 @@ class Handler(BaseHTTPRequestHandler):
             conn.commit()
         self._audit("candidate_delete", {"id": candidate_id})
         return self._send_json({"message": "Candidat supprimé."})
+        except APIError as error:
+            self._handle_api_error(error)
+        except Exception as error:
+            self._handle_api_error(error)
 
 
 def get_client_ip(handler):
@@ -1025,6 +1096,58 @@ def get_client_ip(handler):
     if forwarded:
         return forwarded.split(",")[0].strip()
     return handler.client_address[0] if handler.client_address else "unknown"
+
+
+# ==================== SÉCURITÉ ====================
+def sanitize_string(value, max_length=None):
+    """Nettoie et valide une chaîne pour prévenir XSS"""
+    if not isinstance(value, str):
+        return ""
+    # Échapper HTML
+    value = html.escape(value).strip()
+    # Limiter la longueur
+    if max_length:
+        value = value[:max_length]
+    return value
+
+
+def sanitize_json(obj):
+    """Nettoie récursivement un objet JSON"""
+    if isinstance(obj, dict):
+        return {sanitize_string(k): sanitize_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_json(item) for item in obj]
+    elif isinstance(obj, str):
+        return sanitize_string(obj)
+    return obj
+
+
+def validate_email(email):
+    """Valide un email"""
+    if not email or not isinstance(email, str):
+        return False
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return len(email) <= 120 and re.match(pattern, email) is not None
+
+
+def validate_phone(phone):
+    """Valide un numéro de téléphone"""
+    if not phone or not isinstance(phone, str):
+        return False
+    digits = re.sub(r'\D', '', phone)
+    return 8 <= len(digits) <= 20
+
+
+def hash_password(password):
+    """Hash un mot de passe avec SHA256"""
+    if not password:
+        return ""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def check_password(password, hashed):
+    """Vérifie un mot de passe"""
+    return hash_password(password) == hashed
 
 
 def check_rate_limit(ip, action):

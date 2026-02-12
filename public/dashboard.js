@@ -21,6 +21,8 @@ function escapeHtml(value) {
 async function loadDashboardStats() {
   try {
     const res = await fetch('/api/public-results');
+    if (!res.ok) throw new Error('Erreur lors du chargement des statistiques');
+    
     const data = await res.json();
     const candidates = data.candidates || [];
     const stats = data.stats || {};
@@ -39,8 +41,9 @@ async function loadDashboardStats() {
     updateCountryVotesChart(candidates);
     updateCandidatesProgressChart(candidates);
     updateTopCandidatesList(candidates);
-  } catch (e) {
-    console.error('Error loading dashboard stats:', e);
+  } catch (error) {
+    console.error('Error loading dashboard stats:', error);
+    showToast('Erreur lors du chargement du tableau de bord', 'error');
   }
 }
 

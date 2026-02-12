@@ -90,28 +90,39 @@ function renderResults() {
 
 async function loadResults() {
   if (!resultsGrid) return;
-  const res = await fetch('/api/public-results');
-  const data = await res.json();
-  resultsCache = Array.isArray(data.candidates) ? data.candidates : [];
-  const stats = data.stats || {};
-  
-  // Charger les qualifiés
   try {
-    const qualRes = await fetch('/api/public-results/qualified');
-    const qualData = await qualRes.json();
-    if (qualData.qualifiedIds) {
-      qualifiedIds = new Set(qualData.qualifiedIds);
+    const res = await fetch('/api/public-results');
+    if (!res.ok) throw new Error('Erreur lors du chargement des résultats');
+    
+    const data = await res.json();
+    resultsCache = Array.isArray(data.candidates) ? data.candidates : [];
+    const stats = data.stats || {};
+    
+    // Charger les qualifiés
+    try {
+      const qualRes = await fetch('/api/public-results/qualified');
+      if (qualRes.ok) {
+        const qualData = await qualRes.json();
+        if (qualData.qualifiedIds) {
+          qualifiedIds = new Set(qualData.qualifiedIds);
+        }
+      }
+    } catch (e) {
+      console.warn('Qualification endpoint not available:', e);
     }
-  } catch (e) {
-    // L'endpoint peut ne pas exister encore
-    console.log('Qualification endpoint not available yet');
+    
+    if (resultStatCandidates) resultStatCandidates.textContent = stats.totalCandidates || 0;
+    if (resultStatVotes) resultStatVotes.textContent = stats.totalVotes || 0;
+    if (resultStatCountries) resultStatCountries.textContent = stats.countries || 0;
+    if (resultStatCities) resultStatCities.textContent = stats.cities || 0;
+    renderResults();
+  } catch (error) {
+    console.error('Error loading results:', error);
+    showToast('Erreur lors du chargement des résultats', 'error');
+    if (resultsGrid) {
+      resultsGrid.innerHTML = '<div class="empty">Erreur lors du chargement des résultats.</div>';
+    }
   }
-  
-  if (resultStatCandidates) resultStatCandidates.textContent = stats.totalCandidates || 0;
-  if (resultStatVotes) resultStatVotes.textContent = stats.totalVotes || 0;
-  if (resultStatCountries) resultStatCountries.textContent = stats.countries || 0;
-  if (resultStatCities) resultStatCities.textContent = stats.cities || 0;
-  renderResults();
 }
 
 resultsSearch?.addEventListener('input', renderResults);

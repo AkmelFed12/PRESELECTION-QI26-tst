@@ -134,6 +134,10 @@ async function loadCandidates() {
       fetch('/api/public-settings'),
     ]);
     
+    if (!candidatesRes.ok || !settingsRes.ok) {
+      throw new Error('Erreur lors du chargement des données');
+    }
+    
     const candidates = await candidatesRes.json();
     settings = await settingsRes.json();
 
@@ -149,8 +153,9 @@ async function loadCandidates() {
     }
 
     renderCandidates();
-  } catch (e) {
-    console.error('Error loading candidates:', e);
+  } catch (error) {
+    console.error('Error loading candidates:', error);
+    showToast('Erreur lors du chargement des candidats', 'error');
     candidatesGrid.innerHTML = '<div class="empty">Erreur lors du chargement des candidats.</div>';
   }
 }
@@ -158,22 +163,21 @@ async function loadCandidates() {
 async function submitVote(e) {
   e.preventDefault();
   
-  if (!selectedCandidateId) return;
-  
-  const name = (voterName.value || '').trim();
-  const contact = (voterContact.value || '').trim();
-
-  if (!name) {
-    voteMsg.textContent = 'Veuillez entrer votre nom.';
-    return;
-  }
-
-  voteForm.style.opacity = '0.5';
-  voteForm.style.pointerEvents = 'none';
-  voteMsg.textContent = 'Enregistrement du vote...';
-
   try {
-    const res = await fetch('/api/votes', {
+    setFormLoading(voteForm, true);
+    
+    if (!selectedCandidateId) {
+      throw new Error('Veuillez sélectionner un candidat');
+    }
+    
+    const name = (voterName.value || '').trim();
+    const contact = (voterContact.value || '').trim();
+
+    if (!name) {
+      throw new Error('Veuillez entrer votre nom');
+    }
+
+    const response = await fetch('/api/votes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -183,25 +187,20 @@ async function submitVote(e) {
       }),
     });
 
-    const data = await res.json();
-
-    if (res.ok) {
-      voteMsg.textContent = '✓ Vote enregistré avec succès !';
-      voteForm.reset();
-      setTimeout(() => {
-        voteModal.classList.add('hidden');
-        voteMsg.textContent = '';
-        loadCandidates();
-      }, 1500);
-    } else {
-      voteMsg.textContent = data.message || 'Erreur lors du vote.';
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || error.message || 'Erreur lors du vote');
     }
-  } catch (e) {
-    console.error('Vote error:', e);
-    voteMsg.textContent = 'Erreur réseau. Veuillez réessayer.';
+
+    const data = await response.json();
+    showToast('✓ Vote enregistré avec succès!', 'success');
+    voteForm.reset();
+    voteModal.classList.add('hidden');
+    await loadCandidates();
+  } catch (error) {
+    showToast(error.message || 'Erreur lors du vote', 'error');
   } finally {
-    voteForm.style.opacity = '1';
-    voteForm.style.pointerEvents = 'auto';
+    setFormLoading(voteForm, false);
   }
 }
 
