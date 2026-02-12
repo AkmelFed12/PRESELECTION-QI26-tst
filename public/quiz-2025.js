@@ -1,18 +1,36 @@
 const galleryStatus = document.getElementById('galleryStatus');
 const slideImage = document.getElementById('slideImage');
 const slideVideo = document.getElementById('slideVideo');
+const slideshowStage = document.getElementById('slideshowStage');
 const prevSlideBtn = document.getElementById('prevSlide');
 const nextSlideBtn = document.getElementById('nextSlide');
 const toggleAutoBtn = document.getElementById('toggleAuto');
 const downloadMediaBtn = document.getElementById('downloadMedia');
 const slideCounter = document.getElementById('slideCounter');
 const mediaGrid = document.getElementById('mediaGrid');
+const mediaSearch = document.getElementById('mediaSearch');
+const mediaTypeFilter = document.getElementById('mediaTypeFilter');
+const mediaSort = document.getElementById('mediaSort');
+const retryLoadBtn = document.getElementById('retryLoad');
+const downloadAllZip = document.getElementById('downloadAllZip');
+const mediaStats = document.getElementById('mediaStats');
+const prevPageBtn = document.getElementById('prevPage');
+const nextPageBtn = document.getElementById('nextPage');
+const pageInfo = document.getElementById('pageInfo');
 
 const IMAGE_DURATION_MS = 5000;
+const PAGE_SIZE = 30;
+
 let mediaItems = [];
 let currentIndex = 0;
 let autoTimer = null;
 let autoEnabled = true;
+let lastTrackedMediaName = '';
+let pagination = { page: 1, totalPages: 1, total: 0 };
+let filters = { type: 'all', search: '', sort: 'newest' };
+let mediaStatsCache = { totalMedia: 0, totalViews: 0, totalDownloads: 0 };
+let touchStartX = 0;
+let touchEndX = 0;
 
 function stopAutoPlay() {
   if (autoTimer) {
@@ -24,13 +42,24 @@ function stopAutoPlay() {
 function scheduleNext() {
   stopAutoPlay();
   if (!autoEnabled || mediaItems.length <= 1) return;
-  autoTimer = setTimeout(() => {
-    nextSlide();
-  }, IMAGE_DURATION_MS);
+  autoTimer = setTimeout(nextSlide, IMAGE_DURATION_MS);
 }
 
 function updateCounter() {
   slideCounter.textContent = `${mediaItems.length ? currentIndex + 1 : 0} / ${mediaItems.length}`;
+}
+
+function updatePaginationInfo() {
+  pageInfo.textContent = `Page ${pagination.page} / ${pagination.totalPages}`;
+  prevPageBtn.disabled = pagination.page <= 1;
+  nextPageBtn.disabled = pagination.page >= pagination.totalPages;
+}
+
+function updateStatsText() {
+  mediaStats.textContent =
+    `Médias: ${mediaStatsCache.totalMedia || 0} | ` +
+    `Vues: ${mediaStatsCache.totalViews || 0} | ` +
+    `Téléchargements: ${mediaStatsCache.totalDownloads || 0}`;
 }
 
 function splitBaseName(filename = '') {
@@ -39,10 +68,8 @@ function splitBaseName(filename = '') {
 }
 
 async function triggerDownload(url, filename) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Téléchargement impossible');
-  }
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error('Téléchargement impossible');
   const blob = await response.blob();
   const blobUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -79,6 +106,14 @@ function downloadImageAsFormat(url, baseName, format) {
   img.src = url;
 }
 
+function updateDownloadLink(item) {
+  if (!downloadMediaBtn || !item || !item.url) return;
+  downloadMediaBtn.classList.remove('hidden');
+  downloadMediaBtn.dataset.url = item.url;
+  downloadMediaBtn.dataset.filename = item.name || (item.type === 'video' ? 'video-quiz-2025' : 'image-quiz-2025');
+  downloadMediaBtn.textContent = item.type === 'video' ? 'Télécharger la vidéo' : 'Télécharger l’image';
+}
+
 function renderMediaGrid() {
   if (!mediaGrid) return;
   if (!mediaItems.length) {
@@ -88,13 +123,12 @@ function renderMediaGrid() {
   mediaGrid.innerHTML = mediaItems
     .map((item, idx) => {
       const safeName = escapeHtml(item.name || `media-${idx + 1}`);
+      const safeCaption = escapeHtml(item.caption || '');
       const preview = item.type === 'video'
         ? `<video src="${item.url}" preload="metadata" muted playsinline></video>`
         : `<img src="${item.url}" alt="${safeName}" loading="lazy" decoding="async" />`;
       const actions = item.type === 'video'
-        ? `
-          <button type="button" class="small-btn" data-action="download-original" data-index="${idx}">Télécharger vidéo</button>
-        `
+        ? `<button type="button" class="small-btn" data-action="download-original" data-index="${idx}">Télécharger vidéo</button>`
         : `
           <button type="button" class="small-btn" data-action="download-original" data-index="${idx}">Original</button>
           <button type="button" class="small-btn" data-action="download-jpg" data-index="${idx}">JPG</button>
@@ -104,6 +138,7 @@ function renderMediaGrid() {
         <article class="media-card" data-index="${idx}">
           <div class="media-preview">${preview}</div>
           <p class="media-name">${safeName}</p>
+          ${safeCaption ? `<p class="media-caption">${safeCaption}</p>` : ''}
           <div class="media-actions">${actions}</div>
         </article>
       `;
@@ -119,15 +154,27 @@ function updateActiveMediaCard() {
   });
 }
 
-function updateDownloadLink(item) {
-  if (!downloadMediaBtn || !item || !item.url) return;
-  downloadMediaBtn.classList.remove('hidden');
-  downloadMediaBtn.dataset.url = item.url;
-  downloadMediaBtn.dataset.filename = item.name || (item.type === 'video' ? 'video-quiz-2025' : 'image-quiz-2025');
-  downloadMediaBtn.textContent = item.type === 'video' ? 'Télécharger la vidéo' : 'Télécharger l’image';
+async function trackEvent(item, event) {
+  if (!item || !item.name) return;
+  try {
+    await fetch('/api/public-media/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: item.name, event }),
+      keepalive: true,
+    });
+  } catch (_) {}
 }
 
-function renderSlide() {
+function preloadNextImage() {
+  if (!mediaItems.length) return;
+  const next = mediaItems[(currentIndex + 1) % mediaItems.length];
+  if (!next || next.type !== 'image') return;
+  const img = new Image();
+  img.src = next.url;
+}
+
+async function renderSlide() {
   if (!mediaItems.length) {
     galleryStatus.textContent = 'Aucun média disponible pour le moment.';
     slideImage.classList.add('hidden');
@@ -138,12 +185,13 @@ function renderSlide() {
       delete downloadMediaBtn.dataset.filename;
     }
     updateCounter();
+    updateActiveMediaCard();
     stopAutoPlay();
     return;
   }
 
   const item = mediaItems[currentIndex];
-  galleryStatus.textContent = item.name || 'Média';
+  galleryStatus.textContent = item.caption?.trim() ? item.caption : (item.name || 'Média');
   updateDownloadLink(item);
 
   if (item.type === 'video') {
@@ -153,9 +201,7 @@ function renderSlide() {
     slideVideo.src = item.url;
     slideVideo.load();
     const playPromise = slideVideo.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {});
-    }
+    if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
     stopAutoPlay();
   } else {
     slideVideo.pause();
@@ -164,10 +210,15 @@ function renderSlide() {
     slideImage.classList.remove('hidden');
     slideImage.src = item.url;
     scheduleNext();
+    preloadNextImage();
   }
 
   updateCounter();
   updateActiveMediaCard();
+  if (item.name !== lastTrackedMediaName) {
+    lastTrackedMediaName = item.name;
+    trackEvent(item, 'view');
+  }
 }
 
 function previousSlide() {
@@ -185,28 +236,74 @@ function nextSlide() {
 function toggleAutoPlay() {
   autoEnabled = !autoEnabled;
   toggleAutoBtn.textContent = autoEnabled ? 'Pause' : 'Lecture auto';
-  if (autoEnabled) {
-    renderSlide();
+  if (autoEnabled) renderSlide();
+  else stopAutoPlay();
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    slideshowStage.requestFullscreen?.();
   } else {
-    stopAutoPlay();
+    document.exitFullscreen?.();
   }
 }
 
-async function loadMedia() {
+function buildMediaQuery() {
+  const query = new URLSearchParams({
+    page: String(pagination.page),
+    pageSize: String(PAGE_SIZE),
+    type: filters.type,
+    sort: filters.sort,
+    search: filters.search,
+  });
+  return query.toString();
+}
+
+async function loadStats() {
   try {
-    const response = await fetch('/api/public-media');
+    const response = await fetch('/api/public-media/stats', { cache: 'no-store' });
+    if (!response.ok) return;
+    mediaStatsCache = await response.json();
+    updateStatsText();
+  } catch (_) {}
+}
+
+async function loadMedia(resetPage = false) {
+  if (resetPage) pagination.page = 1;
+  try {
+    const query = buildMediaQuery();
+    const response = await fetch(`/api/public-media?${query}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Erreur de chargement');
     const data = await response.json();
     mediaItems = Array.isArray(data.items) ? data.items : [];
+    pagination = data.pagination || { page: 1, totalPages: 1, total: mediaItems.length };
     currentIndex = 0;
-    renderSlide();
     renderMediaGrid();
-    updateActiveMediaCard();
+    await renderSlide();
+    updatePaginationInfo();
+    downloadAllZip.href = `/api/public-media/download-all?${query}`;
+    await loadStats();
   } catch (error) {
     galleryStatus.textContent = 'Impossible de charger la galerie.';
     showToast('Erreur de chargement de la galerie', 'error');
   }
 }
+
+slideVideo?.addEventListener('ended', () => {
+  if (!autoEnabled) return;
+  nextSlide();
+});
+
+slideshowStage?.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+});
+slideshowStage?.addEventListener('touchend', (e) => {
+  touchEndX = e.changedTouches[0].screenX;
+  const delta = touchEndX - touchStartX;
+  if (Math.abs(delta) < 40) return;
+  if (delta > 0) previousSlide();
+  else nextSlide();
+});
 
 mediaGrid?.addEventListener('click', async (event) => {
   const target = event.target.closest('button[data-action], .media-card');
@@ -230,7 +327,9 @@ mediaGrid?.addEventListener('click', async (event) => {
   if (action === 'download-original') {
     try {
       await triggerDownload(item.url, item.name || `${baseName}.bin`);
-    } catch (error) {
+      trackEvent(item, 'download');
+      await loadStats();
+    } catch (_) {
       showToast('Téléchargement impossible', 'error');
     }
     return;
@@ -241,23 +340,16 @@ mediaGrid?.addEventListener('click', async (event) => {
   }
   if (action === 'download-jpg') {
     downloadImageAsFormat(item.url, baseName, 'jpg');
+    trackEvent(item, 'download');
+    await loadStats();
     return;
   }
   if (action === 'download-png') {
     downloadImageAsFormat(item.url, baseName, 'png');
+    trackEvent(item, 'download');
+    await loadStats();
   }
 });
-
-slideVideo?.addEventListener('ended', () => {
-  if (!autoEnabled) return;
-  nextSlide();
-});
-
-prevSlideBtn?.addEventListener('click', previousSlide);
-nextSlideBtn?.addEventListener('click', nextSlide);
-toggleAutoBtn?.addEventListener('click', toggleAutoPlay);
-
-loadMedia();
 
 downloadMediaBtn?.addEventListener('click', async () => {
   const url = downloadMediaBtn.dataset.url;
@@ -265,7 +357,53 @@ downloadMediaBtn?.addEventListener('click', async () => {
   if (!url) return;
   try {
     await triggerDownload(url, filename);
-  } catch (error) {
+    const current = mediaItems[currentIndex];
+    if (current) {
+      trackEvent(current, 'download');
+      await loadStats();
+    }
+  } catch (_) {
     showToast('Téléchargement impossible', 'error');
   }
 });
+
+prevSlideBtn?.addEventListener('click', previousSlide);
+nextSlideBtn?.addEventListener('click', nextSlide);
+toggleAutoBtn?.addEventListener('click', toggleAutoPlay);
+retryLoadBtn?.addEventListener('click', () => loadMedia(false));
+prevPageBtn?.addEventListener('click', () => {
+  if (pagination.page <= 1) return;
+  pagination.page -= 1;
+  loadMedia(false);
+});
+nextPageBtn?.addEventListener('click', () => {
+  if (pagination.page >= pagination.totalPages) return;
+  pagination.page += 1;
+  loadMedia(false);
+});
+mediaSearch?.addEventListener('input', debounce(() => {
+  filters.search = (mediaSearch.value || '').trim();
+  loadMedia(true);
+}, 250));
+mediaTypeFilter?.addEventListener('change', () => {
+  filters.type = mediaTypeFilter.value || 'all';
+  loadMedia(true);
+});
+mediaSort?.addEventListener('change', () => {
+  filters.sort = mediaSort.value || 'newest';
+  loadMedia(true);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft') previousSlide();
+  if (event.key === 'ArrowRight') nextSlide();
+  if (event.key === 'f' || event.key === 'F') toggleFullscreen();
+  if (event.key === ' ') {
+    event.preventDefault();
+    toggleAutoPlay();
+  }
+});
+
+slideshowStage?.addEventListener('dblclick', toggleFullscreen);
+
+loadMedia(true);

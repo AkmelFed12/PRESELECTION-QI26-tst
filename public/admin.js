@@ -31,6 +31,12 @@ const contactFilter = document.getElementById('contactFilter');
 const contactSearch = document.getElementById('contactSearch');
 const auditTableBody = document.querySelector('#auditTable tbody');
 const exportAudit = document.getElementById('exportAudit');
+const mediaAdminStats = document.getElementById('mediaAdminStats');
+const mediaSearchAdmin = document.getElementById('mediaSearchAdmin');
+const mediaTypeAdmin = document.getElementById('mediaTypeAdmin');
+const mediaSortAdmin = document.getElementById('mediaSortAdmin');
+const mediaAdminReload = document.getElementById('mediaAdminReload');
+const mediaAdminTableBody = document.querySelector('#mediaAdminTable tbody');
 const statCandidates = document.getElementById('statCandidates');
 const statVotes = document.getElementById('statVotes');
 const statScores = document.getElementById('statScores');
@@ -49,8 +55,10 @@ let settingsCache = {};
 let scoresByCandidate = {};
 let contactsCache = [];
 let auditCache = [];
+let mediaAdminCache = [];
 let dashboardTimer = null;
 let dashboardLoading = false;
+let mediaAdminFilters = { search: '', type: 'all', sort: 'newest' };
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -276,6 +284,57 @@ function updateDashboard() {
   }
 }
 
+function buildMediaAdminQuery(page = 1) {
+  const q = new URLSearchParams({
+    page: String(page),
+    pageSize: '60',
+    type: mediaAdminFilters.type || 'all',
+    sort: mediaAdminFilters.sort || 'newest',
+    search: mediaAdminFilters.search || '',
+  });
+  return q.toString();
+}
+
+async function loadMediaAdmin() {
+  if (!mediaAdminTableBody) return;
+  try {
+    const [mediaRes, statsRes] = await Promise.all([
+      authedFetch(`/api/admin/media?${buildMediaAdminQuery()}`),
+      authedFetch('/api/public-media/stats'),
+    ]);
+    if (mediaRes.status === 401 || statsRes.status === 401) return;
+    const mediaData = await mediaRes.json();
+    const statsData = await statsRes.json();
+    mediaAdminCache = Array.isArray(mediaData.items) ? mediaData.items : [];
+    if (mediaAdminStats) {
+      mediaAdminStats.textContent =
+        `Médias: ${statsData.totalMedia || 0} | ` +
+        `Vues: ${statsData.totalViews || 0} | ` +
+        `Téléchargements: ${statsData.totalDownloads || 0}`;
+    }
+    renderMediaAdminTable();
+  } catch (error) {
+    showToast(error.message || 'Erreur chargement galerie admin', 'error');
+  }
+}
+
+function renderMediaAdminTable() {
+  if (!mediaAdminTableBody) return;
+  mediaAdminTableBody.innerHTML = mediaAdminCache
+    .map((m) => `
+      <tr data-media-name="${encodeURIComponent(m.name)}">
+        <td>${escapeHtml(m.name)}</td>
+        <td>${escapeHtml(m.type)}</td>
+        <td><input type="number" class="media-order-input" value="${Number(m.order || 0)}" /></td>
+        <td><input type="checkbox" class="media-hidden-input" ${m.hidden ? 'checked' : ''} /></td>
+        <td><input type="text" class="media-caption-input" value="${escapeHtml(m.caption || '')}" maxlength="240" /></td>
+        <td>${Number(m.views || 0)} vues / ${Number(m.downloads || 0)} dl</td>
+        <td><button type="button" class="small-btn" data-action="save-media">Enregistrer</button></td>
+      </tr>
+    `)
+    .join('');
+}
+
 function startAutoRefresh() {
   if (dashboardTimer) clearInterval(dashboardTimer);
   dashboardTimer = setInterval(() => {
@@ -319,6 +378,7 @@ loginForm.addEventListener('submit', async (e) => {
     logoutBtn.classList.remove('hidden');
     loginForm.reset();
     await loadDashboard();
+    await loadMediaAdmin();
     startAutoRefresh();
   } catch (error) {
     showToast(error.message || 'Erreur lors de la connexion', 'error');
@@ -793,5 +853,50 @@ contactTableBody?.addEventListener('click', async (e) => {
       );
       renderContactsTable();
     }
+  }
+});
+
+mediaAdminReload?.addEventListener('click', () => {
+  loadMediaAdmin();
+});
+
+mediaSearchAdmin?.addEventListener('input', debounce(() => {
+  mediaAdminFilters.search = (mediaSearchAdmin.value || '').trim();
+  loadMediaAdmin();
+}, 250));
+mediaTypeAdmin?.addEventListener('change', () => {
+  mediaAdminFilters.type = mediaTypeAdmin.value || 'all';
+  loadMediaAdmin();
+});
+mediaSortAdmin?.addEventListener('change', () => {
+  mediaAdminFilters.sort = mediaSortAdmin.value || 'newest';
+  loadMediaAdmin();
+});
+
+mediaAdminTableBody?.addEventListener('click', async (e) => {
+  const button = e.target.closest('button[data-action="save-media"]');
+  if (!button) return;
+  const row = button.closest('tr[data-media-name]');
+  if (!row) return;
+  const mediaName = decodeURIComponent(row.dataset.mediaName || '');
+  const orderInput = row.querySelector('.media-order-input');
+  const hiddenInput = row.querySelector('.media-hidden-input');
+  const captionInput = row.querySelector('.media-caption-input');
+  const payload = {
+    order: Number(orderInput?.value || 0),
+    hidden: !!hiddenInput?.checked,
+    caption: (captionInput?.value || '').trim(),
+  };
+  try {
+    const res = await authedFetch(`/api/admin/media/${encodeURIComponent(mediaName)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.message || 'Erreur de sauvegarde');
+    showToast('Média mis à jour', 'success');
+    await loadMediaAdmin();
+  } catch (error) {
+    showToast(error.message || 'Erreur de sauvegarde', 'error');
   }
 });

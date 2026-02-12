@@ -280,6 +280,38 @@
             <tbody></tbody>
           </table>
         </div>
+        <div class="table-wrap">
+          <h3>Gestion galerie Quiz 2025</h3>
+          <p id="mediaAdminStats" class="muted-note">Médias: 0 | Vues: 0 | Téléchargements: 0</p>
+          <div class="table-actions">
+            <input id="mediaSearchAdmin" type="search" placeholder="Rechercher un média..." />
+            <select id="mediaTypeAdmin">
+              <option value="all">Tous</option>
+              <option value="image">Photos</option>
+              <option value="video">Vidéos</option>
+            </select>
+            <select id="mediaSortAdmin">
+              <option value="newest">Plus récents</option>
+              <option value="oldest">Plus anciens</option>
+              <option value="name">Nom (A-Z)</option>
+            </select>
+            <button class="small-btn" id="mediaAdminReload" type="button">Rafraîchir</button>
+          </div>
+          <table id="mediaAdminTable">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Type</th>
+                <th>Ordre</th>
+                <th>Masqué</th>
+                <th>Légende</th>
+                <th>Stats</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
     </main>
 

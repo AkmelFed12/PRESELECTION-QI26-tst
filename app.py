@@ -2,6 +2,7 @@ import base64
 import datetime
 import hmac
 import hashlib
+import io
 import json
 import os
 import re
@@ -11,11 +12,12 @@ import time
 import uuid
 import html
 import traceback
+import zipfile
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from email import policy
 from email.parser import BytesParser
 from pathlib import Path
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import psycopg
 from psycopg.rows import dict_row
@@ -34,6 +36,8 @@ QUIZ_2025_ALLOWED_EXT = {
     ".webm": "video/webm",
     ".mov": "video/quicktime",
 }
+QUIZ_2025_META_FILE = ".quiz_media_meta.json"
+MEDIA_EVENTS = {}
 
 # ==================== GESTION D'ERREURS ====================
 class APIError(Exception):
@@ -400,10 +404,39 @@ class Handler(BaseHTTPRequestHandler):
     def _quiz_media_root(self):
         return Path(QUIZ_2025_MEDIA_DIR).resolve()
 
-    def _list_quiz_media(self):
+    def _quiz_media_meta_path(self):
+        return self._quiz_media_root() / QUIZ_2025_META_FILE
+
+    def _load_quiz_media_meta(self):
+        path = self._quiz_media_meta_path()
+        if not path.exists() or not path.is_file():
+            return {}
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            return raw if isinstance(raw, dict) else {}
+        except Exception:
+            return {}
+
+    def _save_quiz_media_meta(self, meta):
+        path = self._quiz_media_meta_path()
+        try:
+            path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+            return True
+        except Exception:
+            return False
+
+    def _media_event_stats(self, name):
+        stats = MEDIA_EVENTS.get(name, {})
+        return {
+            "views": int(stats.get("views", 0)),
+            "downloads": int(stats.get("downloads", 0)),
+        }
+
+    def _list_quiz_media(self, include_hidden=False):
         root = self._quiz_media_root()
         if not root.exists() or not root.is_dir():
             return []
+        meta = self._load_quiz_media_meta()
         items = []
         for file in sorted(root.iterdir(), key=lambda x: x.name.lower()):
             if not file.is_file():
@@ -411,15 +444,73 @@ class Handler(BaseHTTPRequestHandler):
             ext = file.suffix.lower()
             if ext not in QUIZ_2025_ALLOWED_EXT:
                 continue
+            file_meta = meta.get(file.name, {}) if isinstance(meta.get(file.name), dict) else {}
+            hidden = bool(file_meta.get("hidden", False))
+            if hidden and not include_hidden:
+                continue
             media_type = "video" if QUIZ_2025_ALLOWED_EXT[ext].startswith("video/") else "image"
+            stats = self._media_event_stats(file.name)
             items.append(
                 {
                     "name": file.name,
                     "url": f"/media/{quote(file.name)}",
                     "type": media_type,
+                    "caption": str(file_meta.get("caption", "")),
+                    "order": int(file_meta.get("order", 0) or 0),
+                    "hidden": hidden,
+                    "createdAt": datetime.datetime.fromtimestamp(file.stat().st_mtime, tz=datetime.timezone.utc).isoformat(),
+                    "sizeBytes": int(file.stat().st_size),
+                    "views": stats["views"],
+                    "downloads": stats["downloads"],
                 }
             )
         return items
+
+    def _apply_media_query(self, items, query, paginate=True):
+        def _safe_int(raw, fallback):
+            try:
+                return int(raw)
+            except Exception:
+                return fallback
+
+        media_type = (query.get("type", ["all"])[0] or "all").lower()
+        search = (query.get("search", [""])[0] or "").strip().lower()
+        sort = (query.get("sort", ["newest"])[0] or "newest").lower()
+        page = max(1, _safe_int(query.get("page", ["1"])[0] or 1, 1))
+        page_size = min(80, max(1, _safe_int(query.get("pageSize", ["30"])[0] or 30, 30)))
+
+        filtered = items
+        if media_type in {"image", "video"}:
+            filtered = [x for x in filtered if x.get("type") == media_type]
+        if search:
+            filtered = [x for x in filtered if search in str(x.get("name", "")).lower() or search in str(x.get("caption", "")).lower()]
+
+        if sort == "name":
+            filtered = sorted(filtered, key=lambda x: str(x.get("name", "")).lower())
+        elif sort == "oldest":
+            filtered = sorted(filtered, key=lambda x: str(x.get("createdAt", "")))
+        else:
+            filtered = sorted(filtered, key=lambda x: str(x.get("createdAt", "")), reverse=True)
+
+        filtered = sorted(filtered, key=lambda x: int(x.get("order", 0)))
+
+        total = len(filtered)
+        if paginate:
+            start = (page - 1) * page_size
+            end = start + page_size
+            page_items = filtered[start:end]
+        else:
+            page_items = filtered
+        return {
+            "items": page_items,
+            "pagination": {
+                "page": page,
+                "pageSize": page_size,
+                "total": total,
+                "totalPages": max(1, (total + page_size - 1) // page_size),
+            },
+            "filters": {"type": media_type, "search": search, "sort": sort},
+        }
 
     def _serve_quiz_media(self, rel_path):
         root = self._quiz_media_root()
@@ -443,6 +534,34 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
         self.wfile.write(content)
+
+    def _record_media_event(self, name, event):
+        if not name or event not in {"views", "downloads"}:
+            return
+        current = MEDIA_EVENTS.setdefault(name, {"views": 0, "downloads": 0})
+        current[event] = int(current.get(event, 0)) + 1
+
+    def _send_zip(self, filename, media_items):
+        mem = io.BytesIO()
+        root = self._quiz_media_root()
+        with zipfile.ZipFile(mem, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for item in media_items:
+                name = item.get("name")
+                if not name:
+                    continue
+                path = (root / name).resolve()
+                if root not in path.parents or not path.exists() or not path.is_file():
+                    continue
+                zf.write(path, arcname=name)
+        data = mem.getvalue()
+        self.send_response(200)
+        self._set_security_headers()
+        self.send_header("Content-Type", "application/zip")
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def _require_db(self):
         if not db_ready():
@@ -503,16 +622,52 @@ class Handler(BaseHTTPRequestHandler):
         try:
             parsed = urlparse(self.path)
             path = parsed.path
+            query = parse_qs(parsed.query)
 
             if path == "/":
                 return self._serve_file("index.html")
 
             if path == "/api/public-media":
                 items = self._list_quiz_media()
+                result = self._apply_media_query(items, query)
                 return self._send_json(
                     {
-                        "items": items,
+                        "items": result["items"],
+                        "pagination": result["pagination"],
+                        "filters": result["filters"],
                         "configured": bool(items) or self._quiz_media_root().exists(),
+                    }
+                )
+
+            if path == "/api/public-media/download-all":
+                items = self._list_quiz_media()
+                result = self._apply_media_query(items, query, paginate=False)
+                for item in result["items"]:
+                    self._record_media_event(item.get("name", ""), "downloads")
+                return self._send_zip("quiz-islamique-2025.zip", result["items"])
+
+            if path == "/api/public-media/stats":
+                items = self._list_quiz_media(include_hidden=True)
+                total_views = sum(int(item.get("views", 0)) for item in items)
+                total_downloads = sum(int(item.get("downloads", 0)) for item in items)
+                return self._send_json(
+                    {
+                        "totalMedia": len(items),
+                        "totalViews": total_views,
+                        "totalDownloads": total_downloads,
+                    }
+                )
+
+            if path == "/api/admin/media":
+                if not self._require_admin():
+                    return
+                items = self._list_quiz_media(include_hidden=True)
+                result = self._apply_media_query(items, query)
+                return self._send_json(
+                    {
+                        "items": result["items"],
+                        "pagination": result["pagination"],
+                        "filters": result["filters"],
                     }
                 )
 
@@ -730,6 +885,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
+
+        if path == "/api/public-media/events":
+            payload = self._get_json()
+            if payload is None:
+                return
+            name = str(payload.get("name", "")).strip()
+            event = str(payload.get("event", "")).strip().lower()
+            if event not in {"view", "download"} or not name:
+                return self._send_json({"message": "Événement invalide."}, 400)
+            self._record_media_event(name, "views" if event == "view" else "downloads")
+            return self._send_json({"message": "ok"}, 201)
 
         if path == "/api/admin/change-password":
             if not self._require_admin():
@@ -1146,6 +1312,31 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         path = urlparse(self.path).path
+        if path.startswith("/api/admin/media/"):
+            if not self._require_admin():
+                return
+            media_name = unquote(path.rsplit("/", 1)[-1]).strip()
+            if not media_name:
+                return self._send_json({"message": "Nom média invalide."}, 400)
+            media_file = (self._quiz_media_root() / media_name).resolve()
+            root = self._quiz_media_root()
+            if root not in media_file.parents or not media_file.exists() or not media_file.is_file():
+                return self._send_json({"message": "Média introuvable."}, 404)
+            payload = self._get_json()
+            if payload is None:
+                return
+            meta = self._load_quiz_media_meta()
+            current = meta.get(media_name, {}) if isinstance(meta.get(media_name), dict) else {}
+            updated = {
+                "hidden": bool(payload.get("hidden", current.get("hidden", False))),
+                "order": int(payload.get("order", current.get("order", 0) or 0)),
+                "caption": str(payload.get("caption", current.get("caption", "")))[:240],
+            }
+            meta[media_name] = updated
+            if not self._save_quiz_media_meta(meta):
+                return self._send_json({"message": "Impossible de sauvegarder les métadonnées."}, 500)
+            return self._send_json({"message": "Média mis à jour."})
+
         if path.startswith("/api/contact-messages/"):
             if not self._require_admin():
                 return

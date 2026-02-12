@@ -26,6 +26,22 @@
       <section class="card accent-emerald">
         <h2>Galerie</h2>
         <p id="galleryStatus" class="status" role="status" aria-live="polite">Chargement du diaporama...</p>
+        <div class="toolbar">
+          <input id="mediaSearch" type="search" placeholder="Rechercher un média..." />
+          <select id="mediaTypeFilter">
+            <option value="all">Tous</option>
+            <option value="image">Photos</option>
+            <option value="video">Vidéos</option>
+          </select>
+          <select id="mediaSort">
+            <option value="newest">Plus récents</option>
+            <option value="oldest">Plus anciens</option>
+            <option value="name">Nom (A-Z)</option>
+          </select>
+          <button id="retryLoad" type="button">Réessayer</button>
+          <a id="downloadAllZip" class="btn-link" href="/api/public-media/download-all">Télécharger tout (ZIP)</a>
+        </div>
+        <p id="mediaStats" class="muted-note">Médias: 0 | Vues: 0 | Téléchargements: 0</p>
 
         <div class="slideshow-stage" id="slideshowStage">
           <img id="slideImage" class="slide-media hidden" alt="Image Quiz Islamique 2025" />
@@ -42,6 +58,11 @@
         <p id="slideCounter" class="muted-note">0 / 0</p>
 
         <div id="mediaGrid" class="media-grid" aria-live="polite"></div>
+        <div class="slideshow-controls">
+          <button id="prevPage" type="button">Page précédente</button>
+          <button id="nextPage" type="button">Page suivante</button>
+          <span id="pageInfo" class="muted-note">Page 1 / 1</span>
+        </div>
       </section>
     </main>
 

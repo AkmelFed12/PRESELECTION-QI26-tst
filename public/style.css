@@ -992,6 +992,13 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.media-caption {
+  margin: 0;
+  padding: 0 10px 8px;
+  font-size: 0.82rem;
+  color: #6b7280;
+  line-height: 1.35;
+}
 .media-actions {
   padding: 8px;
   display: grid;
@@ -1031,6 +1038,10 @@ button:disabled {
   .media-name {
     font-size: 0.8rem;
     padding: 7px 8px;
+  }
+  .media-caption {
+    padding: 0 8px 7px;
+    font-size: 0.78rem;
   }
   .media-actions {
     padding: 7px;
