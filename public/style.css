@@ -923,7 +923,7 @@ button:disabled {
 
 .slideshow-stage {
   width: 100%;
-  min-height: clamp(220px, 48vh, 560px);
+  min-height: clamp(180px, 42vh, 520px);
   border-radius: 14px;
   border: 1px solid rgba(197, 155, 63, 0.2);
   background: #111;
@@ -934,7 +934,7 @@ button:disabled {
 }
 .slide-media {
   width: 100%;
-  max-height: clamp(220px, 72vh, 760px);
+  max-height: clamp(180px, 62vh, 680px);
   object-fit: contain;
   background: #000;
 }
@@ -955,7 +955,7 @@ button:disabled {
   margin-top: 18px;
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 .media-card {
   border: 1px solid rgba(197, 155, 63, 0.2);
@@ -971,7 +971,7 @@ button:disabled {
 }
 .media-preview {
   background: #111;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 3 / 4;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1015,10 +1015,29 @@ button:disabled {
     min-width: 0;
   }
   .slideshow-stage {
-    min-height: 220px;
+    min-height: 180px;
+  }
+  .slide-media {
+    max-height: 52vh;
   }
   .media-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .media-preview {
+    aspect-ratio: 3 / 4;
+  }
+  .media-name {
+    font-size: 0.8rem;
+    padding: 7px 8px;
+  }
+  .media-actions {
+    padding: 7px;
+    gap: 5px;
+  }
+  .media-actions .small-btn {
+    padding: 8px 10px;
+    font-size: 0.82rem;
   }
   
   #toast-container {
@@ -1031,5 +1050,11 @@ button:disabled {
   .toast {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+@media (max-width: 420px) {
+  .media-grid {
+    grid-template-columns: 1fr;
   }
 }
