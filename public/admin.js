@@ -355,6 +355,7 @@ settingsForm.addEventListener('submit', async (e) => {
     
     const data = await res.json();
     showToast('✓ Paramètres mis à jour', 'success');
+    await loadDashboard();
   } catch (error) {
     showToast(error.message || 'Erreur lors de la mise à jour', 'error');
   } finally {
@@ -422,31 +423,49 @@ function buildSettingsPayload(overrides = {}) {
 }
 
 toggleRegistrationLock?.addEventListener('click', async () => {
-  const locked = Number(settingsCache.registrationLocked || 0) === 1;
-  const payload = buildSettingsPayload({ registrationLocked: locked ? 0 : 1 });
-  toggleRegistrationLock.disabled = true;
-  const res = await authedFetch('/api/tournament-settings', {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  settingsMsg.textContent = data.message || 'Mise à jour effectuée.';
-  await loadDashboard();
-  toggleRegistrationLock.disabled = false;
+  try {
+    const locked = Number(settingsCache.registrationLocked || 0) === 1;
+    const payload = buildSettingsPayload({ registrationLocked: locked ? 0 : 1 });
+    toggleRegistrationLock.disabled = true;
+    const res = await authedFetch('/api/tournament-settings', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || data.message || 'Erreur lors de la mise à jour');
+    }
+    settingsMsg.textContent = data.message || 'Mise à jour effectuée.';
+    showToast(locked ? 'Inscriptions ouvertes' : 'Inscriptions fermées', 'success');
+    await loadDashboard();
+  } catch (error) {
+    showToast(error.message || 'Erreur lors de la mise à jour', 'error');
+  } finally {
+    toggleRegistrationLock.disabled = false;
+  }
 });
 
 toggleVoting?.addEventListener('click', async () => {
-  const enabled = Number(settingsCache.votingEnabled || 0) === 1;
-  const payload = buildSettingsPayload({ votingEnabled: enabled ? 0 : 1 });
-  toggleVoting.disabled = true;
-  const res = await authedFetch('/api/tournament-settings', {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  settingsMsg.textContent = data.message || 'Mise à jour effectuée.';
-  await loadDashboard();
-  toggleVoting.disabled = false;
+  try {
+    const enabled = Number(settingsCache.votingEnabled || 0) === 1;
+    const payload = buildSettingsPayload({ votingEnabled: enabled ? 0 : 1 });
+    toggleVoting.disabled = true;
+    const res = await authedFetch('/api/tournament-settings', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || data.message || 'Erreur lors de la mise à jour');
+    }
+    settingsMsg.textContent = data.message || 'Mise à jour effectuée.';
+    showToast(enabled ? 'Votes fermés' : 'Votes ouverts', 'success');
+    await loadDashboard();
+  } catch (error) {
+    showToast(error.message || 'Erreur lors de la mise à jour', 'error');
+  } finally {
+    toggleVoting.disabled = false;
+  }
 });
 
 candidateSearch?.addEventListener('input', renderCandidatesTable);
@@ -524,7 +543,12 @@ adminCandidatesTable?.addEventListener('click', async (e) => {
     const res = await authedFetch(`/api/admin/candidates/${candidateId}`, { method: 'DELETE' });
     const data = await res.json();
     candidateMsg.textContent = data.message || 'Candidat supprimé.';
-    if (res.ok) await loadDashboard();
+    if (res.ok) {
+      showToast('Candidat supprimé', 'success');
+      await loadDashboard();
+    } else {
+      showToast(data.error || data.message || 'Erreur lors de la suppression', 'error');
+    }
     return;
   }
   const candidate = candidatesCache.find((c) => c.id === candidateId);

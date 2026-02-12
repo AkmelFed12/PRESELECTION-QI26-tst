@@ -67,13 +67,22 @@ function getInitials(name = '') {
 
 async function loadPublicCandidates() {
   if (!candidatesGrid) return;
-  const [settingsRes, candidatesRes] = await Promise.all([
-    fetch('/api/public-settings'),
-    fetch('/api/public-candidates'),
-  ]);
-
-  const settings = await settingsRes.json();
-  const candidates = await candidatesRes.json();
+  let settings;
+  let candidates;
+  try {
+    const [settingsRes, candidatesRes] = await Promise.all([
+      fetch('/api/public-settings'),
+      fetch('/api/public-candidates'),
+    ]);
+    if (!settingsRes.ok || !candidatesRes.ok) {
+      throw new Error('Erreur lors du chargement des données publiques.');
+    }
+    settings = await settingsRes.json();
+    candidates = await candidatesRes.json();
+  } catch (error) {
+    voteStatus.textContent = 'Impossible de charger les données pour le moment.';
+    return;
+  }
 
   if (registerStatusBadge) {
     const locked = Number(settings.registrationLocked || 0) === 1;
@@ -122,6 +131,10 @@ async function loadPublicCandidates() {
     registerMsg.textContent = Number(settings.competitionClosed || 0) === 1
       ? 'Compétition clôturée.'
       : 'Inscriptions temporairement fermées.';
+  } else if (registrationForm) {
+    registrationForm.querySelectorAll('input, select, textarea, button').forEach((el) => {
+      el.disabled = false;
+    });
   }
 
   cachedCandidates = Array.isArray(candidates) ? candidates : [];
@@ -300,3 +313,4 @@ if (qrCode && window.QRCode) {
 }
 
 loadPublicCandidates();
+setInterval(loadPublicCandidates, 30000);
