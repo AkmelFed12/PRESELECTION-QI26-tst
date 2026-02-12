@@ -34,7 +34,7 @@ class APIError(Exception):
 
 # Admin credentials - utiliser des variables d'environnement en production
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ASAALMO2026")
 ADMIN_WHATSAPP = os.environ.get("ADMIN_WHATSAPP", "2250150070083")
 CODE_PREFIX = "QI26"
 MAX_UPLOAD_BYTES = 3 * 1024 * 1024
