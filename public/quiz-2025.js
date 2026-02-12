@@ -4,7 +4,7 @@ const slideVideo = document.getElementById('slideVideo');
 const prevSlideBtn = document.getElementById('prevSlide');
 const nextSlideBtn = document.getElementById('nextSlide');
 const toggleAutoBtn = document.getElementById('toggleAuto');
-const downloadMediaLink = document.getElementById('downloadMedia');
+const downloadMediaBtn = document.getElementById('downloadMedia');
 const slideCounter = document.getElementById('slideCounter');
 const mediaGrid = document.getElementById('mediaGrid');
 
@@ -38,13 +38,20 @@ function splitBaseName(filename = '') {
   return idx > 0 ? filename.slice(0, idx) : filename;
 }
 
-function triggerDownload(url, filename) {
+async function triggerDownload(url, filename) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error('Téléchargement impossible');
+  }
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = url;
+  link.href = blobUrl;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(blobUrl);
 }
 
 function downloadImageAsFormat(url, baseName, format) {
@@ -61,7 +68,12 @@ function downloadImageAsFormat(url, baseName, format) {
     ctx.drawImage(img, 0, 0);
     const mime = format === 'png' ? 'image/png' : 'image/jpeg';
     const dataUrl = canvas.toDataURL(mime, 0.92);
-    triggerDownload(dataUrl, `${baseName}.${format}`);
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `${baseName}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
   img.onerror = () => showToast('Erreur pendant la conversion de l’image', 'error');
   img.src = url;
@@ -108,11 +120,11 @@ function updateActiveMediaCard() {
 }
 
 function updateDownloadLink(item) {
-  if (!downloadMediaLink || !item || !item.url) return;
-  downloadMediaLink.classList.remove('hidden');
-  downloadMediaLink.href = item.url;
-  downloadMediaLink.download = item.name || (item.type === 'video' ? 'video-quiz-2025' : 'image-quiz-2025');
-  downloadMediaLink.textContent = item.type === 'video' ? 'Télécharger la vidéo' : 'Télécharger l’image';
+  if (!downloadMediaBtn || !item || !item.url) return;
+  downloadMediaBtn.classList.remove('hidden');
+  downloadMediaBtn.dataset.url = item.url;
+  downloadMediaBtn.dataset.filename = item.name || (item.type === 'video' ? 'video-quiz-2025' : 'image-quiz-2025');
+  downloadMediaBtn.textContent = item.type === 'video' ? 'Télécharger la vidéo' : 'Télécharger l’image';
 }
 
 function renderSlide() {
@@ -120,9 +132,10 @@ function renderSlide() {
     galleryStatus.textContent = 'Aucun média disponible pour le moment.';
     slideImage.classList.add('hidden');
     slideVideo.classList.add('hidden');
-    if (downloadMediaLink) {
-      downloadMediaLink.classList.add('hidden');
-      downloadMediaLink.removeAttribute('href');
+    if (downloadMediaBtn) {
+      downloadMediaBtn.classList.add('hidden');
+      delete downloadMediaBtn.dataset.url;
+      delete downloadMediaBtn.dataset.filename;
     }
     updateCounter();
     stopAutoPlay();
@@ -195,7 +208,7 @@ async function loadMedia() {
   }
 }
 
-mediaGrid?.addEventListener('click', (event) => {
+mediaGrid?.addEventListener('click', async (event) => {
   const target = event.target.closest('button[data-action], .media-card');
   if (!target) return;
 
@@ -215,7 +228,11 @@ mediaGrid?.addEventListener('click', (event) => {
   const baseName = splitBaseName(item.name || `media-${idx + 1}`);
 
   if (action === 'download-original') {
-    triggerDownload(item.url, item.name || `${baseName}.bin`);
+    try {
+      await triggerDownload(item.url, item.name || `${baseName}.bin`);
+    } catch (error) {
+      showToast('Téléchargement impossible', 'error');
+    }
     return;
   }
   if (item.type !== 'image') {
@@ -241,3 +258,14 @@ nextSlideBtn?.addEventListener('click', nextSlide);
 toggleAutoBtn?.addEventListener('click', toggleAutoPlay);
 
 loadMedia();
+
+downloadMediaBtn?.addEventListener('click', async () => {
+  const url = downloadMediaBtn.dataset.url;
+  const filename = downloadMediaBtn.dataset.filename || 'media-quiz-2025';
+  if (!url) return;
+  try {
+    await triggerDownload(url, filename);
+  } catch (error) {
+    showToast('Téléchargement impossible', 'error');
+  }
+});

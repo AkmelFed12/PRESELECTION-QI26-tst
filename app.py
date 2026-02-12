@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from email import policy
 from email.parser import BytesParser
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 import psycopg
 from psycopg.rows import dict_row
@@ -404,7 +404,7 @@ class Handler(BaseHTTPRequestHandler):
             items.append(
                 {
                     "name": file.name,
-                    "url": f"/media/{file.name}",
+                    "url": f"/media/{quote(file.name)}",
                     "type": media_type,
                 }
             )
