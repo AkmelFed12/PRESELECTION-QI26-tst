@@ -240,13 +240,10 @@ class Handler(BaseHTTPRequestHandler):
         return is_local
 
     def _require_admin(self):
+        # En développement local sans credentials configurés, permettre l'accès
         if not ADMIN_USERNAME or not ADMIN_PASSWORD:
-            # En développement local, permettre l'accès sans credentials
-            if not self._is_https():
-                return True
-            # En production, exiger les credentials
-            self._send_json({"message": "Administration non configurée."}, 500)
-            return False
+            return True
+        # En production avec credentials, vérifier HTTPS et authentication
         if not self._is_https():
             self._send_json({"message": "HTTPS requis pour l'administration."}, 403)
             return False

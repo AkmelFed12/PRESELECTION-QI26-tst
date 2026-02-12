@@ -35,6 +35,8 @@ const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 const toggleRegistrationLock = document.getElementById('toggleRegistrationLock');
 const registrationLockStatus = document.getElementById('registrationLockStatus');
+const toggleVoting = document.getElementById('toggleVoting');
+const votingStatus = document.getElementById('votingStatus');
 
 let authHeader = '';
 let candidatesCache = [];
@@ -252,6 +254,11 @@ function updateDashboard() {
     toggleRegistrationLock.textContent = locked ? 'Déverrouiller' : 'Verrouiller';
     toggleRegistrationLock.disabled = closed;
   }
+  if (votingStatus && toggleVoting) {
+    const enabled = Number(settingsCache.votingEnabled || 0) === 1;
+    votingStatus.textContent = enabled ? 'Ouverts' : 'Fermés';
+    toggleVoting.textContent = enabled ? 'Fermer' : 'Ouvrir';
+  }
 }
 
 function startAutoRefresh() {
@@ -344,6 +351,20 @@ toggleRegistrationLock?.addEventListener('click', async () => {
   settingsMsg.textContent = data.message || 'Mise à jour effectuée.';
   await loadDashboard();
   toggleRegistrationLock.disabled = false;
+});
+
+toggleVoting?.addEventListener('click', async () => {
+  const enabled = Number(settingsCache.votingEnabled || 0) === 1;
+  const payload = buildSettingsPayload({ votingEnabled: enabled ? 0 : 1 });
+  toggleVoting.disabled = true;
+  const res = await authedFetch('/api/tournament-settings', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  settingsMsg.textContent = data.message || 'Mise à jour effectuée.';
+  await loadDashboard();
+  toggleVoting.disabled = false;
 });
 
 candidateSearch?.addEventListener('input', renderCandidatesTable);
