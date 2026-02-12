@@ -5,8 +5,11 @@ const candidatesPanel = document.getElementById('candidatesPanel');
 const scorePanel = document.getElementById('scorePanel');
 const tablesPanel = document.getElementById('tablesPanel');
 const dashboardPanel = document.getElementById('dashboardPanel');
+const securityPanel = document.getElementById('securityPanel');
 const settingsForm = document.getElementById('settingsForm');
 const settingsMsg = document.getElementById('settingsMsg');
+const passwordForm = document.getElementById('passwordForm');
+const passwordMsg = document.getElementById('passwordMsg');
 const scoreForm = document.getElementById('scoreForm');
 const scoreMsg = document.getElementById('scoreMsg');
 const candidateForm = document.getElementById('candidateForm');
@@ -278,21 +281,30 @@ function stopAutoRefresh() {
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const { username, password } = Object.fromEntries(new FormData(loginForm).entries());
+  
+  if (!username || !password) {
+    loginMsg.textContent = 'Identifiant et mot de passe requis.';
+    return;
+  }
+  
   authHeader = toBasic(username, password);
 
   const res = await authedFetch('/api/candidates');
   if (res.status === 401) {
     loginMsg.textContent = 'Identifiants incorrects.';
+    authHeader = ''; // réinitialiser
     return;
   }
 
-  loginMsg.textContent = 'Connexion réussie.';
+  loginMsg.textContent = 'Connexion réussie ✓';
   adminPanel.classList.remove('hidden');
   dashboardPanel.classList.remove('hidden');
   candidatesPanel.classList.remove('hidden');
   scorePanel.classList.remove('hidden');
   tablesPanel.classList.remove('hidden');
+  securityPanel.classList.remove('hidden');
   logoutBtn.classList.remove('hidden');
+  loginForm.reset();
   await loadDashboard();
   startAutoRefresh();
 });
@@ -317,6 +329,44 @@ settingsForm.addEventListener('submit', async (e) => {
   });
   const data = await res.json();
   settingsMsg.textContent = data.message || 'Mise à jour effectuée.';
+});
+
+passwordForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const { currentPassword, newPassword, confirmPassword } = Object.fromEntries(new FormData(passwordForm).entries());
+  
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    passwordMsg.textContent = 'Tous les champs sont requis.';
+    return;
+  }
+  
+  if (newPassword !== confirmPassword) {
+    passwordMsg.textContent = 'Les mots de passe ne correspondent pas.';
+    return;
+  }
+  
+  if (newPassword.length < 8) {
+    passwordMsg.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
+    return;
+  }
+
+  const res = await authedFetch('/api/admin/change-password', {
+    method: 'POST',
+    body: JSON.stringify({
+      currentPassword,
+      newPassword,
+    }),
+  });
+  const data = await res.json();
+  
+  if (res.ok) {
+    passwordMsg.textContent = '✓ Mot de passe changé avec succès. Vous devez vous reconnecter.';
+    setTimeout(() => {
+      logoutBtn.click();
+    }, 1500);
+  } else {
+    passwordMsg.textContent = data.message || 'Erreur lors du changement de mot de passe.';
+  }
 });
 
 function buildSettingsPayload(overrides = {}) {
@@ -491,7 +541,10 @@ logoutBtn?.addEventListener('click', () => {
   candidatesPanel.classList.add('hidden');
   scorePanel.classList.add('hidden');
   tablesPanel.classList.add('hidden');
+  securityPanel.classList.add('hidden');
   logoutBtn.classList.add('hidden');
+  passwordForm.reset();
+  passwordMsg.textContent = '';
   stopAutoRefresh();
 });
 

@@ -38,6 +38,11 @@
           <button type="submit">Se connecter</button>
         </form>
         <p id="loginMsg" role="status" aria-live="polite"></p>
+        <details style="margin-top: 1rem; font-size: 0.9rem;">
+          <summary>Identifiants de développement</summary>
+          <p style="margin-top: 0.5rem;">Utilisateur: <code>admin</code><br>Mot de passe: <code>qi26admin2026</code></p>
+          <p style="color: #888; font-size: 0.85rem;">⚠️ À changer en production via les variables d'environnement</p>
+        </details>
       </section>
 
       <section class="card accent-emerald hidden" id="adminPanel">
@@ -78,6 +83,21 @@
         </form>
         <p id="settingsMsg" role="status" aria-live="polite"></p>
       </section>
+
+      <section class="card accent-emerald hidden" id="securityPanel">
+        <h2>Sécurité & Authentification</h2>
+        <form id="passwordForm" class="grid-form">
+          <label for="passwordCurrent">Mot de passe actuel</label>
+          <input id="passwordCurrent" name="currentPassword" type="password" placeholder="Mot de passe actuel" required />
+          <label for="passwordNew">Nouveau mot de passe</label>
+          <input id="passwordNew" name="newPassword" type="password" placeholder="Nouveau mot de passe" required />
+          <label for="passwordConfirm">Confirmer le nouveau mot de passe</label>
+          <input id="passwordConfirm" name="confirmPassword" type="password" placeholder="Confirmation" required />
+          <button type="submit">Changer le mot de passe</button>
+        </form>
+        <p id="passwordMsg" role="status" aria-live="polite"></p>
+      </section>
+
 
       <section class="card accent-slate hidden" id="dashboardPanel">
         <h2>Tableau de bord</h2>

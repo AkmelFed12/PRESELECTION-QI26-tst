@@ -19,8 +19,9 @@ import requests
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
 
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+# Admin credentials - utiliser des variables d'environnement en production
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "qi26admin2026")
 ADMIN_WHATSAPP = os.environ.get("ADMIN_WHATSAPP", "2250150070083")
 CODE_PREFIX = "QI26"
 MAX_UPLOAD_BYTES = 3 * 1024 * 1024
@@ -240,13 +241,7 @@ class Handler(BaseHTTPRequestHandler):
         return is_local
 
     def _require_admin(self):
-        # En développement local sans credentials configurés, permettre l'accès
-        if not ADMIN_USERNAME or not ADMIN_PASSWORD:
-            return True
-        # En production avec credentials, vérifier HTTPS et authentication
-        if not self._is_https():
-            self._send_json({"message": "HTTPS requis pour l'administration."}, 403)
-            return False
+        # Toujours exiger les credentials (on a des defaults maintenant)
         if not self._is_admin():
             self._send_json({"message": "Accès non autorisé"}, 401)
             return False
@@ -498,6 +493,51 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
+
+        if path == "/api/admin/change-password":
+            if not self._require_admin():
+                return
+            
+            p = self._get_json()
+            if p is None:
+                return
+            
+            current_password = p.get("currentPassword", "")
+            new_password = p.get("newPassword", "")
+            
+            if not current_password or not new_password:
+                return self._send_json({"message": "Mot de passe actuel et nouveau requis."}, 400)
+            
+            if len(new_password) < 8:
+                return self._send_json({"message": "Le mot de passe doit contenir au moins 8 caractères."}, 400)
+            
+            # Vérifier le mot de passe actuel
+            if current_password != ADMIN_PASSWORD:
+                return self._send_json({"message": "Mot de passe actuel incorrect."}, 401)
+            
+            # Mettre à jour la variable globale
+            globals()['ADMIN_PASSWORD'] = new_password
+            
+            # Aussi enregistrer dans la base de données pour persistance si disponible
+            if db_ready():
+                with get_conn() as conn:
+                    with conn.cursor() as cur:
+                        # Créer une table de configuration si elle n'existe pas
+                        cur.execute("""
+                            create table if not exists admin_config (
+                                key text primary key,
+                                value text,
+                                updatedAt timestamp with time zone default now()
+                            )
+                        """)
+                        cur.execute(
+                            "insert into admin_config (key, value) values (%s, %s) on conflict (key) do update set value = %s, updatedAt = now()",
+                            ("admin_password_hash", hashlib.sha256(new_password.encode()).hexdigest(), hashlib.sha256(new_password.encode()).hexdigest())
+                        )
+                    conn.commit()
+            
+            self._audit("admin_change_password", {})
+            return self._send_json({"message": "Mot de passe changé avec succès."})
 
         if path == "/api/admin/upload-photo":
             if not self._require_admin():
