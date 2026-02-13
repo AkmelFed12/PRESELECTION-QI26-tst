@@ -1,9 +1,17 @@
+databases:
+  - name: preselection-qi26-db
+    plan: free
+
 services:
   - type: web
     name: preselection-qi26
     env: python
     plan: free
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: preselection-qi26-db
+          property: connectionString
       - key: ADMIN_USERNAME
         value: admin
       - key: ADMIN_PASSWORD
@@ -16,5 +24,10 @@ services:
     env: python
     plan: free
     schedule: "0 2 * * *"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: preselection-qi26-db
+          property: connectionString
     buildCommand: "apt-get update && apt-get install -y postgresql-client rclone"
     startCommand: "bash scripts/backup_db.sh"

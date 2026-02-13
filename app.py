@@ -81,7 +81,9 @@ MAX_LENGTHS = {
     "contactMessage": 1200,
 }
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+_raw_db_url = os.environ.get("DATABASE_URL", "")
+# Normaliser postgres:// -> postgresql:// (requis par psycopg3 sur certains hébergeurs comme Render/Heroku)
+DATABASE_URL = (_raw_db_url.replace("postgres://", "postgresql://", 1) if _raw_db_url.startswith("postgres://") else _raw_db_url)
 CLD_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
 CLD_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "")
 CLD_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
@@ -565,7 +567,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _require_db(self):
         if not db_ready():
-            self._send_json({"message": "DATABASE_URL non configuré."}, 500)
+            self._send_json({"error": "DATABASE_URL non configuré. Créez une base PostgreSQL et définissez la variable d'environnement."}, 500)
             return False
         return True
 
@@ -612,11 +614,18 @@ class Handler(BaseHTTPRequestHandler):
         if isinstance(error, APIError):
             self._send_json({"error": error.message, **error.details}, error.status_code)
         else:
-            # Erreur non prévue
             error_msg = str(error)
             print(f"Unexpected error: {error_msg}")
             print(traceback.format_exc())
-            self._send_json({"error": "Erreur serveur interne"}, 500)
+            # Messages plus explicites pour les erreurs courantes (connexion DB, tables manquantes)
+            if isinstance(error, (psycopg.OperationalError, psycopg.Error)):
+                self._send_json({"error": "Erreur base de données. Vérifiez DATABASE_URL et que la base est accessible."}, 500)
+            elif "connection" in error_msg.lower() or "connect" in error_msg.lower() or "refused" in error_msg.lower():
+                self._send_json({"error": "Impossible de se connecter à la base de données. Vérifiez DATABASE_URL."}, 500)
+            elif "does not exist" in error_msg.lower() or "relation" in error_msg.lower():
+                self._send_json({"error": "Table manquante. Redémarrez l'application pour initialiser le schéma."}, 500)
+            else:
+                self._send_json({"error": "Erreur serveur interne"}, 500)
 
     def do_GET(self):
         try:
@@ -1585,7 +1594,15 @@ def send_contact_email(full_name, email, subject, message):
 
 
 if __name__ == "__main__":
-    init_db()
+    if not db_ready():
+        print("ATTENTION: DATABASE_URL non défini. Les fonctionnalités admin (candidats, scores, etc.) ne fonctionneront pas.")
+    else:
+        try:
+            init_db()
+            print("Base de données initialisée.")
+        except Exception as e:
+            print(f"ERREUR init base de données: {e}")
+            print(traceback.format_exc())
     port = int(os.environ.get("PORT", "3000"))
     server = HTTPServer(("0.0.0.0", port), Handler)
     print(f"Serveur démarré sur http://localhost:{port}")
