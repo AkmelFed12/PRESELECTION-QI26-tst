@@ -844,7 +844,7 @@ class Handler(BaseHTTPRequestHandler):
                                        c.country,
                                        c.photoUrl,
                                        coalesce(v.totalVotes, 0) as totalVotes,
-                                       s.averageScore,
+                                       coalesce(s.averageScore, 0) as averageScore,
                                        coalesce(s.passages, 0) as passages
                                 from candidates c
                                 left join (
@@ -854,7 +854,7 @@ class Handler(BaseHTTPRequestHandler):
                                 ) v on c.id = v.candidateId
                                 left join (
                                   select candidateId,
-                                         round(avg(themeChosenScore + themeImposedScore), 2) as averageScore,
+                                         cast(avg(coalesce(themeChosenScore, 0) + coalesce(themeImposedScore, 0)) as numeric(10,2)) as averageScore,
                                          count(*) as passages
                                   from scores
                                   group by candidateId
@@ -919,7 +919,7 @@ class Handler(BaseHTTPRequestHandler):
                             cur.execute(
                                 """
                                 select c.id, c.fullName,
-                                       round(avg(coalesce(s.themeChosenScore, 0) + coalesce(s.themeImposedScore, 0)), 2)
+                                       cast(avg(coalesce(s.themeChosenScore, 0) + coalesce(s.themeImposedScore, 0)) as numeric(10,2))
                                        as averageScore, count(s.id) as passages
                                 from candidates c
                                 left join scores s on c.id = s.candidateId
@@ -982,7 +982,7 @@ class Handler(BaseHTTPRequestHandler):
                                 """
                                 select c.id,
                                        c.fullName,
-                                       round(avg(coalesce(s.themeChosenScore, 0) + coalesce(s.themeImposedScore, 0)), 2)
+                                       cast(avg(coalesce(s.themeChosenScore, 0) + coalesce(s.themeImposedScore, 0)) as numeric(10,2))
                                        as averageScore,
                                        count(s.id) as passages
                                 from candidates c
