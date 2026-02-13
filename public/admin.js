@@ -114,32 +114,37 @@ async function loadDashboard() {
       return;
     }
     const data = await res.json();
-    const candidates = data.candidates || [];
-    const votes = data.votes || [];
-    const ranking = data.ranking || [];
+
+    // Gestion robuste des différents formats de réponse
+    const candidates = Array.isArray(data) ? data : (Array.isArray(data.candidates) ? data.candidates : []);
+    const votes = Array.isArray(data.votes) ? data.votes : [];
+    const ranking = Array.isArray(data.ranking) ? data.ranking : [];
     const settings = data.settings || {};
-    const contacts = data.contacts || [];
-    const audit = data.audit || [];
-    candidatesCache = Array.isArray(candidates) ? candidates : [];
-    votesCache = Array.isArray(votes) ? votes : [];
-    rankingCache = Array.isArray(ranking) ? ranking : [];
-    settingsCache = settings || {};
-    contactsCache = Array.isArray(contacts) ? contacts : [];
-    auditCache = Array.isArray(audit) ? audit : [];
+    const contacts = Array.isArray(data.contacts) ? data.contacts : [];
+    const audit = Array.isArray(data.audit) ? data.audit : [];
+
+    candidatesCache = candidates;
+    votesCache = votes;
+    rankingCache = ranking;
+    settingsCache = settings;
+    contactsCache = contacts;
+    auditCache = audit;
     scoresByCandidate = rankingCache.reduce((acc, row) => {
       acc[row.id] = row;
       return acc;
     }, {});
 
     const candidatesBody = document.querySelector('#candidatesTable tbody');
-    candidatesBody.innerHTML = candidates
-      .map(
-        (c) =>
-          `<tr><td>${c.id}</td><td>${escapeHtml(c.fullName)}</td><td>${escapeHtml(
-            c.whatsapp || '',
-          )}</td><td>${escapeHtml(c.country || '')}</td><td>${escapeHtml(c.createdAt || '')}</td></tr>`,
-      )
-      .join('');
+    if (candidatesBody) {
+      candidatesBody.innerHTML = candidatesCache.length > 0
+        ? candidatesCache.map(
+            (c) =>
+              `<tr><td>${c.id}</td><td>${escapeHtml(c.fullName)}</td><td>${escapeHtml(
+                c.whatsapp || '',
+              )}</td><td>${escapeHtml(c.country || '')}</td><td>${escapeHtml(c.createdAt || '')}</td></tr>`,
+          ).join('')
+        : '<tr><td colspan="5" class="empty">Aucun candidat inscrit</td></tr>';
+    }
 
     const votesBody = document.querySelector('#votesTable tbody');
     votesBody.innerHTML = votesCache

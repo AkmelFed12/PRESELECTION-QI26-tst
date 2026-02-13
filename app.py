@@ -1249,6 +1249,9 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 conn.commit()
 
+            # Envoyer email à l'admin
+            send_registration_email(candidate_id, payload.get("fullName"), payload.get("email"), payload.get("whatsapp"), payload.get("phone"))
+
             msg = (
                 "Assalamou alaykoum, je confirme mon inscription au Quiz Islamique 2026. "
                 f"Mon ID candidat est {candidate_id}."
@@ -1737,6 +1740,53 @@ def send_contact_email(full_name, email, subject, message):
             server.sendmail(SMTP_FROM, [SMTP_TO], msg.encode("utf-8"))
     except Exception:
         return
+
+
+def send_registration_email(candidate_id, full_name, email, whatsapp, phone):
+    """Envoie un email à l'admin quand un nouveau candidat s'inscrit"""
+    if not (SMTP_HOST and SMTP_FROM):
+        logger.info("SMTP non configuré, email non envoyé")
+        return
+
+    # Envoyer à l'admin
+    admin_email = SMTP_TO or "ouattaral2@student.iugb.edu.ci"
+
+    body = (
+        "🎉 NOUVELLE INSCRIPTION - Quiz Islamique 2026\n\n"
+        f"ID Candidat: QI26-{str(candidate_id).zfill(3)}\n"
+        f"Nom complet: {full_name}\n"
+        f"Email: {email or 'Non renseigné'}\n"
+        f"WhatsApp: {whatsapp}\n"
+        f"Téléphone: {phone or 'Non renseigné'}\n\n"
+        f"Voir le dashboard: https://preselection-qi26.onrender.com/admin.html\n\n"
+        f"---\n"
+        f"Association des Serviteurs d'Allah Azawajal\n"
+        f"Quiz Islamique 2026\n"
+    )
+
+    headers = [
+        f"From: {SMTP_FROM}",
+        f"To: {admin_email}",
+        f"Subject: [QI26] Nouvelle inscription - {full_name}",
+        "Content-Type: text/plain; charset=utf-8",
+    ]
+    msg = "\r\n".join(headers) + "\r\n\r\n" + body
+
+    try:
+        if SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15)
+        else:
+            server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
+        with server:
+            server.ehlo()
+            if SMTP_PORT != 465:
+                server.starttls()
+            if SMTP_USER and SMTP_PASSWORD:
+                server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, [admin_email], msg.encode("utf-8"))
+        logger.info(f"Email envoyé pour l'inscription de {full_name}")
+    except Exception as e:
+        logger.error(f"Erreur envoi email inscription: {e}")
 
 
 if __name__ == "__main__":
