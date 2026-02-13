@@ -1740,6 +1740,7 @@ def send_contact_email(full_name, email, subject, message):
 
 
 if __name__ == "__main__":
+    # Initialiser la base de données (non-bloquant)
     if not db_ready():
         logger.warning("DATABASE_URL non défini. Les fonctionnalités admin (candidats, scores, etc.) ne fonctionneront pas.")
     else:
@@ -1747,8 +1748,11 @@ if __name__ == "__main__":
             init_db()
             logger.info("Base de données initialisée.")
         except Exception as e:
-            logger.exception("ERREUR init base de données: %s", e)
-    port = int(os.environ.get("PORT", "3000"))
+            logger.error("ERREUR init base de données: %s", e)
+            logger.warning("Le serveur va démarrer sans base de données. Vérifiez DATABASE_URL/DATABASE_EXTERNAL_URL.")
+
+    # Démarrer le serveur (TOUJOURS, même si DB échoue)
+    port = int(os.environ.get("PORT", "10000"))
     server = HTTPServer(("0.0.0.0", port), Handler)
-    logger.info("Serveur démarré sur http://localhost:%s", port)
+    logger.info("Serveur démarré sur http://0.0.0.0:%s", port)
     server.serve_forever()
