@@ -359,7 +359,8 @@ loginForm.addEventListener('submit', async (e) => {
     
     authHeader = toBasic(username, password);
 
-    const res = await authedFetch('/api/candidates');
+    // Tester l'authentification avec le dashboard
+    const res = await authedFetch('/api/admin/dashboard');
     if (res.status === 401) {
       authHeader = ''; // réinitialiser
       throw new Error('Identifiants incorrects.');
