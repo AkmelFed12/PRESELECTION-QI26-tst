@@ -357,12 +357,22 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 
     def _send_json(self, payload, status=200):
-        """Envoie une réponse JSON avec gestion d'erreurs"""
+        """Envoie une réponse JSON avec format standardisé et gestion d'erreurs robuste"""
         try:
-            # S'assurer que payload est un dict
+            # Standardiser le format de réponse
             if not isinstance(payload, dict):
-                payload = {"data": payload}
-            
+                if payload is None:
+                    payload = {"data": None, "success": False, "error": "No data available"}
+                else:
+                    payload = {"data": payload}
+
+            # Ajouter métadonnées standard si absentes
+            if "success" not in payload and "error" not in payload:
+                payload["success"] = status < 400
+
+            if status >= 400 and "error" not in payload:
+                payload["error"] = "Une erreur est survenue"
+
             data = json.dumps(payload, default=json_default).encode("utf-8")
             self.send_response(status)
             self._set_security_headers()
@@ -375,14 +385,14 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logger.exception("Erreur envoi JSON")
             try:
-                fallback = json.dumps({"error": "Erreur serveur interne"}).encode("utf-8")
+                fallback = json.dumps({"error": "Erreur serveur interne", "success": False}).encode("utf-8")
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(fallback)))
                 self.end_headers()
                 self.wfile.write(fallback)
             except:
-                pass
+                logger.critical("Impossible d'envoyer réponse erreur")
 
     def _get_json(self):
         length = int(self.headers.get("Content-Length", 0))

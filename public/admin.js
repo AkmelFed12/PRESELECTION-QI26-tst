@@ -246,9 +246,18 @@ function formatStatus(value) {
 
 function formatTotalScore(candidateId) {
   const row = scoresByCandidate[candidateId];
-  if (!row || !row.averageScore || !row.passages) return '-';
-  const total = Number(row.averageScore) * Number(row.passages);
-  return total.toFixed(2);
+
+  // Vérification stricte avec gestion de null/undefined/0
+  if (!row) return '-';
+
+  const score = Number(row.averageScore);
+  const passages = Number(row.passages);
+
+  // Vérifier NaN et valeurs invalides
+  if (isNaN(score) || isNaN(passages)) return '-';
+
+  // Afficher simplement la moyenne (pas score * passages qui n'a pas de sens)
+  return score.toFixed(2);
 }
 
 function updateDashboard() {
