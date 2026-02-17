@@ -9,12 +9,36 @@ import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
+import * as Sentry from '@sentry/node';
 
 dotenv.config();
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// ==================== SENTRY MONITORING ====================
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    integrations: [
+      new Sentry.Integrations.Http({ tracing: true }),
+      new Sentry.Integrations.Express({ request: true, serverName: false }),
+    ],
+    beforeSend(event, hint) {
+      // Filter out health check errors (usually 404s)
+      if (event.request?.url?.includes('/api/health')) {
+        return null;
+      }
+      return event;
+    },
+  });
+  console.log('✅ Sentry monitoring initialized');
+} else {
+  console.log('⚠️  Sentry DSN not configured (monitoring disabled)');
+}
 
 // ==================== CONFIGURATION ====================
 const app = express();
@@ -42,6 +66,12 @@ if (process.env.CORS_ORIGIN) {
   app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
 } else {
   app.use(cors({ origin: '*', credentials: false }));
+}
+
+// ==================== SENTRY MIDDLEWARE ====================
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
 }
 
 // Rate limiters
@@ -822,10 +852,30 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Not found' });
 });
 
-// Error handler
+// ==================== SENTRY ERROR HANDLER ====================
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
+
+// Error handler (must be last)
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: 'Server error' });
+  console.error('Error:', err.message);
+  
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err, {
+      contexts: {
+        http: {
+          method: req.method,
+          url: req.url,
+          query: req.query,
+        },
+      },
+    });
+  }
+  
+  res.status(500).json({ 
+    error: process.env.NODE_ENV === 'production' ? 'Server error' : err.message 
+  });
 });
 
 // ==================== SERVER START ====================
