@@ -329,6 +329,51 @@ async function initDatabase() {
         createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS post_likes (
+        id BIGSERIAL PRIMARY KEY,
+        postId BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        likerEmail TEXT NOT NULL,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(postId, likerEmail)
+      );
+
+      CREATE TABLE IF NOT EXISTS post_comments (
+        id BIGSERIAL PRIMARY KEY,
+        postId BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        authorName TEXT NOT NULL,
+        authorEmail TEXT NOT NULL,
+        content TEXT NOT NULL,
+        status TEXT DEFAULT 'approved',
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS post_shares (
+        id BIGSERIAL PRIMARY KEY,
+        postId BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        shareMethod TEXT,
+        sharerId TEXT,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS engagement_stats (
+        id BIGSERIAL PRIMARY KEY,
+        contentType TEXT NOT NULL,
+        contentId BIGINT NOT NULL,
+        likesCount INTEGER DEFAULT 0,
+        sharesCount INTEGER DEFAULT 0,
+        commentsCount INTEGER DEFAULT 0,
+        viewsCount INTEGER DEFAULT 0,
+        lastUpdated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS story_likes (
+        id BIGSERIAL PRIMARY KEY,
+        storyId BIGINT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        likerEmail TEXT NOT NULL,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(storyId, likerEmail)
+      );
+
       INSERT INTO tournament_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 
       CREATE INDEX IF NOT EXISTS idx_votes_candidate ON votes(candidateId);
@@ -338,6 +383,11 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
       CREATE INDEX IF NOT EXISTS idx_stories_status ON stories(status);
       CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expiresAt);
+      CREATE INDEX IF NOT EXISTS idx_post_likes ON post_likes(postId);
+      CREATE INDEX IF NOT EXISTS idx_post_comments ON post_comments(postId);
+      CREATE INDEX IF NOT EXISTS idx_post_shares ON post_shares(postId);
+      CREATE INDEX IF NOT EXISTS idx_story_likes ON story_likes(storyId);
+      CREATE INDEX IF NOT EXISTS idx_engagement_content ON engagement_stats(contentType, contentId);
     `);
 
     console.log('✅ Database initialized successfully');
@@ -1015,19 +1065,535 @@ app.put('/api/admin/donations/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+// ==================== MULTER FILE UPLOAD CONFIGURATION ====================
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, join(__dirname, 'public/uploads'));
+  },
+  filename: (req, file, cb) => {
+    const ext = file.originalname.split('.').pop();
+    const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    cb(null, filename);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images (JPEG, PNG, WebP) and videos (MP4, WebM) allowed'));
+    }
+  }
+});
+
+// ==================== HELPER FUNCTIONS ====================
+async function sendEmail(to, subject, html) {
+  if (!transporter.verify) return; // Skip if email not configured
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@quiz-islamique.org',
+      to,
+      subject,
+      html
+    });
+  } catch (error) {
+    console.error('Email send error:', error.message);
+  }
+}
+
+function generateQRCode(text) {
+  return require('qrcode').toDataURL(text);
+}
+
+async function updateEngagementStats(contentType, contentId) {
+  try {
+    const likes = await pool.query(
+      `SELECT COUNT(*) as count FROM post_likes WHERE postId = $1`,
+      [contentId]
+    );
+    const comments = await pool.query(
+      `SELECT COUNT(*) as count FROM post_comments WHERE postId = $1`,
+      [contentId]
+    );
+    const shares = await pool.query(
+      `SELECT COUNT(*) as count FROM post_shares WHERE postId = $1`,
+      [contentId]
+    );
+
+    const likesCount = parseInt(likes.rows[0]?.count || 0);
+    const commentsCount = parseInt(comments.rows[0]?.count || 0);
+    const sharesCount = parseInt(shares.rows[0]?.count || 0);
+
+    await pool.query(
+      `INSERT INTO engagement_stats (contentType, contentId, likesCount, commentsCount, sharesCount, lastUpdated)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (contentType, contentId) DO UPDATE SET 
+       likesCount = $3, commentsCount = $4, sharesCount = $5, lastUpdated = NOW()`,
+      [contentType, contentId, likesCount, commentsCount, sharesCount]
+    );
+  } catch (error) {
+    console.error('Error updating engagement stats:', error);
+  }
+}
+
+// ==================== PHOTO UPLOAD ENDPOINTS ====================
+
+// POST - Upload photo for post/story
+app.post('/api/upload/photo', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ 
+      success: true, 
+      filename: req.file.filename,
+      url: fileUrl,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message || 'Upload failed' });
+  }
+});
+
+// ==================== POST ENGAGEMENT ENDPOINTS ====================
+
+// POST - Like a post
+app.post('/api/posts/:id/like', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const { email } = req.body;
+
+    if (!email || !validateEmail(email)) {
+      return res.status(400).json({ error: 'Valid email required' });
+    }
+
+    await pool.query(
+      `INSERT INTO post_likes (postId, likerEmail, createdAt) VALUES ($1, $2, NOW())
+       ON CONFLICT (postId, likerEmail) DO NOTHING`,
+      [postId, email.slice(0, 100)]
+    );
+
+    await updateEngagementStats('post', postId);
+    
+    // Get updated counts
+    const counts = await pool.query(
+      `SELECT 
+        (SELECT COUNT(*) FROM post_likes WHERE postId = $1) as likes,
+        (SELECT COUNT(*) FROM post_comments WHERE postId = $1) as comments,
+        (SELECT COUNT(*) FROM post_shares WHERE postId = $1) as shares`,
+      [postId]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Post liked',
+      counts: counts.rows[0]
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE - Unlike a post
+app.delete('/api/posts/:id/like', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email required' });
+    }
+
+    await pool.query(
+      'DELETE FROM post_likes WHERE postId = $1 AND likerEmail = $2',
+      [postId, email]
+    );
+
+    await updateEngagementStats('post', postId);
+    
+    res.json({ success: true, message: 'Like removed' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST - Share a post
+app.post('/api/posts/:id/share', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const { method } = req.body;
+
+    const validMethods = ['facebook', 'twitter', 'whatsapp', 'email', 'copy'];
+    if (!validMethods.includes(method)) {
+      return res.status(400).json({ error: 'Invalid share method' });
+    }
+
+    await pool.query(
+      `INSERT INTO post_shares (postId, shareMethod, createdAt) VALUES ($1, $2, NOW())`,
+      [postId, method]
+    );
+
+    await updateEngagementStats('post', postId);
+    
+    res.json({ success: true, message: 'Share recorded' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Post engagement stats
+app.get('/api/posts/:id/stats', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+
+    const result = await pool.query(
+      `SELECT 
+        (SELECT COUNT(*) FROM post_likes WHERE postId = $1) as likes,
+        (SELECT COUNT(*) FROM post_comments WHERE postId = $1) as comments,
+        (SELECT COUNT(*) FROM post_shares WHERE postId = $1) as shares`,
+      [postId]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==================== POST COMMENT ENDPOINTS ====================
+
+// POST - Add comment to post
+app.post('/api/posts/:id/comments', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const { authorName, authorEmail, content } = req.body;
+
+    if (!authorName || !authorEmail || !content) {
+      return res.status(400).json({ error: 'Name, email, and content required' });
+    }
+
+    if (!validateEmail(authorEmail)) {
+      return res.status(400).json({ error: 'Valid email required' });
+    }
+
+    const sanitizedContent = content.replace(/[<>]/g, '').slice(0, 500);
+
+    const result = await pool.query(
+      `INSERT INTO post_comments (postId, authorName, authorEmail, content, status, createdAt)
+       VALUES ($1, $2, $3, $4, 'approved', NOW())
+       RETURNING id, createdAt`,
+      [postId, authorName.slice(0, 100), authorEmail.slice(0, 100), sanitizedContent]
+    );
+
+    await updateEngagementStats('post', postId);
+
+    // Send notification email to post author
+    await sendEmail(
+      authorEmail,
+      'New comment on your post',
+      `<p>Hi ${authorName},</p><p>Someone commented on your post! Check it out.</p>`
+    );
+
+    res.status(201).json({ 
+      message: 'Comment added',
+      commentId: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Get post comments
+app.get('/api/posts/:id/comments', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+
+    const result = await pool.query(
+      `SELECT id, authorName, content, createdAt 
+       FROM post_comments 
+       WHERE postId = $1 AND status = 'approved'
+       ORDER BY createdAt DESC
+       LIMIT 50`,
+      [postId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE - Admin delete comment
+app.delete('/api/admin/comments/:id', verifyAdmin, async (req, res) => {
+  try {
+    const commentId = parseInt(req.params.id);
+
+    await pool.query(
+      'DELETE FROM post_comments WHERE id = $1',
+      [commentId]
+    );
+
+    res.json({ message: 'Comment deleted' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==================== STORY ENGAGEMENT ENDPOINTS ====================
+
+// POST - Like a story
+app.post('/api/stories/:id/like', async (req, res) => {
+  try {
+    const storyId = parseInt(req.params.id);
+    const { email } = req.body;
+
+    if (!email || !validateEmail(email)) {
+      return res.status(400).json({ error: 'Valid email required' });
+    }
+
+    await pool.query(
+      `INSERT INTO story_likes (storyId, likerEmail, createdAt) VALUES ($1, $2, NOW())
+       ON CONFLICT (storyId, likerEmail) DO NOTHING`,
+      [storyId, email.slice(0, 100)]
+    );
+
+    const result = await pool.query(
+      `SELECT COUNT(*) as count FROM story_likes WHERE storyId = $1`,
+      [storyId]
+    );
+
+    res.json({ 
+      success: true,
+      message: 'Story liked',
+      likes: parseInt(result.rows[0]?.count || 0)
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Story likes count
+app.get('/api/stories/:id/likes', async (req, res) => {
+  try {
+    const storyId = parseInt(req.params.id);
+
+    const result = await pool.query(
+      `SELECT COUNT(*) as count FROM story_likes WHERE storyId = $1`,
+      [storyId]
+    );
+
+    res.json({ likes: parseInt(result.rows[0]?.count || 0) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==================== QR CODE ENDPOINTS ====================
+
+// GET - Generate QR code for payment method
+app.get('/api/qr-code', async (req, res) => {
+  try {
+    const { paymentMethod, amount, donorName } = req.query;
+
+    const validMethods = ['MTN MONEY', 'OM', 'MOOV MONEY', 'Wave'];
+    if (!validMethods.includes(paymentMethod)) {
+      return res.status(400).json({ error: 'Invalid payment method' });
+    }
+
+    const numbers = {
+      'MTN MONEY': '0574724233',
+      'OM': '0705583082',
+      'MOOV MONEY': '0150070083',
+      'Wave': '0574724233'
+    };
+
+    const text = `${paymentMethod}: ${numbers[paymentMethod]}\nAmount: ${amount || 'Variable'}\nFrom: ${donorName || 'Supporter'}`;
+    const qrUrl = await generateQRCode(text);
+
+    res.json({ 
+      success: true,
+      qrCode: qrUrl,
+      paymentMethod,
+      number: numbers[paymentMethod]
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==================== ANALYTICS ENDPOINTS ====================
+
+// GET - Engagement analytics for posts
+app.get('/api/analytics/posts', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        COUNT(DISTINCT p.id) as totalPosts,
+        COALESCE(SUM(pl.likeCount), 0) as totalLikes,
+        COALESCE(SUM(pc.commentCount), 0) as totalComments,
+        COALESCE(SUM(ps.shareCount), 0) as totalShares
+       FROM posts p
+       LEFT JOIN (SELECT postId, COUNT(*) as likeCount FROM post_likes GROUP BY postId) pl ON p.id = pl.postId
+       LEFT JOIN (SELECT postId, COUNT(*) as commentCount FROM post_comments GROUP BY postId) pc ON p.id = pc.postId
+       LEFT JOIN (SELECT postId, COUNT(*) as shareCount FROM post_shares GROUP BY postId) ps ON p.id = ps.postId
+       WHERE p.status = 'approved'`
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Engagement analytics for stories
+app.get('/api/analytics/stories', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        COUNT(DISTINCT s.id) as totalStories,
+        COALESCE(SUM(sl.likeCount), 0) as totalLikes,
+        COUNT(CASE WHEN s.expiresAt > NOW() THEN 1 END) as activeStories
+       FROM stories s
+       LEFT JOIN (SELECT storyId, COUNT(*) as likeCount FROM story_likes GROUP BY storyId) sl ON s.id = sl.storyId
+       WHERE s.status = 'approved'`
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Donations analytics
+app.get('/api/analytics/donations', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        COUNT(*) as totalDonations,
+        COALESCE(SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END), 0) as confirmedTotal,
+        COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as pendingTotal,
+        COUNT(DISTINCT paymentMethod) as uniqueMethods,
+        COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmedCount
+       FROM donations`
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Platform engagement overview
+app.get('/api/analytics/overview', async (req, res) => {
+  try {
+    const posts = await pool.query(
+      `SELECT COUNT(*) as count FROM posts WHERE status = 'approved'`
+    );
+    const stories = await pool.query(
+      `SELECT COUNT(*) as count FROM stories WHERE status = 'approved' AND expiresAt > NOW()`
+    );
+    const donations = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM donations WHERE status = 'confirmed'`
+    );
+    const comments = await pool.query(
+      `SELECT COUNT(*) as count FROM post_comments WHERE status = 'approved'`
+    );
+
+    res.json({
+      posts: parseInt(posts.rows[0]?.count || 0),
+      stories: parseInt(stories.rows[0]?.count || 0),
+      donations: {
+        count: parseInt(donations.rows[0]?.count || 0),
+        total: parseFloat(donations.rows[0]?.total || 0)
+      },
+      comments: parseInt(comments.rows[0]?.count || 0)
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ==================== PUBLIC MEDIA ENDPOINTS ====================
 
 // GET - All public media
 app.get('/api/public-media', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT id, filename, filepath, category, uploadedAt 
-       FROM admin_media 
-       ORDER BY uploadedAt DESC 
-       LIMIT 100`
-    );
+    // Support pagination and basic filters used by the frontend
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize || '30', 10)));
+    const typeFilter = (req.query.type || 'all').toLowerCase();
+    const sort = req.query.sort === 'oldest' ? 'ASC' : 'DESC';
+    const search = (req.query.search || '').trim();
 
-    res.json(result.rows);
+    // Build WHERE clauses
+    const where = [];
+    const params = [];
+    if (typeFilter === 'image') {
+      where.push("(filename ~* '\\.(jpg|jpeg|png|gif|webp)$')");
+    } else if (typeFilter === 'video') {
+      where.push("(filename ~* '\\.(mp4|webm|mov)$')");
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      where.push(`filename ILIKE $${params.length}`);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    // Total count for pagination
+    const countSql = `SELECT COUNT(*)::int as total FROM admin_media ${whereSql}`;
+    const countResult = await pool.query(countSql, params);
+    const total = parseInt(countResult.rows[0]?.total || 0, 10);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    // Fetch paginated rows
+    const offset = (page - 1) * pageSize;
+    const fetchSql = `SELECT id, filename, filepath, category, uploadedAt
+      FROM admin_media
+      ${whereSql}
+      ORDER BY uploadedAt ${sort}
+      LIMIT ${pageSize} OFFSET ${offset}`;
+    const result = await pool.query(fetchSql, params);
+
+    // Map rows to the structure expected by the frontend
+    const items = result.rows.map((r) => {
+      const fname = r.filename || '';
+      const ext = (fname.split('.').pop() || '').toLowerCase();
+      const isVideo = ['mp4', 'webm', 'mov', 'mkv'].includes(ext);
+      return {
+        id: r.id,
+        name: fname,
+        filename: fname,
+        filepath: r.filepath || `/quiz-2025-media/${fname}`,
+        category: r.category,
+        uploadedAt: r.uploadedat || r.uploadedAt,
+        url: `/quiz-2025-media/${encodeURIComponent(fname)}`,
+        type: isVideo ? 'video' : 'image'
+      };
+    });
+
+    res.json({ items, pagination: { page, pageSize, totalPages, total } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

@@ -34,6 +34,16 @@ Application web professionnelle pour l'Association des Serviteurs d'Allah Azawaj
 - ✅ **NEW** 💰 Gestion des donations (confirmation de paiement)
 - ✅ **NEW** 📸 Gestion galerie Quiz 2025
 
+### **NEW** Engagement Features (v2.0) 🎉
+- ✅ **📤 Photo Upload** - Users can upload images/videos for posts and stories
+- ✅ **❤️ Like System** - Like/unlike posts and stories with duplicate prevention
+- ✅ **💬 Comments** - Add, view, and moderate comments on posts
+- ✅ **📱 Share Tracking** - Track shares by method (Facebook, Twitter, WhatsApp, Email)
+- ✅ **🔢 Engagement Counters** - Real-time like, comment, and share counts
+- ✅ **📊 Analytics Dashboard** - Track engagement metrics and donation statistics
+- ✅ **📱 QR Codes** - Generate payment QR codes for donations
+- ✅ **📧 Email Notifications** - Auto-notifications for comments and interactions
+
 ### Sécurité & Qualité
 - ✅ CORS configuré + Security headers (HSTS, CSP, X-Frame-Options)
 - ✅ Sanitization XSS complète (HTML removal)
@@ -159,6 +169,35 @@ PUT  /api/contact-messages/:id   - Archiver/dés-archiver
 DELETE /api/contact-messages/:id - Supprimer message
 
 GET  /api/admin-audit            - Historique audit
+```
+
+### **NEW** Endpoints Engagement Features (v2.0)
+
+```
+# Photo Upload
+POST /api/upload/photo           - Upload photo/vidéo
+
+# Post Engagement
+POST /api/posts/:id/like         - Liker une publication
+DELETE /api/posts/:id/like       - Retirer le like
+POST /api/posts/:id/share        - Enregistrer un partage
+GET /api/posts/:id/stats         - Stats d'engagement (likes, comments, shares)
+POST /api/posts/:id/comments     - Ajouter commentaire
+GET /api/posts/:id/comments      - Lister commentaires
+DELETE /api/admin/comments/:id   - Supprimer commentaire (admin)
+
+# Story Engagement
+POST /api/stories/:id/like       - Liker une story
+GET /api/stories/:id/likes       - Nombre de likes
+
+# QR Codes
+GET /api/qr-code                 - Générer code QR paiement
+
+# Analytics
+GET /api/analytics/posts         - Stats publications
+GET /api/analytics/stories       - Stats stories
+GET /api/analytics/donations     - Stats donations (admin)
+GET /api/analytics/overview      - Vue d'ensemble plateforme
 ```
 
 ## 🔐 Authentification
@@ -357,6 +396,33 @@ Si vous voyez « Erreur base de données. Vérifiez DATABASE_URL... » :
 **Association des Serviteurs d'Allah Azawajal**
 - Contactez: admin@quizislamique.com
 - WhatsApp: +225 01 50 07 00 83
+
+---
+
+## 📚 Documentation v2.0 - Nouvelles Fonctionnalités
+
+### Guides Disponibles
+
+| Document | Contenu | Audience |
+|----------|---------|----------|
+| [NEW_FEATURES_API_DOCUMENTATION.md](NEW_FEATURES_API_DOCUMENTATION.md) | Référence complète des 27 endpoints | Développeurs backend |
+| [FRONTEND_INTEGRATION_GUIDE.md](FRONTEND_INTEGRATION_GUIDE.md) | Exemples d'intégration HTML/CSS/JS | Développeurs frontend |
+| [DEPLOYMENT_&_TESTING_GUIDE.md](DEPLOYMENT_&_TESTING_GUIDE.md) | Procédures test + déploiement | DevOps / QA |
+| [FEATURES_IMPLEMENTATION_SUMMARY.md](FEATURES_IMPLEMENTATION_SUMMARY.md) | Résumé technique complet | Chefs de projet |
+| [QUICK_REFERENCE_v2.md](QUICK_REFERENCE_v2.md) | Guide rapide API | Tous |
+
+### Début Rapide - v2.0
+
+**1. Tester un endpoint (After npm install):**
+```bash
+curl http://localhost:3000/api/analytics/overview
+```
+
+**2. Intégrer frontend** (voir [FRONTEND_INTEGRATION_GUIDE.md](FRONTEND_INTEGRATION_GUIDE.md)):
+- Ajouter boutons like/comment/share
+- Formulaire upload photo
+- Affichage code QR donations
+- Dashboard analytics
 
 ---
 

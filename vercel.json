@@ -1,8 +1,30 @@
 {
   "version": 2,
-  "buildCommand": "npm ci",
-  "outputDirectory": ".",
-  "installCommand": "npm ci",
-  "framework": "express",
-  "devCommand": "node server.js"
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/quiz-2025-media/(.*)",
+      "dest": "/public/quiz-2025-media/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
