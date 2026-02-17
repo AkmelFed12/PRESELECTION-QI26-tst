@@ -1,5 +1,6 @@
 const postForm = document.getElementById('postForm');
 const postsDiv = document.getElementById('postsDiv');
+const topPostsList = document.getElementById('topPostsList');
 let postsFetchInFlight = false;
 let postsRefreshTimer = null;
 
@@ -55,6 +56,8 @@ async function loadPosts() {
       return;
     }
 
+    renderTopPosts(posts);
+
     posts.forEach(post => {
       const date = new Date(post.createdAt).toLocaleDateString('fr-FR');
       const likes = Number(post.likes || 0);
@@ -85,7 +88,7 @@ async function loadPosts() {
           <div class="post-comments" data-comments="${post.id}"></div>
         </div>
       `;
-      postsDiv.innerHTML += postHTML;
+    postsDiv.innerHTML += postHTML;
     });
   } catch (error) {
     console.error(error);
@@ -93,6 +96,30 @@ async function loadPosts() {
   } finally {
     postsFetchInFlight = false;
   }
+}
+
+function renderTopPosts(posts) {
+  if (!topPostsList) return;
+  if (!Array.isArray(posts) || posts.length === 0) {
+    topPostsList.textContent = 'Aucune publication pour le moment.';
+    return;
+  }
+  const ranked = [...posts].map((p) => {
+    const score =
+      Number(p.reactions_heart || 0) +
+      Number(p.reactions_thumb || 0) +
+      Number(p.reactions_laugh || 0) +
+      Number(p.likes || 0) +
+      Number(p.shares || 0);
+    return { ...p, score };
+  }).sort((a, b) => b.score - a.score).slice(0, 5);
+
+  topPostsList.innerHTML = ranked.map((p, idx) => `
+    <div class="top-posts-item">
+      <span>${idx + 1}. ${escapeHtml(p.authorName)} — ${escapeHtml((p.content || '').slice(0, 60))}${(p.content || '').length > 60 ? '…' : ''}</span>
+      <strong>${p.score}</strong>
+    </div>
+  `).join('');
 }
 
 function escapeHtml(text) {

@@ -91,6 +91,34 @@
             gap: 20px;
         }
 
+        .top-posts {
+            margin: 20px 0 30px;
+            background: #fffdf7;
+            border: 1px solid #f0e6d2;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .top-posts h3 {
+            margin: 0 0 12px;
+            color: #7a5a20;
+        }
+
+        .top-posts-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .top-posts-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 10px;
+            background: #fff;
+            border: 1px solid #f2ead9;
+            border-radius: 6px;
+        }
+
         .post-card {
             background: white;
             border: 1px solid #ddd;
@@ -250,6 +278,11 @@
             <a href="index.html" class="btn-link outline">Retour à l'accueil</a>
         </div>
         <h1>Actualités & Publications</h1>
+
+        <div class="top-posts" id="topPosts">
+            <h3>🔥 Posts les plus aimés</h3>
+            <div class="top-posts-list" id="topPostsList">Chargement...</div>
+        </div>
         
         <div class="post-submission-form">
             <h3>Soumettre une publication</h3>
