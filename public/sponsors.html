@@ -43,6 +43,10 @@
     <main class="sponsors-container">
       <h1>🤝 Sponsors & Partenaires</h1>
       <p class="muted-note">Merci à nos partenaires pour leur soutien.</p>
+      <div style="display:flex; gap:12px; margin:12px 0 20px;">
+        <a href="#become-sponsor" class="btn-link outline">Devenir sponsor</a>
+        <a href="contact.html" class="btn-link">Nous contacter</a>
+      </div>
       <div class="sponsors-grid">
         <div class="sponsor-card">
           <div class="sponsor-logo">Logo 1</div>
@@ -60,6 +64,32 @@
           <p class="muted-note">Support local</p>
         </div>
       </div>
+
+      <section class="card" id="become-sponsor" style="margin-top:24px;">
+        <h2>Devenir sponsor</h2>
+        <p class="muted-note">Remplissez ce formulaire, nous vous recontactons rapidement.</p>
+        <div class="success-message" id="sponsorSuccess" style="display:none;"></div>
+        <div class="error-message" id="sponsorError" style="display:none;"></div>
+        <form id="sponsorForm">
+          <div class="form-group">
+            <label for="sponsorName">Nom / Entreprise *</label>
+            <input type="text" id="sponsorName" required maxlength="120" />
+          </div>
+          <div class="form-group">
+            <label for="sponsorEmail">Email *</label>
+            <input type="email" id="sponsorEmail" required maxlength="120" />
+          </div>
+          <div class="form-group">
+            <label for="sponsorPhone">Téléphone</label>
+            <input type="tel" id="sponsorPhone" maxlength="30" />
+          </div>
+          <div class="form-group">
+            <label for="sponsorMessage">Message *</label>
+            <textarea id="sponsorMessage" required maxlength="800" rows="5"></textarea>
+          </div>
+          <button type="submit" class="btn-link">Envoyer</button>
+        </form>
+      </section>
     </main>
     <footer class="site-footer">
       <div>
@@ -74,5 +104,36 @@
         <a href="mentions-legales.html">Mentions légales</a>
       </div>
     </footer>
+    <script>
+      const sponsorForm = document.getElementById('sponsorForm');
+      const sponsorSuccess = document.getElementById('sponsorSuccess');
+      const sponsorError = document.getElementById('sponsorError');
+      sponsorForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        sponsorSuccess.style.display = 'none';
+        sponsorError.style.display = 'none';
+        const payload = {
+          fullName: document.getElementById('sponsorName').value.trim(),
+          email: document.getElementById('sponsorEmail').value.trim(),
+          subject: 'Demande de sponsoring',
+          message: `Téléphone: ${document.getElementById('sponsorPhone').value.trim()}\n\n${document.getElementById('sponsorMessage').value.trim()}`
+        };
+        try {
+          const res = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || 'Erreur envoi');
+          sponsorSuccess.textContent = 'Merci, votre demande a été envoyée.';
+          sponsorSuccess.style.display = 'block';
+          sponsorForm.reset();
+        } catch (err) {
+          sponsorError.textContent = err.message || 'Erreur envoi.';
+          sponsorError.style.display = 'block';
+        }
+      });
+    </script>
   </body>
 </html>
