@@ -637,6 +637,21 @@ app.post('/api/register', registerLimiter, async (req, res) => {
     const msg = `Assalamou alaykoum, je confirme mon inscription au Quiz Islamique 2026. Mon ID candidat est ${candidateId}.`;
     const whatsappRedirect = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`;
 
+    if (process.env.ADMIN_EMAIL) {
+      await sendEmail(
+        process.env.ADMIN_EMAIL,
+        `🆕 Nouvelle inscription — ${sanitizedName}`,
+        `<p>Nouvelle inscription reçue.</p>
+         <ul>
+           <li>Nom: ${sanitizeString(sanitizedName, 255)}</li>
+           <li>WhatsApp: ${normalized}</li>
+           <li>Pays/Ville: ${sanitizeString(sanitizedCountry, 100)} ${sanitizeString(sanitizedCity, 100)}</li>
+           <li>Email: ${sanitizeString(sanitizedEmail, 120)}</li>
+           <li>Code: ${candidateCode}</li>
+         </ul>`
+      );
+    }
+
     res.status(201).json({
       message: 'Inscription enregistrée. Un email de confirmation vous a été envoyé.',
       candidateId,
