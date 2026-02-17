@@ -231,6 +231,37 @@
             margin-top: 6px;
         }
 
+        .upload-preview {
+            margin-top: 10px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 8px;
+            background: #f7f7fb;
+        }
+
+        .upload-preview img,
+        .upload-preview video {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 4px;
+        }
+
+        .upload-progress {
+            height: 6px;
+            background: #eee;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .upload-progress span {
+            display: block;
+            height: 100%;
+            width: 0%;
+            background: #667eea;
+            transition: width 0.2s ease;
+        }
+
         .form-group textarea {
             min-height: 80px;
         }
@@ -320,6 +351,8 @@
                         </div>
                         <button type="button" class="btn-small" id="uploadMediaBtn">Téléverser</button>
                         <div class="upload-status" id="uploadMediaStatus"></div>
+                        <div class="upload-progress" id="uploadMediaProgress"><span></span></div>
+                        <div class="upload-preview" id="uploadMediaPreview" style="display:none;"></div>
                     </div>
 
                     <button type="submit" class="submit-btn">Publier Story</button>

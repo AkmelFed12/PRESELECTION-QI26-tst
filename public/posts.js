@@ -4,6 +4,9 @@ const topPostsList = document.getElementById('topPostsList');
 const imageFileInput = document.getElementById('imageFile');
 const uploadImageBtn = document.getElementById('uploadImageBtn');
 const uploadStatus = document.getElementById('uploadStatus');
+const uploadProgress = document.getElementById('uploadProgress');
+const uploadProgressBar = uploadProgress?.querySelector('span');
+const uploadPreview = document.getElementById('uploadPreview');
 let postsFetchInFlight = false;
 let postsRefreshTimer = null;
 
@@ -239,26 +242,60 @@ uploadImageBtn?.addEventListener('click', async () => {
     uploadStatus.textContent = 'Veuillez choisir un fichier.';
     return;
   }
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    uploadStatus.textContent = 'Fichier trop lourd (max 5MB).';
+    return;
+  }
   uploadStatus.textContent = 'Téléversement en cours...';
+  if (uploadProgressBar) uploadProgressBar.style.width = '0%';
+  if (uploadPreview) {
+    uploadPreview.style.display = 'none';
+    uploadPreview.innerHTML = '';
+  }
   try {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/api/upload/photo', {
-      method: 'POST',
-      body: formData
+    const data = await uploadFileWithProgress('/api/upload/photo', file, (pct) => {
+      if (uploadProgressBar) uploadProgressBar.style.width = `${pct}%`;
     });
-    const data = await res.json();
-    if (!res.ok) {
-      uploadStatus.textContent = data.error || 'Erreur de téléversement.';
-      return;
-    }
     const imageUrlInput = document.getElementById('imageUrl');
     if (imageUrlInput) imageUrlInput.value = data.url || '';
     uploadStatus.textContent = 'Téléversement terminé.';
+    if (uploadPreview) {
+      const isVideo = file.type.startsWith('video/');
+      uploadPreview.style.display = 'block';
+      uploadPreview.innerHTML = isVideo
+        ? `<video src="${data.url}" controls muted playsinline></video>`
+        : `<img src="${data.url}" alt="Aperçu">`;
+    }
   } catch (error) {
     uploadStatus.textContent = 'Erreur de téléversement.';
   }
 });
+
+function uploadFileWithProgress(url, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.upload.onprogress = (evt) => {
+      if (!evt.lengthComputable) return;
+      const pct = Math.round((evt.loaded / evt.total) * 100);
+      onProgress?.(pct);
+    };
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText || '{}');
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+        else reject(data);
+      } catch {
+        reject(new Error('Upload failed'));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Upload failed'));
+    const formData = new FormData();
+    formData.append('file', file);
+    xhr.send(formData);
+  });
+}
 
 postsDiv?.addEventListener('submit', async (e) => {
   const form = e.target.closest('.comment-form');
