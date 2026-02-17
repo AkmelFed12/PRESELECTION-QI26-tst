@@ -17,6 +17,7 @@ const candidateCityFilter = document.getElementById('candidateCityFilter');
 const publicStatCandidates = document.getElementById('publicStatCandidates');
 const publicStatCountries = document.getElementById('publicStatCountries');
 const publicStatCities = document.getElementById('publicStatCities');
+const topReactionsList = document.getElementById('topReactionsList');
 
 let cachedCandidates = [];
 
@@ -226,6 +227,41 @@ function renderPublicCandidatesList() {
     : '<div class="empty">Aucun candidat ne correspond à ces filtres.</div>';
 }
 
+async function loadTopReactions() {
+  if (!topReactionsList) return;
+  try {
+    const res = await fetch('/api/posts?limit=50', { cache: 'no-store' });
+    const posts = await res.json();
+    if (!Array.isArray(posts) || posts.length === 0) {
+      topReactionsList.textContent = 'Aucune publication pour le moment.';
+      return;
+    }
+    const ranked = posts
+      .map((p) => {
+        const score =
+          Number(p.reactions_heart || 0) +
+          Number(p.reactions_thumb || 0) +
+          Number(p.reactions_laugh || 0);
+        return { ...p, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    topReactionsList.innerHTML = ranked
+      .map(
+        (p, idx) => `
+          <div class="top-reactions-item">
+            <span>${idx + 1}. ${escapeHtml(p.authorName)} — ${escapeHtml((p.content || '').slice(0, 60))}${(p.content || '').length > 60 ? '…' : ''}</span>
+            <strong>${p.score}</strong>
+          </div>
+        `
+      )
+      .join('');
+  } catch (error) {
+    topReactionsList.textContent = 'Erreur chargement des réactions.';
+  }
+}
+
 function hydratePublicFilters() {
   if (!candidateCountryFilter || !candidateCityFilter) return;
   const countries = Array.from(
@@ -316,3 +352,4 @@ if (qrCode && window.QRCode) {
 
 loadPublicCandidates();
 setInterval(loadPublicCandidates, 30000);
+loadTopReactions();

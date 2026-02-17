@@ -734,6 +734,23 @@ tbody tr:hover { background: #fffaf0; }
 .poll-results.hidden {
   display: none;
 }
+.top-reactions-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.top-reactions-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.top-reactions-item strong {
+  color: #c0392b;
+}
 .full {
   grid-column: 1 / -1;
 }
