@@ -1,5 +1,7 @@
 let currentStoryIndex = 0;
 let allStories = [];
+let storiesFetchInFlight = false;
+let storiesRefreshTimer = null;
 
 document.getElementById('storyForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -40,8 +42,10 @@ document.getElementById('storyForm').addEventListener('submit', async (e) => {
 });
 
 async function loadStories() {
+  if (storiesFetchInFlight) return;
+  storiesFetchInFlight = true;
   try {
-    const response = await fetch('/api/stories/active');
+    const response = await fetch('/api/stories/active', { cache: 'no-store' });
     allStories = await response.json();
 
     const storiesDiv = document.getElementById('storiesDiv');
@@ -71,6 +75,8 @@ async function loadStories() {
   } catch (error) {
     console.error(error);
     document.getElementById('storiesDiv').innerHTML = '<div class="empty-stories">Erreur chargement des stories</div>';
+  } finally {
+    storiesFetchInFlight = false;
   }
 }
 
@@ -135,6 +141,16 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') prevStory();
 });
 
+function startStoriesRefresh() {
+  if (storiesRefreshTimer) clearInterval(storiesRefreshTimer);
+  storiesRefreshTimer = setInterval(() => {
+    if (!document.hidden) loadStories();
+  }, 20000);
+}
+
 // Auto-refresh stories every 20 seconds
 loadStories();
-setInterval(loadStories, 20000);
+startStoriesRefresh();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadStories();
+});

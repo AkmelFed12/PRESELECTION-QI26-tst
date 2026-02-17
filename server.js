@@ -3,7 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { readdir, stat } from 'fs/promises';
+import { readdir, stat, access } from 'fs/promises';
+import { createReadStream } from 'fs';
 import rateLimit from 'express-rate-limit';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
@@ -409,6 +410,8 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_engagement_content ON engagement_stats(contentType, contentId);
       CREATE INDEX IF NOT EXISTS idx_admin_media_category ON admin_media(category);
       CREATE INDEX IF NOT EXISTS idx_admin_media_hidden ON admin_media(hidden);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_media_filename ON admin_media(filename);
+      CREATE INDEX IF NOT EXISTS idx_media_events_updated ON media_events(updatedAt);
     `);
 
     console.log('✅ Database initialized successfully');
@@ -839,12 +842,17 @@ app.post('/api/posts', async (req, res) => {
 // GET - List approved posts (public feed)
 app.get('/api/posts', async (req, res) => {
   try {
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '50', 10)));
     const result = await pool.query(
-      `SELECT id, authorName, content, imageUrl, createdAt, approvedAt 
-       FROM posts 
-       WHERE status = 'approved' 
-       ORDER BY approvedAt DESC 
-       LIMIT 50`
+      `SELECT p.id, p.authorName, p.content, p.imageUrl, p.createdAt, p.approvedAt,
+              (SELECT COUNT(*) FROM post_likes WHERE postId = p.id) as likes,
+              (SELECT COUNT(*) FROM post_comments WHERE postId = p.id AND status = 'approved') as comments,
+              (SELECT COUNT(*) FROM post_shares WHERE postId = p.id) as shares
+       FROM posts p
+       WHERE p.status = 'approved'
+       ORDER BY p.approvedAt DESC
+       LIMIT $1`,
+      [limit]
     );
 
     res.json(result.rows);
@@ -1041,6 +1049,39 @@ app.post('/api/donations', async (req, res) => {
     );
 
     res.status(201).json({ message: 'Donation enregistrée. Merci!', donationId: result.rows[0].id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Public confirmed donations
+app.get('/api/donations', async (req, res) => {
+  try {
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit || '20', 10)));
+    const [rows, summary] = await Promise.all([
+      pool.query(
+        `SELECT donorName, amount, currency, paymentMethod, message, createdAt
+         FROM donations
+         WHERE status = 'confirmed'
+         ORDER BY createdAt DESC
+         LIMIT $1`,
+        [limit]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int as count, COALESCE(SUM(amount), 0) as total
+         FROM donations
+         WHERE status = 'confirmed'`
+      )
+    ]);
+
+    res.json({
+      items: rows.rows,
+      summary: {
+        totalDonations: parseInt(summary.rows[0]?.count || 0, 10),
+        totalAmount: parseFloat(summary.rows[0]?.total || 0)
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -1590,13 +1631,26 @@ function matchesTypeFilter(filename, typeFilter) {
   return true;
 }
 
+async function fileExists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function loadMediaFromFilesystem({ page, pageSize, typeFilter, sort, search }) {
   const files = await listMediaFilesFromDisk();
   const filtered = files
     .filter((f) => matchesTypeFilter(f.name, typeFilter))
     .filter((f) => (search ? f.name.toLowerCase().includes(search.toLowerCase()) : true));
 
-  filtered.sort((a, b) => (sort === 'ASC' ? a.mtimeMs - b.mtimeMs : b.mtimeMs - a.mtimeMs));
+  if (sort === 'name') {
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    filtered.sort((a, b) => (sort === 'ASC' ? a.mtimeMs - b.mtimeMs : b.mtimeMs - a.mtimeMs));
+  }
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -1617,6 +1671,51 @@ async function loadMediaFromFilesystem({ page, pageSize, typeFilter, sort, searc
   return { items, pagination: { page, pageSize, totalPages, total } };
 }
 
+async function buildAdminMediaList() {
+  const [files, dbRows, eventRows] = await Promise.all([
+    listMediaFilesFromDisk(),
+    pool.query(`SELECT filename, caption, displayOrder, hidden, category, uploadedAt FROM admin_media`),
+    pool.query(`SELECT name, views, downloads FROM media_events`)
+  ]);
+
+  const rowMap = new Map(dbRows.rows.map((r) => [r.filename, r]));
+  const eventMap = new Map(eventRows.rows.map((r) => [r.name, r]));
+
+  return files.map((f) => {
+    const row = rowMap.get(f.name) || {};
+    const ev = eventMap.get(f.name) || {};
+    return {
+      name: f.name,
+      type: classifyMediaType(f.name),
+      caption: row.caption || '',
+      order: Number(row.displayorder || row.displayOrder || 0),
+      hidden: Boolean(row.hidden),
+      category: row.category || 'quiz-2025',
+      uploadedAt: row.uploadedat || row.uploadedAt || null,
+      views: Number(ev.views || 0),
+      downloads: Number(ev.downloads || 0),
+      mtimeMs: f.mtimeMs
+    };
+  });
+}
+
+// HEAD/GET - Download all media as a ZIP (if provided)
+app.head('/api/public-media/download-all', async (req, res) => {
+  const zipPath = join(__dirname, 'public', 'quiz-2025-media.zip');
+  if (await fileExists(zipPath)) return res.status(200).end();
+  return res.status(404).end();
+});
+
+app.get('/api/public-media/download-all', async (req, res) => {
+  const zipPath = join(__dirname, 'public', 'quiz-2025-media.zip');
+  if (!await fileExists(zipPath)) {
+    return res.status(404).json({ error: 'Archive indisponible pour le moment.' });
+  }
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="quiz-2025-media.zip"');
+  createReadStream(zipPath).pipe(res);
+});
+
 // GET - All public media
 app.get('/api/public-media', async (req, res) => {
   try {
@@ -1624,7 +1723,9 @@ app.get('/api/public-media', async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize || '30', 10)));
     const typeFilter = (req.query.type || 'all').toLowerCase();
-    const sort = req.query.sort === 'oldest' ? 'ASC' : 'DESC';
+    const sortValue = (req.query.sort || 'newest').toLowerCase();
+    const sortField = sortValue === 'name' ? 'filename' : 'uploadedAt';
+    const sortDir = sortValue === 'oldest' || sortValue === 'name' ? 'ASC' : 'DESC';
     const search = (req.query.search || '').trim();
 
     // Build WHERE clauses
@@ -1639,6 +1740,7 @@ app.get('/api/public-media', async (req, res) => {
       params.push(`%${search}%`);
       where.push(`filename ILIKE $${params.length}`);
     }
+    where.push('hidden = 0');
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
@@ -1654,12 +1756,12 @@ app.get('/api/public-media', async (req, res) => {
       const fetchSql = `SELECT id, filename, filepath, category, caption, displayOrder, hidden, uploadedAt
         FROM admin_media
         ${whereSql}
-        ORDER BY uploadedAt ${sort}
+        ORDER BY ${sortField} ${sortDir}
         LIMIT ${pageSize} OFFSET ${offset}`;
       const result = await pool.query(fetchSql, params);
 
       if (!result.rows.length) {
-        const fallback = await loadMediaFromFilesystem({ page, pageSize, typeFilter, sort, search });
+        const fallback = await loadMediaFromFilesystem({ page, pageSize, typeFilter, sort: sortValue === 'name' ? 'name' : sortDir, search });
         return res.json(fallback);
       }
 
@@ -1684,11 +1786,101 @@ app.get('/api/public-media', async (req, res) => {
       res.json({ items, pagination: { page, pageSize, totalPages, total } });
     } catch (dbError) {
       if (dbError?.code === '42P01') {
-        const fallback = await loadMediaFromFilesystem({ page, pageSize, typeFilter, sort, search });
+        const fallback = await loadMediaFromFilesystem({ page, pageSize, typeFilter, sort: sortValue === 'name' ? 'name' : sortDir, search });
         return res.json(fallback);
       }
       throw dbError;
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Admin media management list
+app.get('/api/admin/media', verifyAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(200, Math.max(1, parseInt(req.query.pageSize || '60', 10)));
+    const typeFilter = (req.query.type || 'all').toLowerCase();
+    const sortValue = (req.query.sort || 'newest').toLowerCase();
+    const search = (req.query.search || '').trim().toLowerCase();
+
+    let items = await buildAdminMediaList();
+
+    if (typeFilter !== 'all') {
+      items = items.filter((i) => i.type === typeFilter);
+    }
+    if (search) {
+      items = items.filter((i) => i.name.toLowerCase().includes(search) || i.caption.toLowerCase().includes(search));
+    }
+
+    if (sortValue === 'name') {
+      items.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      items.sort((a, b) => {
+        const aTime = a.uploadedAt ? new Date(a.uploadedAt).getTime() : a.mtimeMs;
+        const bTime = b.uploadedAt ? new Date(b.uploadedAt).getTime() : b.mtimeMs;
+        return sortValue === 'oldest' ? aTime - bTime : bTime - aTime;
+      });
+    }
+
+    const total = items.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const offset = (page - 1) * pageSize;
+    const slice = items.slice(offset, offset + pageSize);
+
+    res.json({ items: slice, pagination: { page, pageSize, totalPages, total } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT - Update media metadata
+app.put('/api/admin/media/:name', verifyAdmin, async (req, res) => {
+  try {
+    const filename = decodeURIComponent(req.params.name || '').trim();
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    const caption = String(req.body?.caption || '').slice(0, 240);
+    const hidden = req.body?.hidden ? 1 : 0;
+    const order = Number.isFinite(Number(req.body?.order)) ? Number(req.body.order) : 0;
+    const category = String(req.body?.category || 'quiz-2025').slice(0, 60);
+    const filepath = `/quiz-2025-media/${filename}`;
+
+    await pool.query(
+      `INSERT INTO admin_media (filename, filepath, category, caption, displayOrder, hidden, uploadedAt)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       ON CONFLICT (filename)
+       DO UPDATE SET filepath = $2, category = $3, caption = $4, displayOrder = $5, hidden = $6`,
+      [filename, filepath, category, caption, order, hidden]
+    );
+
+    res.json({ message: 'Média mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE - Soft-hide media (serverless-safe)
+app.delete('/api/admin/media/:name', verifyAdmin, async (req, res) => {
+  try {
+    const filename = decodeURIComponent(req.params.name || '').trim();
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    const filepath = `/quiz-2025-media/${filename}`;
+    await pool.query(
+      `INSERT INTO admin_media (filename, filepath, category, caption, displayOrder, hidden, uploadedAt)
+       VALUES ($1, $2, 'quiz-2025', '', 0, 1, NOW())
+       ON CONFLICT (filename)
+       DO UPDATE SET hidden = 1, filepath = $2`,
+      [filename, filepath]
+    );
+    res.json({ message: 'Média masqué.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

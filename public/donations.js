@@ -1,4 +1,8 @@
-document.getElementById('donationForm').addEventListener('submit', async (e) => {
+const donationForm = document.getElementById('donationForm');
+let donationFetchInFlight = false;
+let donationRefreshTimer = null;
+
+donationForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const donorName = document.getElementById('donorName').value;
@@ -45,12 +49,13 @@ document.getElementById('donationForm').addEventListener('submit', async (e) => 
   }
 });
 
-function copyToClipboard(elementId, methodName) {
+function copyToClipboard(elementId, methodName, button) {
   const element = document.getElementById(elementId);
   const text = element.textContent;
   
   navigator.clipboard.writeText(text).then(() => {
-    const btn = event.target;
+    const btn = button || document.activeElement;
+    if (!btn) return;
     const originalText = btn.textContent;
     btn.textContent = '✅ Copié!';
     setTimeout(() => {
@@ -63,31 +68,26 @@ function copyToClipboard(elementId, methodName) {
 }
 
 async function loadDonations() {
+  if (donationFetchInFlight) return;
+  donationFetchInFlight = true;
   try {
-    const response = await fetch('/api/donations');
-    const donations = await response.json();
+    const response = await fetch('/api/donations?limit=20', { cache: 'no-store' });
+    const payload = await response.json();
 
     const donationsDiv = document.getElementById('donationsDiv');
     donationsDiv.innerHTML = '';
 
-    if (!donations || donations.length === 0) {
+    const donations = Array.isArray(payload.items) ? payload.items : [];
+    const summary = payload.summary || { totalDonations: 0, totalAmount: 0 };
+
+    if (!donations.length) {
       donationsDiv.innerHTML = '<p style="color: #999;">Aucune donation enregistrée pour le moment.</p>';
       return;
     }
 
-    // Show only confirmed donations (public)
-    const confirmedDonations = donations.filter(d => d.status === 'confirmed').slice(0, 20);
-
-    if (confirmedDonations.length === 0) {
-      donationsDiv.innerHTML = '<p style="color: #999;">Soyez le premier à soutenir notre mission!</p>';
-      return;
-    }
-
-    let totalAmount = 0;
     let totalDonors = new Set();
 
-    confirmedDonations.forEach(donation => {
-      totalAmount += parseFloat(donation.amount);
+    donations.forEach(donation => {
       totalDonors.add(donation.donorName);
 
       const donationHTML = `
@@ -104,16 +104,18 @@ async function loadDonations() {
     });
 
     // Add summary at the top
-    const summary = `
+    const summaryHtml = `
       <div style="background: #E8F5E9; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border-left: 4px solid #4CAF50;">
-        <strong style="color: #2E7D32; font-size: 18px;">Total: ${totalAmount.toLocaleString('fr-FR')} FCA</strong><br>
-        <span style="color: #666; font-size: 14px;">${totalDonors.size} généreux donateurs</span>
+        <strong style="color: #2E7D32; font-size: 18px;">Total: ${Number(summary.totalAmount || 0).toLocaleString('fr-FR')} FCA</strong><br>
+        <span style="color: #666; font-size: 14px;">${summary.totalDonations || totalDonors.size} généreux donateurs</span>
       </div>
     `;
-    donationsDiv.innerHTML = summary + donationsDiv.innerHTML;
+    donationsDiv.innerHTML = summaryHtml + donationsDiv.innerHTML;
   } catch (error) {
     console.error(error);
     document.getElementById('donationsDiv').innerHTML = '<p style="color: red;">Erreur chargement des donations</p>';
+  } finally {
+    donationFetchInFlight = false;
   }
 }
 
@@ -128,7 +130,16 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
+function startDonationRefresh() {
+  if (donationRefreshTimer) clearInterval(donationRefreshTimer);
+  donationRefreshTimer = setInterval(() => {
+    if (!document.hidden) loadDonations();
+  }, 60000);
+}
+
 // Load donations on page load
 loadDonations();
-// Refresh every 60 seconds
-setInterval(loadDonations, 60000);
+startDonationRefresh();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadDonations();
+});

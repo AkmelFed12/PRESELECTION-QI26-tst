@@ -1,4 +1,9 @@
-document.getElementById('postForm').addEventListener('submit', async (e) => {
+const postForm = document.getElementById('postForm');
+const postsDiv = document.getElementById('postsDiv');
+let postsFetchInFlight = false;
+let postsRefreshTimer = null;
+
+postForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const authorName = document.getElementById('authorName').value;
@@ -37,11 +42,12 @@ document.getElementById('postForm').addEventListener('submit', async (e) => {
 });
 
 async function loadPosts() {
+  if (postsFetchInFlight) return;
+  postsFetchInFlight = true;
   try {
-    const response = await fetch('/api/posts');
+    const response = await fetch('/api/posts?limit=50', { cache: 'no-store' });
     const posts = await response.json();
 
-    const postsDiv = document.getElementById('postsDiv');
     postsDiv.innerHTML = '';
 
     if (posts.length === 0) {
@@ -51,6 +57,8 @@ async function loadPosts() {
 
     posts.forEach(post => {
       const date = new Date(post.createdAt).toLocaleDateString('fr-FR');
+      const likes = Number(post.likes || 0);
+      const shares = Number(post.shares || 0);
       const postHTML = `
         <div class="post-card">
           <div class="post-header">
@@ -62,8 +70,8 @@ async function loadPosts() {
           ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" class="post-image" onerror="this.style.display='none'">` : ''}
           <div class="post-content">${escapeHtml(post.content)}</div>
           <div class="post-actions">
-            <button class="btn-small" onclick="alert('Vous avez aimé cette publication')">❤️ Aimer</button>
-            <button class="btn-small" onclick="alert('Partager avec vos contacts')">📤 Partager</button>
+            <button class="btn-small" data-action="like" data-id="${post.id}">❤️ Aimer (${likes})</button>
+            <button class="btn-small" data-action="share" data-id="${post.id}">📤 Partager (${shares})</button>
           </div>
         </div>
       `;
@@ -72,6 +80,8 @@ async function loadPosts() {
   } catch (error) {
     console.error(error);
     document.getElementById('postsDiv').innerHTML = '<div class="error-message show">Erreur chargement des publications</div>';
+  } finally {
+    postsFetchInFlight = false;
   }
 }
 
@@ -86,6 +96,61 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
+postsDiv?.addEventListener('click', async (e) => {
+  const button = e.target.closest('button[data-action]');
+  if (!button) return;
+  const action = button.dataset.action;
+  const postId = button.dataset.id;
+  if (!postId) return;
+
+  try {
+    if (action === 'like') {
+      const stored = localStorage.getItem('viewerEmail') || '';
+      const email = prompt('Votre email pour aimer cette publication:', stored) || '';
+      const cleanEmail = email.trim();
+      if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        alert('Email invalide.');
+        return;
+      }
+      localStorage.setItem('viewerEmail', cleanEmail);
+      const res = await fetch(`/api/posts/${postId}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail })
+      });
+      if (!res.ok) throw new Error('Erreur lors du like');
+      await loadPosts();
+    } else if (action === 'share') {
+      const url = `${window.location.origin}/posts.html`;
+      await fetch(`/api/posts/${postId}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: 'copy' })
+      }).catch(() => {});
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('Lien copié dans le presse-papiers.');
+      } catch (_) {
+        alert(`Copiez ce lien: ${url}`);
+      }
+      await loadPosts();
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Action impossible pour le moment.');
+  }
+});
+
+function startPostsRefresh() {
+  if (postsRefreshTimer) clearInterval(postsRefreshTimer);
+  postsRefreshTimer = setInterval(() => {
+    if (!document.hidden) loadPosts();
+  }, 30000);
+}
+
 // Auto-refresh posts every 30 seconds
 loadPosts();
-setInterval(loadPosts, 30000);
+startPostsRefresh();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadPosts();
+});

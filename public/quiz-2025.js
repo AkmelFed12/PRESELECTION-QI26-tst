@@ -268,6 +268,16 @@ async function loadStats() {
   } catch (_) {}
 }
 
+async function checkDownloadAll() {
+  if (!downloadAllZip) return;
+  try {
+    const response = await fetch(downloadAllZip.href, { method: 'HEAD' });
+    if (!response.ok) downloadAllZip.classList.add('hidden');
+  } catch (_) {
+    downloadAllZip.classList.add('hidden');
+  }
+}
+
 async function loadMedia(resetPage = false) {
   if (resetPage) pagination.page = 1;
   try {
@@ -282,6 +292,7 @@ async function loadMedia(resetPage = false) {
     await renderSlide();
     updatePaginationInfo();
     downloadAllZip.href = `/api/public-media/download-all?${query}`;
+    await checkDownloadAll();
     await loadStats();
   } catch (error) {
     galleryStatus.textContent = 'Impossible de charger la galerie.';
