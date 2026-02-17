@@ -292,12 +292,52 @@ async function initDatabase() {
         updatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS posts (
+        id BIGSERIAL PRIMARY KEY,
+        authorName TEXT NOT NULL,
+        authorEmail TEXT,
+        content TEXT NOT NULL,
+        imageUrl TEXT,
+        status TEXT DEFAULT 'pending',
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        approvedAt TIMESTAMP WITH TIME ZONE,
+        approvedBy TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS stories (
+        id BIGSERIAL PRIMARY KEY,
+        authorName TEXT NOT NULL,
+        authorEmail TEXT,
+        content TEXT NOT NULL,
+        mediaUrl TEXT,
+        status TEXT DEFAULT 'pending',
+        expiresAt TIMESTAMP WITH TIME ZONE DEFAULT NOW() + INTERVAL '24 hours',
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        approvedAt TIMESTAMP WITH TIME ZONE,
+        approvedBy TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS donations (
+        id BIGSERIAL PRIMARY KEY,
+        donorName TEXT NOT NULL,
+        donorEmail TEXT,
+        amount DECIMAL(10, 2),
+        currency TEXT DEFAULT 'XOF',
+        paymentMethod TEXT,
+        message TEXT,
+        status TEXT DEFAULT 'pending',
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
       INSERT INTO tournament_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 
       CREATE INDEX IF NOT EXISTS idx_votes_candidate ON votes(candidateId);
       CREATE INDEX IF NOT EXISTS idx_scores_candidate ON scores(candidateId);
       CREATE INDEX IF NOT EXISTS idx_votes_candidate_ip ON votes(candidateId, ip);
       CREATE INDEX IF NOT EXISTS idx_contact_archived ON contact_messages(archived);
+      CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
+      CREATE INDEX IF NOT EXISTS idx_stories_status ON stories(status);
+      CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expiresAt);
     `);
 
     console.log('✅ Database initialized successfully');
@@ -692,6 +732,337 @@ app.put('/api/tournament-settings', verifyAdmin, async (req, res) => {
     );
 
     res.json({ message: 'Paramètres mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==================== POSTS / FEED ENDPOINTS ====================
+
+// POST - Submit a new post
+app.post('/api/posts', async (req, res) => {
+  try {
+    const { authorName, authorEmail, content, imageUrl } = req.body;
+
+    if (!authorName || !authorEmail || !content) {
+      return res.status(400).json({ error: 'authorName, authorEmail, and content required' });
+    }
+
+    const sanitizedContent = content.replace(/[<>]/g, '').slice(0, 1000);
+    
+    const result = await pool.query(
+      `INSERT INTO posts (authorName, authorEmail, content, imageUrl, status, createdAt)
+       VALUES ($1, $2, $3, $4, 'pending', NOW())
+       RETURNING id, createdAt`,
+      [authorName.slice(0, 100), authorEmail.slice(0, 100), sanitizedContent, imageUrl?.slice(0, 500) || null]
+    );
+
+    res.status(201).json({ message: 'Post soumis pour approbation.', postId: result.rows[0].id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - List approved posts (public feed)
+app.get('/api/posts', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, authorName, content, imageUrl, createdAt, approvedAt 
+       FROM posts 
+       WHERE status = 'approved' 
+       ORDER BY approvedAt DESC 
+       LIMIT 50`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Admin list all posts
+app.get('/api/admin/posts', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, authorName, authorEmail, content, imageUrl, status, createdAt, approvedAt, approvedBy 
+       FROM posts 
+       ORDER BY createdAt DESC 
+       LIMIT 100`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT - Admin approve/reject post
+app.put('/api/admin/posts/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const postId = parseInt(req.params.id);
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'status must be approved or rejected' });
+    }
+
+    await pool.query(
+      `UPDATE posts SET status = $1, approvedAt = NOW(), approvedBy = $2 WHERE id = $3`,
+      [status, req.adminUser, postId]
+    );
+
+    res.json({ message: `Post ${status}.` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE - Admin delete post
+app.delete('/api/admin/posts/:id', verifyAdmin, async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    await pool.query('DELETE FROM posts WHERE id = $1', [postId]);
+    res.json({ message: 'Post supprimé.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==================== STORIES ENDPOINTS ====================
+
+// POST - Submit a new story (24h expiration)
+app.post('/api/stories', async (req, res) => {
+  try {
+    const { authorName, authorEmail, content, mediaUrl } = req.body;
+
+    if (!authorName || !authorEmail || !content) {
+      return res.status(400).json({ error: 'authorName, authorEmail, and content required' });
+    }
+
+    const sanitizedContent = content.replace(/[<>]/g, '').slice(0, 500);
+    
+    const result = await pool.query(
+      `INSERT INTO stories (authorName, authorEmail, content, mediaUrl, status, expiresAt, createdAt)
+       VALUES ($1, $2, $3, $4, 'pending', NOW() + INTERVAL '24 hours', NOW())
+       RETURNING id, expiresAt`,
+      [authorName.slice(0, 100), authorEmail.slice(0, 100), sanitizedContent, mediaUrl?.slice(0, 500) || null]
+    );
+
+    res.status(201).json({ message: 'Story soumise pour approbation.', storyId: result.rows[0].id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - List active stories (within 24h)
+app.get('/api/stories/active', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, authorName, content, mediaUrl, createdAt, expiresAt 
+       FROM stories 
+       WHERE status = 'approved' AND expiresAt > NOW() 
+       ORDER BY createdAt DESC 
+       LIMIT 20`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Admin list all stories
+app.get('/api/admin/stories', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, authorName, authorEmail, content, mediaUrl, status, createdAt, expiresAt, approvedAt, approvedBy 
+       FROM stories 
+       ORDER BY createdAt DESC 
+       LIMIT 100`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT - Admin approve/reject story
+app.put('/api/admin/stories/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const storyId = parseInt(req.params.id);
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'status must be approved or rejected' });
+    }
+
+    await pool.query(
+      `UPDATE stories SET status = $1, approvedAt = NOW(), approvedBy = $2 WHERE id = $3`,
+      [status, req.adminUser, storyId]
+    );
+
+    res.json({ message: `Story ${status}.` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE - Admin delete story
+app.delete('/api/admin/stories/:id', verifyAdmin, async (req, res) => {
+  try {
+    const storyId = parseInt(req.params.id);
+    await pool.query('DELETE FROM stories WHERE id = $1', [storyId]);
+    res.json({ message: 'Story supprimée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Cron job - Delete expired stories (runs every 30 minutes)
+setInterval(async () => {
+  try {
+    await pool.query('DELETE FROM stories WHERE expiresAt < NOW()');
+  } catch (error) {
+    console.error('Error deleting expired stories:', error);
+  }
+}, 30 * 60 * 1000);
+
+// ==================== DONATIONS ENDPOINTS ====================
+
+// POST - Record a donation
+app.post('/api/donations', async (req, res) => {
+  try {
+    const { donorName, donorEmail, amount, currency, paymentMethod, message } = req.body;
+
+    if (!donorName || !donorEmail || !amount || !paymentMethod) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const validMethods = ['MTN MONEY', 'OM', 'MOOV MONEY', 'Wave'];
+    if (!validMethods.includes(paymentMethod)) {
+      return res.status(400).json({ error: 'Invalid payment method' });
+    }
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0 || numAmount > 1000000) {
+      return res.status(400).json({ error: 'Invalid amount (must be 0-1000000)' });
+    }
+
+    const sanitizedMessage = message ? message.replace(/[<>]/g, '').slice(0, 500) : '';
+
+    const result = await pool.query(
+      `INSERT INTO donations (donorName, donorEmail, amount, currency, paymentMethod, message, status, createdAt)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())
+       RETURNING id, createdAt`,
+      [donorName.slice(0, 100), donorEmail.slice(0, 100), numAmount, currency || 'FCA', paymentMethod, sanitizedMessage]
+    );
+
+    res.status(201).json({ message: 'Donation enregistrée. Merci!', donationId: result.rows[0].id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Admin list all donations
+app.get('/api/admin/donations', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, donorName, donorEmail, amount, currency, paymentMethod, message, status, createdAt 
+       FROM donations 
+       ORDER BY createdAt DESC 
+       LIMIT 500`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT - Admin verify/confirm donation
+app.put('/api/admin/donations/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const donationId = parseInt(req.params.id);
+
+    if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    await pool.query(
+      'UPDATE donations SET status = $1 WHERE id = $2',
+      [status, donationId]
+    );
+
+    res.json({ message: `Donation marked ${status}.` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==================== PUBLIC MEDIA ENDPOINTS ====================
+
+// GET - All public media
+app.get('/api/public-media', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, filename, filepath, category, uploadedAt 
+       FROM admin_media 
+       ORDER BY uploadedAt DESC 
+       LIMIT 100`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Quiz 2025 media specifically
+app.get('/api/quiz-2025-media', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, filename, filepath, category, uploadedAt 
+       FROM admin_media 
+       WHERE category = 'quiz-2025' 
+       ORDER BY uploadedAt DESC 
+       LIMIT 50`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Public media statistics
+app.get('/api/public-media/stats', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT category, COUNT(*) as count, MAX(uploadedAt) as lastUpload
+       FROM admin_media 
+       GROUP BY category 
+       ORDER BY count DESC`
+    );
+
+    res.json(result.rows);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

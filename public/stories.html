@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stories - Quiz Islamique 2026</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .stories-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 20px;
+            min-height: calc(100vh - 200px);
+        }
+
+        .stories-section {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .stories-section h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .stories-carousel {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 20px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .story-item {
+            position: relative;
+            width: 150px;
+            height: 250px;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
+            background: white;
+            flex-shrink: 0;
+        }
+
+        .story-item:hover {
+            transform: scale(1.05);
+        }
+
+        .story-media {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+
+        .story-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 15px;
+            color: white;
+            font-size: 12px;
+            max-height: 60px;
+            overflow: hidden;
+        }
+
+        .story-author {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .story-time {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .empty-stories {
+            text-align: center;
+            color: white;
+            padding: 40px 20px;
+            font-size: 18px;
+        }
+
+        .story-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .story-modal.active {
+            display: flex;
+        }
+
+        .story-modal-content {
+            position: relative;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+        }
+
+        .story-modal-media {
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            border-radius: 12px;
+        }
+
+        .story-modal-info {
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .close-story {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 30px;
+            color: white;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+
+        .close-story:hover {
+            background: rgba(0,0,0,0.8);
+        }
+
+        .story-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.3);
+            color: white;
+            border: none;
+            font-size: 24px;
+            padding: 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.3s;
+            display: none;
+        }
+
+        .story-nav:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        .story-nav.left {
+            left: 10px;
+        }
+
+        .story-nav.right {
+            right: 10px;
+        }
+
+        .story-modal.active .story-nav {
+            display: block;
+        }
+
+        .submission-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 20px auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .submission-form h3 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+        }
+
+        .submit-btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background: #764ba2;
+        }
+
+        .success-message,
+        .error-message {
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message.show,
+        .error-message.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="stories-container">
+        <div class="stories-section">
+            <h1>📱 Stories (24h)</h1>
+
+            <div class="submission-form">
+                <h3>Ajouter une Story</h3>
+                <div class="success-message" id="successMsg"></div>
+                <div class="error-message" id="errorMsg"></div>
+
+                <form id="storyForm">
+                    <div class="form-group">
+                        <label for="authorName">Votre nom *</label>
+                        <input type="text" id="authorName" name="authorName" required maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="authorEmail">Email *</label>
+                        <input type="email" id="authorEmail" name="authorEmail" required maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="storyContent">Message *</label>
+                        <textarea id="storyContent" name="content" required maxlength="500" placeholder="Maximum 500 caractères..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mediaUrl">URL du média (photo/vidéo)</label>
+                        <input type="url" id="mediaUrl" name="mediaUrl" maxlength="500">
+                    </div>
+
+                    <button type="submit" class="submit-btn">Publier Story</button>
+                </form>
+            </div>
+
+            <div id="storiesDiv" class="stories-carousel">
+                <div class="loading">Chargement des stories...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story Modal -->
+    <div id="storyModal" class="story-modal">
+        <div class="story-modal-content">
+            <button class="close-story" onclick="closeStory()">&times;</button>
+            <button class="story-nav left" onclick="prevStory()">‹</button>
+            <button class="story-nav right" onclick="nextStory()">›</button>
+            <img id="storyModalMedia" class="story-modal-media" src="" alt="Story">
+            <div class="story-modal-info" id="storyModalInfo"></div>
+        </div>
+    </div>
+
+    <script src="stories.js"></script>
+</body>
+</html>

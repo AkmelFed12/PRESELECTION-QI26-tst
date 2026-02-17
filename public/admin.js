@@ -6,6 +6,10 @@ const scorePanel = document.getElementById('scorePanel');
 const tablesPanel = document.getElementById('tablesPanel');
 const dashboardPanel = document.getElementById('dashboardPanel');
 const securityPanel = document.getElementById('securityPanel');
+const postsPanel = document.getElementById('postsPanel');
+const storiesPanel = document.getElementById('storiesPanel');
+const donationsPanel = document.getElementById('donationsPanel');
+const mediaPanel = document.getElementById('mediaPanel');
 const settingsForm = document.getElementById('settingsForm');
 const settingsMsg = document.getElementById('settingsMsg');
 const passwordForm = document.getElementById('passwordForm');
@@ -548,10 +552,17 @@ loginForm.addEventListener('submit', async (e) => {
     scorePanel.classList.remove('hidden');
     tablesPanel.classList.remove('hidden');
     securityPanel.classList.remove('hidden');
+    postsPanel.classList.remove('hidden');
+    storiesPanel.classList.remove('hidden');
+    donationsPanel.classList.remove('hidden');
+    mediaPanel.classList.remove('hidden');
     logoutBtn.classList.remove('hidden');
     loginForm.reset();
     await loadDashboard();
     await loadMediaAdmin();
+    await loadPostsAdmin();
+    await loadStoriesAdmin();
+    await loadDonationsAdmin();
     startAutoRefresh();
   } catch (error) {
     showToast(error.message || 'Erreur lors de la connexion', 'error');
@@ -842,6 +853,10 @@ logoutBtn?.addEventListener('click', () => {
   scorePanel.classList.add('hidden');
   tablesPanel.classList.add('hidden');
   securityPanel.classList.add('hidden');
+  postsPanel.classList.add('hidden');
+  storiesPanel.classList.add('hidden');
+  donationsPanel.classList.add('hidden');
+  mediaPanel.classList.add('hidden');
   logoutBtn.classList.add('hidden');
   passwordForm.reset();
   passwordMsg.textContent = '';
@@ -1073,3 +1088,306 @@ mediaAdminTableBody?.addEventListener('click', async (e) => {
     showToast(error.message || 'Erreur de sauvegarde', 'error');
   }
 });
+
+// ==================== POSTS MANAGEMENT ====================
+let postsCache = [];
+
+async function loadPostsAdmin() {
+  try {
+    const res = await authedFetch('/api/admin/posts');
+    if (res.status === 401) return;
+    postsCache = await res.json();
+    renderPostsAdminTable();
+  } catch (error) {
+    showToast(error.message || 'Erreur chargement posts', 'error');
+  }
+}
+
+function renderPostsAdminTable() {
+  const postTableBody = document.querySelector('#postsAdminTable tbody');
+  if (!postTableBody) return;
+  
+  postTableBody.innerHTML = postsCache.map((post) => `
+    <tr>
+      <td>${escapeHtml(post.authorName)}</td>
+      <td>${escapeHtml(post.content.substring(0, 50))}...</td>
+      <td>${formatStatus(post.status)}</td>
+      <td>${escapeHtml(post.createdAt || '')}</td>
+      <td>
+        ${post.status === 'pending' ? `
+          <button class="small-btn" data-action="approve-post" data-id="${post.id}">Approuver</button>
+          <button class="small-btn danger" data-action="reject-post" data-id="${post.id}">Rejeter</button>
+        ` : ''}
+        <button class="small-btn danger" data-action="delete-post" data-id="${post.id}">Supprimer</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+document.addEventListener('click', async (e) => {
+  const button = e.target.closest('button[data-action]');
+  if (!button) return;
+  const action = button.dataset.action;
+  const id = button.dataset.id;
+  
+  if (action === 'approve-post') {
+    try {
+      const res = await authedFetch(`/api/admin/posts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'approved' })
+      });
+      if (res.ok) {
+        showToast('Post approuvé', 'success');
+        loadPostsAdmin();
+      } else {
+        throw new Error('Erreur approbation');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+  
+  if (action === 'reject-post') {
+    try {
+      const res = await authedFetch(`/api/admin/posts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'rejected' })
+      });
+      if (res.ok) {
+        showToast('Post rejeté', 'success');
+        loadPostsAdmin();
+      } else {
+        throw new Error('Erreur rejet');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+  
+  if (action === 'delete-post') {
+    if (!confirm('Supprimer ce post?')) return;
+    try {
+      const res = await authedFetch(`/api/admin/posts/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Post supprimé', 'success');
+        loadPostsAdmin();
+      } else {
+        throw new Error('Erreur suppression');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+  
+  // Stories management
+  if (action === 'approve-story') {
+    try {
+      const res = await authedFetch(`/api/admin/stories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'approved' })
+      });
+      if (res.ok) {
+        showToast('Story approuvée', 'success');
+        loadStoriesAdmin();
+      } else {
+        throw new Error('Erreur approbation');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+  
+  if (action === 'reject-story') {
+    try {
+      const res = await authedFetch(`/api/admin/stories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'rejected' })
+      });
+      if (res.ok) {
+        showToast('Story rejetée', 'success');
+        loadStoriesAdmin();
+      } else {
+        throw new Error('Erreur rejet');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+  
+  if (action === 'delete-story') {
+    if (!confirm('Supprimer cette story?')) return;
+    try {
+      const res = await authedFetch(`/api/admin/stories/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Story supprimée', 'success');
+        loadStoriesAdmin();
+      } else {
+        throw new Error('Erreur suppression');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+});
+
+// ==================== STORIES MANAGEMENT ====================
+let storiesCache = [];
+
+async function loadStoriesAdmin() {
+  try {
+    const res = await authedFetch('/api/admin/stories');
+    if (res.status === 401) return;
+    storiesCache = await res.json();
+    renderStoriesAdminTable();
+  } catch (error) {
+    showToast(error.message || 'Erreur chargement stories', 'error');
+  }
+}
+
+function renderStoriesAdminTable() {
+  const storyTableBody = document.querySelector('#storiesAdminTable tbody');
+  if (!storyTableBody) return;
+  
+  storyTableBody.innerHTML = storiesCache.map((story) => {
+    const expiresAt = new Date(story.expiresAt);
+    const now = new Date();
+    const hoursLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60));
+    
+    return `<tr>
+      <td>${escapeHtml(story.authorName)}</td>
+      <td>${escapeHtml(story.content.substring(0, 50))}...</td>
+      <td>${formatStatus(story.status)}</td>
+      <td>${hoursLeft > 0 ? hoursLeft + 'h' : 'Expirée'}</td>
+      <td>
+        ${story.status === 'pending' ? `
+          <button class="small-btn" data-action="approve-story" data-id="${story.id}">Approuver</button>
+          <button class="small-btn danger" data-action="reject-story" data-id="${story.id}">Rejeter</button>
+        ` : ''}
+        <button class="small-btn danger" data-action="delete-story" data-id="${story.id}">Supprimer</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ==================== DONATIONS MANAGEMENT ====================
+let donationsCache = [];
+
+async function loadDonationsAdmin() {
+  try {
+    const res = await authedFetch('/api/admin/donations');
+    if (res.status === 401) return;
+    donationsCache = await res.json();
+    renderDonationsAdminTable();
+  } catch (error) {
+    showToast(error.message || 'Erreur chargement donations', 'error');
+  }
+}
+
+function renderDonationsAdminTable() {
+  const donationTableBody = document.querySelector('#donationsAdminTable tbody');
+  if (!donationTableBody) return;
+  
+  let totalConfirmed = 0;
+  donationsCache.forEach(d => {
+    if (d.status === 'confirmed') {
+      totalConfirmed += parseFloat(d.amount || 0);
+    }
+  });
+  
+  donationTableBody.innerHTML = donationsCache.map((donation) => {
+    const statusColor = donation.status === 'confirmed' ? '#4CAF50' : donation.status === 'pending' ? '#FF9800' : '#999';
+    return `<tr>
+      <td>${escapeHtml(donation.donorName)}</td>
+      <td>${donation.amount} ${donation.currency}</td>
+      <td>${donation.paymentMethod}</td>
+      <td style="color: ${statusColor}; font-weight: bold;">${donation.status}</td>
+      <td>${escapeHtml(donation.createdAt || '')}</td>
+      <td>
+        ${donation.status === 'pending' ? `
+          <button class="small-btn" data-action="confirm-donation" data-id="${donation.id}">Confirmer</button>
+          <button class="small-btn danger" data-action="cancel-donation" data-id="${donation.id}">Annuler</button>
+        ` : ''}
+        <button class="small-btn danger" data-action="delete-donation" data-id="${donation.id}">Supprimer</button>
+      </td>
+    </tr>`;
+  }).join('');
+  
+  const donationStatsEl = document.querySelector('#donationStats');
+  if (donationStatsEl) {
+    donationStatsEl.textContent = `Total confirmé: ${totalConfirmed.toLocaleString('fr-FR')} FCA | Donations: ${donationsCache.length}`;
+  }
+}
+
+// Handle donation actions
+document.addEventListener('click', async (e) => {
+  const button = e.target.closest('button[data-action]');
+  if (!button) return;
+  const action = button.dataset.action;
+  const id = button.dataset.id;
+  
+  if (action === 'confirm-donation') {
+    try {
+      const res = await authedFetch(`/api/admin/donations/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed' })
+      });
+      if (res.ok) {
+        showToast('Donation confirmée', 'success');
+        loadDonationsAdmin();
+      } else {
+        throw new Error('Erreur confirmation');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+  
+  if (action === 'cancel-donation') {
+    if (!confirm('Annuler cette donation?')) return;
+    try {
+      const res = await authedFetch(`/api/admin/donations/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'cancelled' })
+      });
+      if (res.ok) {
+        showToast('Donation annulée', 'success');
+        loadDonationsAdmin();
+      } else {
+        throw new Error('Erreur annulation');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+  
+  if (action === 'delete-donation') {
+    if (!confirm('Supprimer cette donation?')) return;
+    try {
+      const res = await authedFetch(`/api/admin/donations/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Donation supprimée', 'success');
+        loadDonationsAdmin();
+      } else {
+        throw new Error('Erreur suppression');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+});
+
+// Auto-load management tabs when logged in
+document.addEventListener('adminLogin', () => {
+  loadPostsAdmin();
+  loadStoriesAdmin();
+  loadDonationsAdmin();
+});
+
+// Refresh management data every 60 seconds
+setInterval(() => {
+  if (authHeader && window.location.pathname.includes('admin')) {
+    loadPostsAdmin();
+    loadStoriesAdmin();
+    loadDonationsAdmin();
+  }
+}, 60000);

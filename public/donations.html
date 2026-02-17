@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donations - Quiz Islamique 2026</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .donations-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .donations-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .donations-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .donations-header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .donations-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .donations-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .donation-form {
+            background: white;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .donation-form h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+
+        .submit-btn {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background: #45a049;
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .payment-methods {
+            background: white;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .payment-methods h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #FF9800;
+            padding-bottom: 15px;
+        }
+
+        .payment-method {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #FF9800;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .payment-method:hover {
+            background: #fff3e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .payment-method-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .payment-method-number {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #FF9800;
+            margin-bottom: 8px;
+            border: 1px solid #FFE0B2;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: #FF9800;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #F57C00;
+        }
+
+        .info-section {
+            background: #E8F5E9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .info-section h4 {
+            margin-top: 0;
+            color: #2E7D32;
+        }
+
+        .info-section ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .info-section li {
+            color: #2E7D32;
+            margin-bottom: 5px;
+        }
+
+        .success-message,
+        .error-message {
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message.show,
+        .error-message.show {
+            display: block;
+        }
+
+        .donations-list {
+            background: white;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .donations-list h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .donation-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .donation-item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .donation-item-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .donation-item-amount {
+            background: #4CAF50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .donation-item-method {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .donation-item-message {
+            font-size: 13px;
+            color: #999;
+            font-style: italic;
+            margin-top: 8px;
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="donations-container">
+        <div class="donations-header">
+            <h1>💝 Donations</h1>
+            <p>Soutenez la mission du Quiz Islamique 2026</p>
+        </div>
+
+        <div class="donations-content">
+            <!-- Donation Form -->
+            <div class="donation-form">
+                <h3>Effectuer une donation</h3>
+                <div class="success-message" id="successMsg"></div>
+                <div class="error-message" id="errorMsg"></div>
+
+                <form id="donationForm">
+                    <div class="form-group">
+                        <label for="donorName">Votre nom *</label>
+                        <input type="text" id="donorName" name="donorName" required maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="donorEmail">Email *</label>
+                        <input type="email" id="donorEmail" name="donorEmail" required maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Montant *</label>
+                        <input type="number" id="amount" name="amount" min="1" max="1000000" step="100" required placeholder="Ex: 5000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="currency">Devise *</label>
+                        <select id="currency" name="currency" required>
+                            <option value="FCA">Franc CFA (FCA)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                            <option value="USD">Dollar (USD)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paymentMethod">Méthode de paiement *</label>
+                        <select id="paymentMethod" name="paymentMethod" required>
+                            <option value="">-- Sélectionnez une méthode --</option>
+                            <option value="MTN MONEY">MTN MONEY</option>
+                            <option value="OM">OM (Orange Money)</option>
+                            <option value="MOOV MONEY">MOOV MONEY</option>
+                            <option value="Wave">Wave</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message">Message (optionnel)</label>
+                        <textarea id="message" name="message" maxlength="500" placeholder="Laissez un message de soutien..."></textarea>
+                    </div>
+
+                    <button type="submit" class="submit-btn">Confirmer la donation</button>
+                </form>
+
+                <div class="info-section">
+                    <h4>ℹ️ Comment procéder?</h4>
+                    <ul>
+                        <li>Remplissez le formulaire avec vos informations</li>
+                        <li>Sélectionnez le montant et la méthode de paiement</li>
+                        <li>Cliquez sur "Confirmer la donation"</li>
+                        <li>Complétez le paiement au numéro indiqué</li>
+                        <li>Votre donation sera enregistrée après confirmation</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="payment-methods">
+                <h3>💳 Méthodes de paiement</h3>
+
+                <div class="payment-method">
+                    <div class="payment-method-name">📱 MTN MONEY</div>
+                    <div class="payment-method-number" id="mtn-number">0574724233</div>
+                    <button class="copy-btn" onclick="copyToClipboard('mtn-number', 'MTN MONEY')">Copier</button>
+                </div>
+
+                <div class="payment-method">
+                    <div class="payment-method-name">🟠 Orange Money (OM)</div>
+                    <div class="payment-method-number" id="om-number">0705583082</div>
+                    <button class="copy-btn" onclick="copyToClipboard('om-number', 'Orange Money')">Copier</button>
+                </div>
+
+                <div class="payment-method">
+                    <div class="payment-method-name">💜 MOOV MONEY</div>
+                    <div class="payment-method-number" id="moov-number">0150070083</div>
+                    <button class="copy-btn" onclick="copyToClipboard('moov-number', 'MOOV MONEY')">Copier</button>
+                </div>
+
+                <div class="payment-method">
+                    <div class="payment-method-name">👋 Wave</div>
+                    <div class="payment-method-number" id="wave-number">0574724233</div>
+                    <button class="copy-btn" onclick="copyToClipboard('wave-number', 'Wave')">Copier</button>
+                </div>
+
+                <div class="info-section">
+                    <h4>✅ Avantages des donations</h4>
+                    <ul>
+                        <li>Soutien direct de nos activités</li>
+                        <li>Visibilité de votre soutien</li>
+                        <li>Accès aux contenus exclusifs</li>
+                        <li>Reconnaissance de votre générosité</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Donations -->
+        <div class="donations-list">
+            <h3>🙏 Donations récentes</h3>
+            <div id="donationsDiv" style="text-align: center; padding: 20px; color: #999;">Chargement des donations...</div>
+        </div>
+    </div>
+
+    <script src="donations.js"></script>
+</body>
+</html>
