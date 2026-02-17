@@ -7,6 +7,7 @@ const uploadStatus = document.getElementById('uploadStatus');
 const uploadProgress = document.getElementById('uploadProgress');
 const uploadProgressBar = uploadProgress?.querySelector('span');
 const uploadPreview = document.getElementById('uploadPreview');
+const imageUrlInput = document.getElementById('imageUrl');
 let postsFetchInFlight = false;
 let postsRefreshTimer = null;
 
@@ -257,9 +258,13 @@ uploadImageBtn?.addEventListener('click', async () => {
     const data = await uploadFileWithProgress('/api/upload/photo', file, (pct) => {
       if (uploadProgressBar) uploadProgressBar.style.width = `${pct}%`;
     });
-    const imageUrlInput = document.getElementById('imageUrl');
     if (imageUrlInput) imageUrlInput.value = data.url || '';
     uploadStatus.textContent = 'Téléversement terminé.';
+    setTimeout(() => {
+      if (uploadStatus.textContent === 'Téléversement terminé.') {
+        uploadStatus.textContent = '';
+      }
+    }, 3000);
     if (uploadPreview) {
       const isVideo = file.type.startsWith('video/');
       uploadPreview.style.display = 'block';
@@ -320,6 +325,17 @@ postsDiv?.addEventListener('submit', async (e) => {
   } catch (error) {
     alert('Erreur commentaire');
   }
+});
+
+postForm?.addEventListener('submit', () => {
+  if (imageFileInput) imageFileInput.value = '';
+  if (imageUrlInput) imageUrlInput.value = '';
+  if (uploadPreview) {
+    uploadPreview.style.display = 'none';
+    uploadPreview.innerHTML = '';
+  }
+  if (uploadProgressBar) uploadProgressBar.style.width = '0%';
+  if (uploadStatus) uploadStatus.textContent = '';
 });
 
 async function loadComments(postId) {

@@ -8,6 +8,7 @@ const uploadMediaStatus = document.getElementById('uploadMediaStatus');
 const uploadMediaProgress = document.getElementById('uploadMediaProgress');
 const uploadMediaProgressBar = uploadMediaProgress?.querySelector('span');
 const uploadMediaPreview = document.getElementById('uploadMediaPreview');
+const mediaUrlInput = document.getElementById('mediaUrl');
 
 document.getElementById('storyForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -69,9 +70,13 @@ uploadMediaBtn?.addEventListener('click', async () => {
     const data = await uploadFileWithProgress('/api/upload/photo', file, (pct) => {
       if (uploadMediaProgressBar) uploadMediaProgressBar.style.width = `${pct}%`;
     });
-    const mediaUrlInput = document.getElementById('mediaUrl');
     if (mediaUrlInput) mediaUrlInput.value = data.url || '';
     uploadMediaStatus.textContent = 'Téléversement terminé.';
+    setTimeout(() => {
+      if (uploadMediaStatus.textContent === 'Téléversement terminé.') {
+        uploadMediaStatus.textContent = '';
+      }
+    }, 3000);
     if (uploadMediaPreview) {
       const isVideo = file.type.startsWith('video/');
       uploadMediaPreview.style.display = 'block';
@@ -221,4 +226,15 @@ loadStories();
 startStoriesRefresh();
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) loadStories();
+});
+
+document.getElementById('storyForm')?.addEventListener('submit', () => {
+  if (mediaFileInput) mediaFileInput.value = '';
+  if (mediaUrlInput) mediaUrlInput.value = '';
+  if (uploadMediaPreview) {
+    uploadMediaPreview.style.display = 'none';
+    uploadMediaPreview.innerHTML = '';
+  }
+  if (uploadMediaProgressBar) uploadMediaProgressBar.style.width = '0%';
+  if (uploadMediaStatus) uploadMediaStatus.textContent = '';
 });
