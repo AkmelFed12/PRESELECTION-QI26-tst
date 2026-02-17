@@ -218,6 +218,19 @@
             box-sizing: border-box;
         }
 
+        .upload-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .upload-status {
+            font-size: 12px;
+            color: #555;
+            margin-top: 6px;
+        }
+
         .form-group textarea {
             min-height: 80px;
         }
@@ -301,7 +314,12 @@
 
                     <div class="form-group">
                         <label for="mediaUrl">URL du média (photo/vidéo)</label>
-                        <input type="url" id="mediaUrl" name="mediaUrl" maxlength="500">
+                        <div class="upload-row">
+                            <input type="url" id="mediaUrl" name="mediaUrl" maxlength="500" placeholder="Collez un lien ou téléversez ci-dessous">
+                            <input type="file" id="mediaFile" accept="image/*,video/*">
+                        </div>
+                        <button type="button" class="btn-small" id="uploadMediaBtn">Téléverser</button>
+                        <div class="upload-status" id="uploadMediaStatus"></div>
                     </div>
 
                     <button type="submit" class="submit-btn">Publier Story</button>

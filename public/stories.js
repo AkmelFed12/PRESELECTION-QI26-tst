@@ -2,6 +2,9 @@ let currentStoryIndex = 0;
 let allStories = [];
 let storiesFetchInFlight = false;
 let storiesRefreshTimer = null;
+const mediaFileInput = document.getElementById('mediaFile');
+const uploadMediaBtn = document.getElementById('uploadMediaBtn');
+const uploadMediaStatus = document.getElementById('uploadMediaStatus');
 
 document.getElementById('storyForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -38,6 +41,34 @@ document.getElementById('storyForm').addEventListener('submit', async (e) => {
     console.error(error);
     errorMsg.textContent = 'Erreur serveur';
     errorMsg.classList.add('show');
+  }
+});
+
+uploadMediaBtn?.addEventListener('click', async () => {
+  if (!mediaFileInput || !uploadMediaStatus) return;
+  const file = mediaFileInput.files?.[0];
+  if (!file) {
+    uploadMediaStatus.textContent = 'Veuillez choisir un fichier.';
+    return;
+  }
+  uploadMediaStatus.textContent = 'Téléversement en cours...';
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload/photo', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      uploadMediaStatus.textContent = data.error || 'Erreur de téléversement.';
+      return;
+    }
+    const mediaUrlInput = document.getElementById('mediaUrl');
+    if (mediaUrlInput) mediaUrlInput.value = data.url || '';
+    uploadMediaStatus.textContent = 'Téléversement terminé.';
+  } catch (error) {
+    uploadMediaStatus.textContent = 'Erreur de téléversement.';
   }
 });
 

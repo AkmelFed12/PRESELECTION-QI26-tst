@@ -1,6 +1,9 @@
 const postForm = document.getElementById('postForm');
 const postsDiv = document.getElementById('postsDiv');
 const topPostsList = document.getElementById('topPostsList');
+const imageFileInput = document.getElementById('imageFile');
+const uploadImageBtn = document.getElementById('uploadImageBtn');
+const uploadStatus = document.getElementById('uploadStatus');
 let postsFetchInFlight = false;
 let postsRefreshTimer = null;
 
@@ -226,6 +229,34 @@ postsDiv?.addEventListener('click', async (e) => {
   } catch (error) {
     console.error(error);
     alert('Action impossible pour le moment.');
+  }
+});
+
+uploadImageBtn?.addEventListener('click', async () => {
+  if (!imageFileInput || !uploadStatus) return;
+  const file = imageFileInput.files?.[0];
+  if (!file) {
+    uploadStatus.textContent = 'Veuillez choisir un fichier.';
+    return;
+  }
+  uploadStatus.textContent = 'Téléversement en cours...';
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload/photo', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      uploadStatus.textContent = data.error || 'Erreur de téléversement.';
+      return;
+    }
+    const imageUrlInput = document.getElementById('imageUrl');
+    if (imageUrlInput) imageUrlInput.value = data.url || '';
+    uploadStatus.textContent = 'Téléversement terminé.';
+  } catch (error) {
+    uploadStatus.textContent = 'Erreur de téléversement.';
   }
 });
 

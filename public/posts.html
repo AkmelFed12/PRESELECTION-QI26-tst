@@ -240,6 +240,19 @@
             box-sizing: border-box;
         }
 
+        .upload-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .upload-status {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px;
+        }
+
         .loading {
             text-align: center;
             padding: 20px;
@@ -307,7 +320,12 @@
 
                 <div class="form-group">
                     <label for="imageUrl">URL de l'image (optionnel)</label>
-                    <input type="url" id="imageUrl" name="imageUrl" maxlength="500">
+                    <div class="upload-row">
+                        <input type="url" id="imageUrl" name="imageUrl" maxlength="500" placeholder="Collez un lien ou téléversez ci-dessous">
+                        <input type="file" id="imageFile" accept="image/*,video/*">
+                    </div>
+                    <button type="button" class="btn-small" id="uploadImageBtn">Téléverser</button>
+                    <div class="upload-status" id="uploadStatus"></div>
                 </div>
 
                 <button type="submit" class="submit-btn">Soumettre</button>
