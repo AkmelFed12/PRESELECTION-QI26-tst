@@ -9,36 +9,12 @@ import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
-import * as Sentry from '@sentry/node';
 
 dotenv.config();
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// ==================== SENTRY MONITORING ====================
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'development',
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    integrations: [
-      new Sentry.Integrations.Http({ tracing: true }),
-      new Sentry.Integrations.Express({ request: true, serverName: false }),
-    ],
-    beforeSend(event, hint) {
-      // Filter out health check errors (usually 404s)
-      if (event.request?.url?.includes('/api/health')) {
-        return null;
-      }
-      return event;
-    },
-  });
-  console.log('✅ Sentry monitoring initialized');
-} else {
-  console.log('⚠️  Sentry DSN not configured (monitoring disabled)');
-}
 
 // ==================== CONFIGURATION ====================
 const app = express();
@@ -66,12 +42,6 @@ if (process.env.CORS_ORIGIN) {
   app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
 } else {
   app.use(cors({ origin: '*', credentials: false }));
-}
-
-// ==================== SENTRY MIDDLEWARE ====================
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
 }
 
 // Rate limiters
@@ -709,95 +679,6 @@ app.post('/api/admin/candidates', verifyAdmin, async (req, res) => {
   }
 });
 
-// Update candidate
-app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { fullName, whatsapp, email, phone, city, country, age, quranLevel, motivation, status } = req.body;
-
-    const normalized = normalizeWhatsapp(whatsapp);
-    if (!normalized) {
-      return res.status(400).json({ message: 'Numéro WhatsApp invalide.' });
-    }
-
-    if (email && !validateEmail(email)) {
-      return res.status(400).json({ message: 'Email invalide.' });
-    }
-
-    await pool.query(
-      `UPDATE candidates 
-       SET fullName = $1, age = $2, city = $3, country = $4, email = $5, phone = $6, 
-           whatsapp = $7, quranLevel = $8, motivation = $9, status = $10
-       WHERE id = $11`,
-      [fullName, age || null, city, country, email, phone, normalized, quranLevel, motivation, status || 'pending', id]
-    );
-
-    res.json({ message: 'Candidat mis à jour.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Delete candidate
-app.delete('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('DELETE FROM candidates WHERE id = $1', [id]);
-    res.json({ message: 'Candidat supprimé.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Add score for candidate
-app.post('/api/scores', verifyAdmin, async (req, res) => {
-  try {
-    const { candidateId, judgeName, themeChosenScore, themeImposedScore, notes } = req.body;
-
-    if (!candidateId || !judgeName) {
-      return res.status(400).json({ message: 'Candidat et juge obligatoires.' });
-    }
-
-    await pool.query(
-      `INSERT INTO scores (candidateId, judgeName, themeChosenScore, themeImposedScore, notes)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [candidateId, sanitizeString(judgeName, 100), themeChosenScore || 0, themeImposedScore || 0, sanitizeString(notes, 500)]
-    );
-
-    res.status(201).json({ message: 'Score enregistré.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Delete contact message
-app.delete('/api/contact-messages/:id', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('DELETE FROM contact_messages WHERE id = $1', [id]);
-    res.json({ message: 'Message supprimé.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Archive contact message
-app.put('/api/contact-messages/:id', verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { archived } = req.body;
-    await pool.query('UPDATE contact_messages SET archived = $1 WHERE id = $2', [archived ? 1 : 0, id]);
-    res.json({ message: 'Message archivé.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // Update tournament settings
 app.put('/api/tournament-settings', verifyAdmin, async (req, res) => {
   try {
@@ -817,65 +698,15 @@ app.put('/api/tournament-settings', verifyAdmin, async (req, res) => {
   }
 });
 
-// Get admin media list (placeholder)
-app.get('/api/admin/media', verifyAdmin, async (req, res) => {
-  try {
-    res.json([]);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Delete media
-app.delete('/api/admin/media/:name', verifyAdmin, async (req, res) => {
-  try {
-    res.json({ message: 'Média supprimé.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Get public media stats (placeholder)
-app.get('/api/public-media/stats', async (req, res) => {
-  try {
-    res.json({ total: 0 });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: 'Not found' });
 });
 
-// ==================== SENTRY ERROR HANDLER ====================
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
-}
-
-// Error handler (must be last)
+// Error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
-  
-  if (process.env.SENTRY_DSN) {
-    Sentry.captureException(err, {
-      contexts: {
-        http: {
-          method: req.method,
-          url: req.url,
-          query: req.query,
-        },
-      },
-    });
-  }
-  
-  res.status(500).json({ 
-    error: process.env.NODE_ENV === 'production' ? 'Server error' : err.message 
-  });
+  console.error(err);
+  res.status(500).json({ error: 'Server error' });
 });
 
 // ==================== SERVER START ====================
