@@ -59,6 +59,9 @@ async function loadPosts() {
       const date = new Date(post.createdAt).toLocaleDateString('fr-FR');
       const likes = Number(post.likes || 0);
       const shares = Number(post.shares || 0);
+      const heart = Number(post.reactions_heart || 0);
+      const thumb = Number(post.reactions_thumb || 0);
+      const laugh = Number(post.reactions_laugh || 0);
       const postHTML = `
         <div class="post-card">
           <div class="post-header">
@@ -70,9 +73,16 @@ async function loadPosts() {
           ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" class="post-image" onerror="this.style.display='none'">` : ''}
           <div class="post-content">${escapeHtml(post.content)}</div>
           <div class="post-actions">
-            <button class="btn-small" data-action="like" data-id="${post.id}">❤️ Aimer (${likes})</button>
-            <button class="btn-small" data-action="share" data-id="${post.id}">📤 Partager (${shares})</button>
+            <button class="btn-small" data-action="reaction" data-reaction="heart" data-id="${post.id}">❤️ ${heart}</button>
+            <button class="btn-small" data-action="reaction" data-reaction="thumb" data-id="${post.id}">👍 ${thumb}</button>
+            <button class="btn-small" data-action="reaction" data-reaction="laugh" data-id="${post.id}">😂 ${laugh}</button>
+            <button class="btn-small" data-action="like" data-id="${post.id}">Aimer (${likes})</button>
+            <button class="btn-small" data-action="share-whatsapp" data-id="${post.id}">WhatsApp</button>
+            <button class="btn-small" data-action="share-facebook" data-id="${post.id}">Facebook</button>
+            <button class="btn-small" data-action="share" data-id="${post.id}">Copier (${shares})</button>
+            <button class="btn-small" data-action="toggle-comments" data-id="${post.id}">Commentaires</button>
           </div>
+          <div class="post-comments" data-comments="${post.id}"></div>
         </div>
       `;
       postsDiv.innerHTML += postHTML;
@@ -104,6 +114,21 @@ postsDiv?.addEventListener('click', async (e) => {
   if (!postId) return;
 
   try {
+    if (action === 'reaction') {
+      const reaction = button.dataset.reaction;
+      const res = await fetch(`/api/posts/${postId}/reaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reaction })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Réaction déjà enregistrée.');
+        return;
+      }
+      await loadPosts();
+      return;
+    }
     if (action === 'like') {
       const stored = localStorage.getItem('viewerEmail') || '';
       const email = prompt('Votre email pour aimer cette publication:', stored) || '';
@@ -120,6 +145,24 @@ postsDiv?.addEventListener('click', async (e) => {
       });
       if (!res.ok) throw new Error('Erreur lors du like');
       await loadPosts();
+    } else if (action === 'share-whatsapp') {
+      const url = `${window.location.origin}/posts.html`;
+      await fetch(`/api/posts/${postId}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: 'whatsapp' })
+      }).catch(() => {});
+      window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, '_blank');
+      await loadPosts();
+    } else if (action === 'share-facebook') {
+      const url = `${window.location.origin}/posts.html`;
+      await fetch(`/api/posts/${postId}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: 'facebook' })
+      }).catch(() => {});
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+      await loadPosts();
     } else if (action === 'share') {
       const url = `${window.location.origin}/posts.html`;
       await fetch(`/api/posts/${postId}/share`, {
@@ -134,12 +177,80 @@ postsDiv?.addEventListener('click', async (e) => {
         alert(`Copiez ce lien: ${url}`);
       }
       await loadPosts();
+    } else if (action === 'toggle-comments') {
+      const container = postsDiv.querySelector(`[data-comments="${postId}"]`);
+      if (!container) return;
+      if (container.dataset.loaded === '1') {
+        container.classList.toggle('hidden');
+        return;
+      }
+      container.dataset.loaded = '1';
+      container.innerHTML = `
+        <div class="comment-list" data-list="${postId}">Chargement...</div>
+        <form class="comment-form" data-form="${postId}">
+          <input type="text" name="authorName" placeholder="Votre nom" required maxlength="100" />
+          <input type="email" name="authorEmail" placeholder="Email" required maxlength="100" />
+          <textarea name="content" placeholder="Votre commentaire..." required maxlength="500"></textarea>
+          <button type="submit" class="btn-small">Publier</button>
+        </form>
+      `;
+      await loadComments(postId);
     }
   } catch (error) {
     console.error(error);
     alert('Action impossible pour le moment.');
   }
 });
+
+postsDiv?.addEventListener('submit', async (e) => {
+  const form = e.target.closest('.comment-form');
+  if (!form) return;
+  e.preventDefault();
+  const postId = form.dataset.form;
+  const formData = new FormData(form);
+  const payload = Object.fromEntries(formData.entries());
+  try {
+    const res = await fetch(`/api/posts/${postId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Erreur commentaire');
+      return;
+    }
+    form.reset();
+    await loadComments(postId);
+  } catch (error) {
+    alert('Erreur commentaire');
+  }
+});
+
+async function loadComments(postId) {
+  const list = postsDiv.querySelector(`[data-list="${postId}"]`);
+  if (!list) return;
+  try {
+    const res = await fetch(`/api/posts/${postId}/comments`, { cache: 'no-store' });
+    const comments = await res.json();
+    if (!Array.isArray(comments) || !comments.length) {
+      list.innerHTML = '<div class="comment-empty">Aucun commentaire pour le moment.</div>';
+      return;
+    }
+    list.innerHTML = comments
+      .map(
+        (c) => `
+        <div class="comment-item">
+          <strong>${escapeHtml(c.authorName)}</strong>
+          <p>${escapeHtml(c.content)}</p>
+        </div>
+      `
+      )
+      .join('');
+  } catch (error) {
+    list.innerHTML = '<div class="comment-empty">Erreur chargement commentaires.</div>';
+  }
+}
 
 function startPostsRefresh() {
   if (postsRefreshTimer) clearInterval(postsRefreshTimer);

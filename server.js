@@ -334,7 +334,33 @@ async function initDatabase() {
         name TEXT PRIMARY KEY,
         views BIGINT DEFAULT 0,
         downloads BIGINT DEFAULT 0,
+        favorites BIGINT DEFAULT 0,
         updatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS post_reactions (
+        id BIGSERIAL PRIMARY KEY,
+        postId BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        reaction TEXT NOT NULL,
+        ip TEXT,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS poll (
+        id BIGSERIAL PRIMARY KEY,
+        question TEXT NOT NULL,
+        optionsJson TEXT NOT NULL,
+        active INTEGER DEFAULT 1,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS poll_votes (
+        id BIGSERIAL PRIMARY KEY,
+        pollId BIGINT NOT NULL REFERENCES poll(id) ON DELETE CASCADE,
+        optionKey TEXT NOT NULL,
+        ip TEXT,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(pollId, ip)
       );
 
       CREATE TABLE IF NOT EXISTS donations (
@@ -412,6 +438,17 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_admin_media_hidden ON admin_media(hidden);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_media_filename ON admin_media(filename);
       CREATE INDEX IF NOT EXISTS idx_media_events_updated ON media_events(updatedAt);
+      CREATE INDEX IF NOT EXISTS idx_post_reactions_post ON post_reactions(postId);
+      CREATE INDEX IF NOT EXISTS idx_post_reactions_ip ON post_reactions(ip);
+      CREATE INDEX IF NOT EXISTS idx_poll_active ON poll(active);
+    `);
+
+    await pool.query(`ALTER TABLE media_events ADD COLUMN IF NOT EXISTS favorites BIGINT DEFAULT 0;`);
+
+    await pool.query(`
+      INSERT INTO poll (question, optionsJson, active)
+      SELECT 'Sondage du jour : Quel contenu préférez-vous ?', '["Quiz","Stories","Actualités","Galerie"]', 1
+      WHERE NOT EXISTS (SELECT 1 FROM poll);
     `);
 
     console.log('✅ Database initialized successfully');
@@ -690,7 +727,7 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
 // Admin dashboard
 app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
   try {
-    const [candidates, votes, ranking, settings, contacts] = await Promise.all([
+    const [candidates, votes, ranking, settings, contacts, donationsPending] = await Promise.all([
       pool.query('SELECT * FROM candidates ORDER BY id DESC'),
       pool.query(`
         SELECT c.id, c.fullName, COUNT(v.id) as totalVotes
@@ -709,7 +746,8 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
         ORDER BY averageScore DESC NULLS LAST
       `),
       pool.query('SELECT * FROM tournament_settings WHERE id = 1'),
-      pool.query('SELECT * FROM contact_messages ORDER BY id DESC LIMIT 500')
+      pool.query('SELECT * FROM contact_messages ORDER BY id DESC LIMIT 500'),
+      pool.query(`SELECT COUNT(*)::int as count FROM donations WHERE status = 'pending'`)
     ]);
 
     res.json({
@@ -717,7 +755,12 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
       votes: votes.rows,
       ranking: ranking.rows,
       settings: settings.rows[0] || {},
-      contacts: contacts.rows
+      contacts: contacts.rows,
+      stats: {
+        candidates: candidates.rows.length,
+        contacts: contacts.rows.length,
+        donationsPending: parseInt(donationsPending.rows[0]?.count || 0, 10)
+      }
     });
   } catch (error) {
     console.error(error);
@@ -847,7 +890,10 @@ app.get('/api/posts', async (req, res) => {
       `SELECT p.id, p.authorName, p.content, p.imageUrl, p.createdAt, p.approvedAt,
               (SELECT COUNT(*) FROM post_likes WHERE postId = p.id) as likes,
               (SELECT COUNT(*) FROM post_comments WHERE postId = p.id AND status = 'approved') as comments,
-              (SELECT COUNT(*) FROM post_shares WHERE postId = p.id) as shares
+              (SELECT COUNT(*) FROM post_shares WHERE postId = p.id) as shares,
+              (SELECT COUNT(*) FROM post_reactions WHERE postId = p.id AND reaction = 'heart') as reactions_heart,
+              (SELECT COUNT(*) FROM post_reactions WHERE postId = p.id AND reaction = 'thumb') as reactions_thumb,
+              (SELECT COUNT(*) FROM post_reactions WHERE postId = p.id AND reaction = 'laugh') as reactions_laugh
        FROM posts p
        WHERE p.status = 'approved'
        ORDER BY p.approvedAt DESC
@@ -1049,6 +1095,77 @@ app.post('/api/donations', async (req, res) => {
     );
 
     res.status(201).json({ message: 'Donation enregistrée. Merci!', donationId: result.rows[0].id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST - React to a post (heart/thumb/laugh)
+app.post('/api/posts/:id/reaction', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const reaction = String(req.body?.reaction || '').toLowerCase();
+    if (!['heart', 'thumb', 'laugh'].includes(reaction)) {
+      return res.status(400).json({ error: 'Invalid reaction' });
+    }
+    const ip = getClientIp(req);
+
+    const exists = await pool.query(
+      `SELECT 1 FROM post_reactions
+       WHERE postId = $1 AND reaction = $2 AND ip = $3
+         AND createdAt > NOW() - INTERVAL '24 hours'
+       LIMIT 1`,
+      [postId, reaction, ip]
+    );
+    if (exists.rows.length) {
+      return res.status(429).json({ error: 'Reaction already recorded' });
+    }
+
+    await pool.query(
+      `INSERT INTO post_reactions (postId, reaction, ip) VALUES ($1, $2, $3)`,
+      [postId, reaction, ip]
+    );
+
+    const counts = await pool.query(
+      `SELECT
+        COUNT(*) FILTER (WHERE reaction = 'heart') as heart,
+        COUNT(*) FILTER (WHERE reaction = 'thumb') as thumb,
+        COUNT(*) FILTER (WHERE reaction = 'laugh') as laugh
+       FROM post_reactions
+       WHERE postId = $1`,
+      [postId]
+    );
+
+    res.json({
+      heart: parseInt(counts.rows[0]?.heart || 0),
+      thumb: parseInt(counts.rows[0]?.thumb || 0),
+      laugh: parseInt(counts.rows[0]?.laugh || 0)
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Post reactions counts
+app.get('/api/posts/:id/reactions', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const counts = await pool.query(
+      `SELECT
+        COUNT(*) FILTER (WHERE reaction = 'heart') as heart,
+        COUNT(*) FILTER (WHERE reaction = 'thumb') as thumb,
+        COUNT(*) FILTER (WHERE reaction = 'laugh') as laugh
+       FROM post_reactions
+       WHERE postId = $1`,
+      [postId]
+    );
+    res.json({
+      heart: parseInt(counts.rows[0]?.heart || 0),
+      thumb: parseInt(counts.rows[0]?.thumb || 0),
+      laugh: parseInt(counts.rows[0]?.laugh || 0)
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -1466,6 +1583,87 @@ app.get('/api/stories/:id/likes', async (req, res) => {
   }
 });
 
+// ==================== POLL ENDPOINTS ====================
+
+// GET - Current active poll
+app.get('/api/poll', async (req, res) => {
+  try {
+    const pollRes = await pool.query(
+      `SELECT id, question, optionsJson FROM poll WHERE active = 1 ORDER BY id DESC LIMIT 1`
+    );
+    const poll = pollRes.rows[0];
+    if (!poll) return res.json({ poll: null });
+
+    const options = JSON.parse(poll.optionsjson || poll.optionsJson || '[]');
+    const votesRes = await pool.query(
+      `SELECT optionKey, COUNT(*)::int as count FROM poll_votes WHERE pollId = $1 GROUP BY optionKey`,
+      [poll.id]
+    );
+    const counts = {};
+    votesRes.rows.forEach((row) => {
+      counts[row.optionkey || row.optionKey] = parseInt(row.count || 0);
+    });
+
+    res.json({
+      poll: {
+        id: poll.id,
+        question: poll.question,
+        options
+      },
+      counts
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST - Vote on poll
+app.post('/api/poll/vote', async (req, res) => {
+  try {
+    const pollId = parseInt(req.body?.pollId);
+    const optionKey = String(req.body?.option || '').trim();
+    if (!pollId || !optionKey) {
+      return res.status(400).json({ error: 'Invalid vote' });
+    }
+    const pollRes = await pool.query(
+      `SELECT optionsJson FROM poll WHERE id = $1 AND active = 1`,
+      [pollId]
+    );
+    if (!pollRes.rows.length) {
+      return res.status(404).json({ error: 'Poll not found' });
+    }
+    const options = JSON.parse(pollRes.rows[0].optionsjson || '[]');
+    if (!options.includes(optionKey)) {
+      return res.status(400).json({ error: 'Invalid option' });
+    }
+
+    const ip = getClientIp(req);
+    try {
+      await pool.query(
+        `INSERT INTO poll_votes (pollId, optionKey, ip) VALUES ($1, $2, $3)`,
+        [pollId, optionKey, ip]
+      );
+    } catch (e) {
+      return res.status(429).json({ error: 'Vote already recorded' });
+    }
+
+    const votesRes = await pool.query(
+      `SELECT optionKey, COUNT(*)::int as count FROM poll_votes WHERE pollId = $1 GROUP BY optionKey`,
+      [pollId]
+    );
+    const counts = {};
+    votesRes.rows.forEach((row) => {
+      counts[row.optionkey || row.optionKey] = parseInt(row.count || 0);
+    });
+
+    res.json({ ok: true, counts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ==================== QR CODE ENDPOINTS ====================
 
 // GET - Generate QR code for payment method
@@ -1675,7 +1873,7 @@ async function buildAdminMediaList() {
   const [files, dbRows, eventRows] = await Promise.all([
     listMediaFilesFromDisk(),
     pool.query(`SELECT filename, caption, displayOrder, hidden, category, uploadedAt FROM admin_media`),
-    pool.query(`SELECT name, views, downloads FROM media_events`)
+    pool.query(`SELECT name, views, downloads, favorites FROM media_events`)
   ]);
 
   const rowMap = new Map(dbRows.rows.map((r) => [r.filename, r]));
@@ -1694,6 +1892,7 @@ async function buildAdminMediaList() {
       uploadedAt: row.uploadedat || row.uploadedAt || null,
       views: Number(ev.views || 0),
       downloads: Number(ev.downloads || 0),
+      favorites: Number(ev.favorites || 0),
       mtimeMs: f.mtimeMs
     };
   });
@@ -1766,6 +1965,17 @@ app.get('/api/public-media', async (req, res) => {
       }
 
       // Map rows to the structure expected by the frontend
+      const names = result.rows.map((r) => r.filename || '').filter(Boolean);
+      let favoritesMap = new Map();
+      if (names.length) {
+        const placeholders = names.map((_, idx) => `$${idx + 1}`).join(',');
+        const favRes = await pool.query(
+          `SELECT name, favorites FROM media_events WHERE name IN (${placeholders})`,
+          names
+        );
+        favoritesMap = new Map(favRes.rows.map((row) => [row.name, Number(row.favorites || 0)]));
+      }
+
       const items = result.rows.map((r) => {
         const fname = r.filename || '';
         return {
@@ -1779,7 +1989,8 @@ app.get('/api/public-media', async (req, res) => {
           url: `/quiz-2025-media/${encodeURIComponent(fname)}`,
           type: classifyMediaType(fname),
           hidden: Boolean(r.hidden),
-          order: r.displayorder || r.displayOrder || 0
+          order: r.displayorder || r.displayOrder || 0,
+          favorites: favoritesMap.get(fname) || 0
         };
       });
 
@@ -1947,6 +2158,35 @@ app.post('/api/public-media/events', async (req, res) => {
     );
 
     res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST - Favorite a media item
+app.post('/api/public-media/favorite', async (req, res) => {
+  try {
+    const name = (req.body?.name || '').trim();
+    if (!name) {
+      return res.status(400).json({ error: 'Invalid media name' });
+    }
+
+    await pool.query(
+      `INSERT INTO media_events (name, views, downloads, favorites, updatedAt)
+       VALUES ($1, 0, 0, 1, NOW())
+       ON CONFLICT (name)
+       DO UPDATE SET favorites = media_events.favorites + 1,
+                    updatedAt = NOW()`,
+      [name]
+    );
+
+    const result = await pool.query(
+      `SELECT favorites FROM media_events WHERE name = $1`,
+      [name]
+    );
+
+    res.json({ favorites: Number(result.rows[0]?.favorites || 0) });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

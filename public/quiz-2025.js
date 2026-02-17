@@ -134,12 +134,16 @@ function renderMediaGrid() {
           <button type="button" class="small-btn" data-action="download-jpg" data-index="${idx}">JPG</button>
           <button type="button" class="small-btn" data-action="download-png" data-index="${idx}">PNG</button>
         `;
+      const favCount = Number(item.favorites || 0);
       return `
         <article class="media-card" data-index="${idx}">
           <div class="media-preview">${preview}</div>
           <p class="media-name">${safeName}</p>
           ${safeCaption ? `<p class="media-caption">${safeCaption}</p>` : ''}
           <div class="media-actions">${actions}</div>
+          <div class="media-actions">
+            <button type="button" class="small-btn" data-action="favorite" data-index="${idx}">❤️ ${favCount}</button>
+          </div>
         </article>
       `;
     })
@@ -334,6 +338,22 @@ mediaGrid?.addEventListener('click', async (event) => {
   if (!Number.isInteger(idx) || idx < 0 || idx >= mediaItems.length) return;
   const item = mediaItems[idx];
   const baseName = splitBaseName(item.name || `media-${idx + 1}`);
+
+  if (target.dataset.action === 'favorite') {
+    try {
+      const res = await fetch('/api/public-media/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: item.name })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        item.favorites = Number(data.favorites || 0);
+        renderMediaGrid();
+      }
+    } catch (_) {}
+    return;
+  }
 
   if (action === 'download-original') {
     try {

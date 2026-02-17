@@ -250,6 +250,14 @@
           <a href="quiz-2025.html" class="btn-link outline">LE QUIZ ISLAMIQUE 2025 en images</a>
         </div>
       </section>
+
+      <section class="card" id="pollCard">
+        <h2>🗳️ Sondage du jour</h2>
+        <p class="muted-note">Votre avis compte pour améliorer le site.</p>
+        <div id="pollStatus" class="muted-note">Chargement du sondage...</div>
+        <div id="pollOptions" class="poll-options"></div>
+        <div id="pollResults" class="poll-results hidden"></div>
+      </section>
     </main>
 
     <footer class="site-footer">
@@ -267,5 +275,6 @@
     </footer>
 
     <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>    <script src="utils.js?v=2.1.0"></script>    <script defer src="app.js?v=2.1.0"></script>
+    <script defer src="poll.js"></script>
   </body>
 </html>

@@ -35,6 +35,7 @@ const contactFilter = document.getElementById('contactFilter');
 const contactSearch = document.getElementById('contactSearch');
 const auditTableBody = document.querySelector('#auditTable tbody');
 const exportAudit = document.getElementById('exportAudit');
+const exportDonations = document.getElementById('exportDonations');
 const mediaAdminStats = document.getElementById('mediaAdminStats');
 const mediaSearchAdmin = document.getElementById('mediaSearchAdmin');
 const mediaTypeAdmin = document.getElementById('mediaTypeAdmin');
@@ -63,6 +64,7 @@ let mediaAdminCache = [];
 let dashboardTimer = null;
 let dashboardLoading = false;
 let mediaAdminFilters = { search: '', type: 'all', sort: 'newest' };
+let lastDashboardStats = { candidates: 0, contacts: 0, donationsPending: 0 };
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -126,6 +128,7 @@ async function loadDashboard() {
     const settings = data.settings || {};
     const contacts = Array.isArray(data.contacts) ? data.contacts : [];
     const audit = Array.isArray(data.audit) ? data.audit : [];
+    const stats = data.stats || {};
 
     candidatesCache = candidates;
     votesCache = votes;
@@ -137,6 +140,21 @@ async function loadDashboard() {
       acc[row.id] = row;
       return acc;
     }, {});
+
+    if (stats.candidates > lastDashboardStats.candidates) {
+      showToast('Nouveau candidat inscrit.', 'success');
+    }
+    if (stats.contacts > lastDashboardStats.contacts) {
+      showToast('Nouveau message reçu.', 'info');
+    }
+    if (stats.donationsPending > lastDashboardStats.donationsPending) {
+      showToast('Nouvelle donation en attente.', 'info');
+    }
+    lastDashboardStats = {
+      candidates: stats.candidates || candidates.length,
+      contacts: stats.contacts || contacts.length,
+      donationsPending: stats.donationsPending || 0
+    };
 
     const candidatesBody = document.querySelector('#candidatesTable tbody');
     if (candidatesBody) {
@@ -504,7 +522,7 @@ function renderMediaAdminTable() {
         <td><input type="number" class="media-order-input" value="${Number(m.order || 0)}" /></td>
         <td><input type="checkbox" class="media-hidden-input" ${m.hidden ? 'checked' : ''} /></td>
         <td><input type="text" class="media-caption-input" value="${escapeHtml(m.caption || '')}" maxlength="240" /></td>
-        <td>${Number(m.views || 0)} vues / ${Number(m.downloads || 0)} dl</td>
+        <td>${Number(m.views || 0)} vues / ${Number(m.downloads || 0)} dl / ${Number(m.favorites || 0)} ❤️</td>
         <td><button type="button" class="small-btn" data-action="save-media">Enregistrer</button></td>
       </tr>
     `)
@@ -972,6 +990,20 @@ exportAudit?.addEventListener('click', () => {
     ip: a.ip,
   }));
   downloadCSV('audit.csv', rows);
+});
+
+exportDonations?.addEventListener('click', () => {
+  const rows = donationsCache.map((d) => ({
+    id: d.id,
+    donorName: d.donorName,
+    donorEmail: d.donorEmail,
+    amount: d.amount,
+    currency: d.currency,
+    paymentMethod: d.paymentMethod,
+    status: d.status,
+    createdAt: d.createdAt,
+  }));
+  downloadCSV('donations.csv', rows);
 });
 
 function renderContactsTable() {
