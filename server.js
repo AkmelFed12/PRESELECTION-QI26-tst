@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { readdir, stat } from 'fs/promises';
 import rateLimit from 'express-rate-limit';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
@@ -317,6 +318,24 @@ async function initDatabase() {
         approvedBy TEXT
       );
 
+      CREATE TABLE IF NOT EXISTS admin_media (
+        id BIGSERIAL PRIMARY KEY,
+        filename TEXT NOT NULL,
+        filepath TEXT,
+        category TEXT DEFAULT 'quiz-2025',
+        caption TEXT,
+        displayOrder INTEGER DEFAULT 0,
+        hidden INTEGER DEFAULT 0,
+        uploadedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS media_events (
+        name TEXT PRIMARY KEY,
+        views BIGINT DEFAULT 0,
+        downloads BIGINT DEFAULT 0,
+        updatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS donations (
         id BIGSERIAL PRIMARY KEY,
         donorName TEXT NOT NULL,
@@ -388,6 +407,8 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_post_shares ON post_shares(postId);
       CREATE INDEX IF NOT EXISTS idx_story_likes ON story_likes(storyId);
       CREATE INDEX IF NOT EXISTS idx_engagement_content ON engagement_stats(contentType, contentId);
+      CREATE INDEX IF NOT EXISTS idx_admin_media_category ON admin_media(category);
+      CREATE INDEX IF NOT EXISTS idx_admin_media_hidden ON admin_media(hidden);
     `);
 
     console.log('✅ Database initialized successfully');
@@ -1536,6 +1557,66 @@ app.get('/api/analytics/overview', async (req, res) => {
 
 // ==================== PUBLIC MEDIA ENDPOINTS ====================
 
+async function listMediaFilesFromDisk() {
+  const mediaDir = join(__dirname, 'public', 'quiz-2025-media');
+  try {
+    const entries = await readdir(mediaDir, { withFileTypes: true });
+    const files = entries.filter((e) => e.isFile()).map((e) => e.name);
+    const withMeta = await Promise.all(
+      files.map(async (name) => {
+        try {
+          const info = await stat(join(mediaDir, name));
+          return { name, mtimeMs: info.mtimeMs };
+        } catch {
+          return { name, mtimeMs: 0 };
+        }
+      })
+    );
+    return withMeta;
+  } catch {
+    return [];
+  }
+}
+
+function classifyMediaType(filename = '') {
+  const ext = (filename.split('.').pop() || '').toLowerCase();
+  const isVideo = ['mp4', 'webm', 'mov', 'mkv'].includes(ext);
+  return isVideo ? 'video' : 'image';
+}
+
+function matchesTypeFilter(filename, typeFilter) {
+  if (typeFilter === 'image') return /\.(jpg|jpeg|png|gif|webp)$/i.test(filename);
+  if (typeFilter === 'video') return /\.(mp4|webm|mov|mkv)$/i.test(filename);
+  return true;
+}
+
+async function loadMediaFromFilesystem({ page, pageSize, typeFilter, sort, search }) {
+  const files = await listMediaFilesFromDisk();
+  const filtered = files
+    .filter((f) => matchesTypeFilter(f.name, typeFilter))
+    .filter((f) => (search ? f.name.toLowerCase().includes(search.toLowerCase()) : true));
+
+  filtered.sort((a, b) => (sort === 'ASC' ? a.mtimeMs - b.mtimeMs : b.mtimeMs - a.mtimeMs));
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const offset = (page - 1) * pageSize;
+  const slice = filtered.slice(offset, offset + pageSize);
+
+  const items = slice.map((f) => ({
+    id: null,
+    name: f.name,
+    filename: f.name,
+    filepath: `/quiz-2025-media/${f.name}`,
+    category: 'quiz-2025',
+    uploadedAt: null,
+    url: `/quiz-2025-media/${encodeURIComponent(f.name)}`,
+    type: classifyMediaType(f.name),
+  }));
+
+  return { items, pagination: { page, pageSize, totalPages, total } };
+}
+
 // GET - All public media
 app.get('/api/public-media', async (req, res) => {
   try {
@@ -1561,39 +1642,53 @@ app.get('/api/public-media', async (req, res) => {
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-    // Total count for pagination
-    const countSql = `SELECT COUNT(*)::int as total FROM admin_media ${whereSql}`;
-    const countResult = await pool.query(countSql, params);
-    const total = parseInt(countResult.rows[0]?.total || 0, 10);
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    try {
+      // Total count for pagination
+      const countSql = `SELECT COUNT(*)::int as total FROM admin_media ${whereSql}`;
+      const countResult = await pool.query(countSql, params);
+      const total = parseInt(countResult.rows[0]?.total || 0, 10);
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-    // Fetch paginated rows
-    const offset = (page - 1) * pageSize;
-    const fetchSql = `SELECT id, filename, filepath, category, uploadedAt
-      FROM admin_media
-      ${whereSql}
-      ORDER BY uploadedAt ${sort}
-      LIMIT ${pageSize} OFFSET ${offset}`;
-    const result = await pool.query(fetchSql, params);
+      // Fetch paginated rows
+      const offset = (page - 1) * pageSize;
+      const fetchSql = `SELECT id, filename, filepath, category, caption, displayOrder, hidden, uploadedAt
+        FROM admin_media
+        ${whereSql}
+        ORDER BY uploadedAt ${sort}
+        LIMIT ${pageSize} OFFSET ${offset}`;
+      const result = await pool.query(fetchSql, params);
 
-    // Map rows to the structure expected by the frontend
-    const items = result.rows.map((r) => {
-      const fname = r.filename || '';
-      const ext = (fname.split('.').pop() || '').toLowerCase();
-      const isVideo = ['mp4', 'webm', 'mov', 'mkv'].includes(ext);
-      return {
-        id: r.id,
-        name: fname,
-        filename: fname,
-        filepath: r.filepath || `/quiz-2025-media/${fname}`,
-        category: r.category,
-        uploadedAt: r.uploadedat || r.uploadedAt,
-        url: `/quiz-2025-media/${encodeURIComponent(fname)}`,
-        type: isVideo ? 'video' : 'image'
-      };
-    });
+      if (!result.rows.length) {
+        const fallback = await loadMediaFromFilesystem({ page, pageSize, typeFilter, sort, search });
+        return res.json(fallback);
+      }
 
-    res.json({ items, pagination: { page, pageSize, totalPages, total } });
+      // Map rows to the structure expected by the frontend
+      const items = result.rows.map((r) => {
+        const fname = r.filename || '';
+        return {
+          id: r.id,
+          name: fname,
+          filename: fname,
+          filepath: r.filepath || `/quiz-2025-media/${fname}`,
+          category: r.category,
+          caption: r.caption || '',
+          uploadedAt: r.uploadedat || r.uploadedAt,
+          url: `/quiz-2025-media/${encodeURIComponent(fname)}`,
+          type: classifyMediaType(fname),
+          hidden: Boolean(r.hidden),
+          order: r.displayorder || r.displayOrder || 0
+        };
+      });
+
+      res.json({ items, pagination: { page, pageSize, totalPages, total } });
+    } catch (dbError) {
+      if (dbError?.code === '42P01') {
+        const fallback = await loadMediaFromFilesystem({ page, pageSize, typeFilter, sort, search });
+        return res.json(fallback);
+      }
+      throw dbError;
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -1618,17 +1713,65 @@ app.get('/api/quiz-2025-media', async (req, res) => {
   }
 });
 
+// POST - Public media events (view/download)
+app.post('/api/public-media/events', async (req, res) => {
+  try {
+    const name = (req.body?.name || '').trim();
+    const event = (req.body?.event || '').trim().toLowerCase();
+    if (!name || !['view', 'download'].includes(event)) {
+      return res.status(400).json({ error: 'Invalid event payload' });
+    }
+    const viewsInc = event === 'view' ? 1 : 0;
+    const downloadsInc = event === 'download' ? 1 : 0;
+
+    await pool.query(
+      `INSERT INTO media_events (name, views, downloads, updatedAt)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (name)
+       DO UPDATE SET views = media_events.views + $2,
+                    downloads = media_events.downloads + $3,
+                    updatedAt = NOW()`,
+      [name, viewsInc, downloadsInc]
+    );
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET - Public media statistics
 app.get('/api/public-media/stats', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT category, COUNT(*) as count, MAX(uploadedAt) as lastUpload
-       FROM admin_media 
-       GROUP BY category 
-       ORDER BY count DESC`
+    let totalMedia = 0;
+    try {
+      const count = await pool.query(`SELECT COUNT(*)::int as total FROM admin_media`);
+      totalMedia = parseInt(count.rows[0]?.total || 0, 10);
+      if (!totalMedia) {
+        const fallback = await listMediaFilesFromDisk();
+        totalMedia = fallback.length;
+      }
+    } catch (dbError) {
+      if (dbError?.code === '42P01') {
+        const fallback = await listMediaFilesFromDisk();
+        totalMedia = fallback.length;
+      } else {
+        throw dbError;
+      }
+    }
+
+    const events = await pool.query(
+      `SELECT COALESCE(SUM(views), 0)::bigint as views,
+              COALESCE(SUM(downloads), 0)::bigint as downloads
+       FROM media_events`
     );
 
-    res.json(result.rows);
+    res.json({
+      totalMedia,
+      totalViews: Number(events.rows[0]?.views || 0),
+      totalDownloads: Number(events.rows[0]?.downloads || 0)
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
