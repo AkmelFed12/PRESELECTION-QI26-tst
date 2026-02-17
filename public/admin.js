@@ -36,6 +36,8 @@ const contactSearch = document.getElementById('contactSearch');
 const auditTableBody = document.querySelector('#auditTable tbody');
 const exportAudit = document.getElementById('exportAudit');
 const exportDonations = document.getElementById('exportDonations');
+const sponsorsTableBody = document.querySelector('#sponsorsTable tbody');
+const exportSponsors = document.getElementById('exportSponsors');
 const mediaAdminStats = document.getElementById('mediaAdminStats');
 const mediaSearchAdmin = document.getElementById('mediaSearchAdmin');
 const mediaTypeAdmin = document.getElementById('mediaTypeAdmin');
@@ -180,6 +182,9 @@ async function loadDashboard() {
 
     if (contactTableBody) {
       renderContactsTable();
+    }
+    if (sponsorsTableBody) {
+      renderSponsorsTable();
     }
 
     if (auditTableBody) {
@@ -981,6 +986,20 @@ exportContacts?.addEventListener('click', () => {
   downloadCSV('contacts.csv', rows);
 });
 
+exportSponsors?.addEventListener('click', () => {
+  const rows = contactsCache
+    .filter((c) => isSponsorMessage(c))
+    .map((c) => ({
+      id: c.id,
+      createdAt: c.createdAt,
+      fullName: c.fullName,
+      email: c.email,
+      message: c.message,
+      archived: Number(c.archived || 0) === 1 ? 'oui' : 'non',
+    }));
+  downloadCSV('sponsors.csv', rows);
+});
+
 exportAudit?.addEventListener('click', () => {
   const rows = auditCache.map((a) => ({
     id: a.id,
@@ -1040,6 +1059,35 @@ function renderContactsTable() {
     .join('');
 }
 
+function isSponsorMessage(c) {
+  const subject = (c.subject || '').toLowerCase();
+  const message = (c.message || '').toLowerCase();
+  return subject.includes('sponsor') || subject.includes('sponsoring') || message.includes('sponsor');
+}
+
+function renderSponsorsTable() {
+  if (!sponsorsTableBody) return;
+  const list = contactsCache.filter((c) => isSponsorMessage(c));
+  sponsorsTableBody.innerHTML = list
+    .map((c) => {
+      const archiveLabel = Number(c.archived || 0) === 1 ? 'Désarchiver' : 'Archiver';
+      const archiveValue = Number(c.archived || 0) === 1 ? 0 : 1;
+      const statusLabel = Number(c.archived || 0) === 1 ? 'archivé' : 'actif';
+      return `<tr>
+        <td>${escapeHtml(c.createdAt)}</td>
+        <td>${escapeHtml(c.fullName)}</td>
+        <td>${escapeHtml(c.email)}</td>
+        <td>${escapeHtml(c.message)}</td>
+        <td>${statusLabel}</td>
+        <td>
+          <button class="small-btn" data-contact-action="archive" data-id="${c.id}" data-value="${archiveValue}">${archiveLabel}</button>
+          <button class="small-btn danger" data-contact-action="delete" data-id="${c.id}">Supprimer</button>
+        </td>
+      </tr>`;
+    })
+    .join('');
+}
+
 contactFilter?.addEventListener('change', renderContactsTable);
 contactSearch?.addEventListener('input', renderContactsTable);
 
@@ -1056,6 +1104,7 @@ contactTableBody?.addEventListener('click', async (e) => {
     if (res.ok) {
       contactsCache = contactsCache.filter((c) => String(c.id) !== String(messageId));
       renderContactsTable();
+      renderSponsorsTable();
     }
     return;
   }
@@ -1072,6 +1121,7 @@ contactTableBody?.addEventListener('click', async (e) => {
         String(c.id) === String(messageId) ? { ...c, archived: archivedValue } : c,
       );
       renderContactsTable();
+      renderSponsorsTable();
     }
   }
 });
