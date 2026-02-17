@@ -1797,6 +1797,26 @@ app.get('/api/public-media', async (req, res) => {
   }
 });
 
+// DELETE - Admin delete donation
+app.delete('/api/admin/donations/:id', verifyAdmin, async (req, res) => {
+  try {
+    const donationId = parseInt(req.params.id);
+    if (!Number.isFinite(donationId)) {
+      return res.status(400).json({ error: 'Invalid donation id' });
+    }
+
+    const result = await pool.query('DELETE FROM donations WHERE id = $1', [donationId]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Donation not found' });
+    }
+
+    res.json({ message: 'Donation supprimée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET - Admin media management list
 app.get('/api/admin/media', verifyAdmin, async (req, res) => {
   try {
