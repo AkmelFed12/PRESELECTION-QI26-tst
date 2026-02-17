@@ -1,29 +1,8 @@
 {
   "version": 2,
-  "name": "preselection-qi26",
-  
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/public/(.*)",
-      "dest": "/public/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/server.js"
-    }
-  ],
   "buildCommand": "npm ci",
   "outputDirectory": ".",
   "installCommand": "npm ci",
-  "framework": "express"
+  "framework": "express",
+  "devCommand": "node server.js"
 }

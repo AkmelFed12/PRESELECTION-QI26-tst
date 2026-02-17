@@ -29,13 +29,20 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
+pool.on('error', (error) => {
+  console.error('Unexpected error on idle client', error);
+  process.exit(-1);
+});
+
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(join(__dirname, 'public')));
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true
-}));
+// CORS config: credentials only with explicit origin
+if (process.env.CORS_ORIGIN) {
+  app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
+} else {
+  app.use(cors({ origin: '*', credentials: false }));
+}
 
 // Rate limiters
 const registerLimiter = rateLimit({
@@ -122,6 +129,30 @@ function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) return forwarded.split(',')[0].trim();
   return req.ip || req.connection.remoteAddress || 'unknown';
+}
+
+function getFrontendUrl(req) {
+  if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL.replace(/\/$/, '');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.get('host') || '';
+  return `${proto}://${host}`;
+}
+
+function normalizeSettingsRow(row) {
+  if (!row) return {
+    votingEnabled: 0,
+    registrationLocked: 0,
+    competitionClosed: 0,
+    announcementText: '',
+    scheduleJson: '[]'
+  };
+  return {
+    votingEnabled: row.votingenabled ?? row.votingEnabled ?? 0,
+    registrationLocked: row.registrationlocked ?? row.registrationLocked ?? 0,
+    competitionClosed: row.competitionclosed ?? row.competitionClosed ?? 0,
+    announcementText: row.announcementtext ?? row.announcementText ?? '',
+    scheduleJson: row.schedulejson ?? row.scheduleJson ?? '[]'
+  };
 }
 
 // ==================== SECURITY HEADERS ====================
@@ -312,13 +343,8 @@ app.get('/api/public-settings', async (req, res) => {
     const result = await pool.query(
       'SELECT votingEnabled, registrationLocked, competitionClosed, announcementText, scheduleJson FROM tournament_settings WHERE id = 1'
     );
-    res.json(result.rows[0] || {
-      votingEnabled: 0,
-      registrationLocked: 0,
-      competitionClosed: 0,
-      announcementText: '',
-      scheduleJson: '[]'
-    });
+    const normalized = normalizeSettingsRow(result.rows[0]);
+    res.json(normalized);
   } catch (error) {
     res.status(500).json({ error: 'Database error' });
   }
@@ -368,8 +394,23 @@ app.post('/api/register', registerLimiter, async (req, res) => {
   try {
     const { fullName, whatsapp, email, phone, city, country, age, quranLevel, motivation, photoUrl } = req.body;
 
+    // Validate mandatory fields
     if (!fullName || !whatsapp) {
       return res.status(400).json({ message: 'Nom complet et WhatsApp obligatoires.' });
+    }
+
+    // Sanitize and validate lengths
+    const sanitizedName = sanitizeString(fullName, 255);
+    const sanitizedCity = sanitizeString(city, 100);
+    const sanitizedCountry = sanitizeString(country, 100);
+    const sanitizedEmail = sanitizeString(email, 120);
+    const sanitizedPhone = sanitizeString(phone, 30);
+    const sanitizedQuranLevel = sanitizeString(quranLevel, 100);
+    const sanitizedMotivation = sanitizeString(motivation, 1000);
+    const sanitizedPhotoUrl = sanitizeString(photoUrl, 500);
+
+    if (!sanitizedName || sanitizedName.length < 2) {
+      return res.status(400).json({ message: 'Nom invalide.' });
     }
 
     const normalized = normalizeWhatsapp(whatsapp);
@@ -377,11 +418,11 @@ app.post('/api/register', registerLimiter, async (req, res) => {
       return res.status(400).json({ message: 'Numéro WhatsApp invalide.' });
     }
 
-    if (email && !validateEmail(email)) {
+    if (sanitizedEmail && !validateEmail(sanitizedEmail)) {
       return res.status(400).json({ message: 'Email invalide.' });
     }
 
-    if (phone && !validatePhone(phone)) {
+    if (sanitizedPhone && !validatePhone(sanitizedPhone)) {
       return res.status(400).json({ message: 'Téléphone invalide.' });
     }
 
@@ -389,15 +430,15 @@ app.post('/api/register', registerLimiter, async (req, res) => {
     const settingsResult = await pool.query(
       'SELECT registrationLocked, competitionClosed FROM tournament_settings WHERE id = 1'
     );
-    const settings = settingsResult.rows[0];
-    if (settings && (settings.registrationlocked === 1 || settings.competitionclosed === 1)) {
+    const settings = normalizeSettingsRow(settingsResult.rows[0]);
+    if (settings.registrationLocked === 1 || settings.competitionClosed === 1) {
       return res.status(403).json({ message: 'Inscriptions fermées.' });
     }
 
     // Check duplicate
     const existResult = await pool.query(
       'SELECT id FROM candidates WHERE LOWER(fullName) = LOWER($1) AND whatsapp = $2',
-      [fullName, normalized]
+      [sanitizedName, normalized]
     );
     if (existResult.rows.length > 0) {
       return res.status(409).json({ message: 'Utilisateur déjà enregistré.' });
@@ -416,7 +457,7 @@ app.post('/api/register', registerLimiter, async (req, res) => {
       `INSERT INTO candidates (fullName, age, city, country, email, phone, whatsapp, photoUrl, quranLevel, motivation, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id`,
-      [fullName, age || null, city, country, email, phone, normalized, photoUrl, quranLevel, motivation, 'pending']
+      [sanitizedName, age || null, sanitizedCity, sanitizedCountry, sanitizedEmail, sanitizedPhone, normalized, sanitizedPhotoUrl, sanitizedQuranLevel, sanitizedMotivation, 'pending']
     );
 
     const candidateId = insertResult.rows[0].id;
@@ -430,11 +471,12 @@ app.post('/api/register', registerLimiter, async (req, res) => {
     // Send emails
     if (email && process.env.SMTP_HOST) {
       try {
+        const frontendUrl = getFrontendUrl(req);
         await transporter.sendMail({
           from: process.env.SMTP_FROM,
           to: email,
           subject: `✅ Confirmation d'inscription - Quiz Islamique 2026 (${candidateCode})`,
-          text: `Assalamou alaykoum ${fullName},\n\nVotre inscription a été enregistrée avec succès!\nCode candidat: ${candidateCode}\n\nConsultez: https://preselection-qi26.onrender.com`
+          text: `Assalamou alaykoum ${fullName},\n\nVotre inscription a été enregistrée avec succès!\nCode candidat: ${candidateCode}\n\nConsultez: ${frontendUrl}`
         });
       } catch (emailError) {
         console.error('Email error:', emailError.message);
@@ -468,9 +510,9 @@ app.post('/api/votes', voteLimiter, async (req, res) => {
     const settingsResult = await pool.query(
       'SELECT votingEnabled, competitionClosed FROM tournament_settings WHERE id = 1'
     );
-    const settings = settingsResult.rows[0];
+    const settings = normalizeSettingsRow(settingsResult.rows[0]);
 
-    if (!settings || settings.votingenabled !== 1 || settings.competitionclosed === 1) {
+    if (settings.votingEnabled !== 1 || settings.competitionClosed === 1) {
       return res.status(403).json({ message: 'Votes fermés.' });
     }
 
