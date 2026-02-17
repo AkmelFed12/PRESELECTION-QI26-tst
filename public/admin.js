@@ -288,6 +288,172 @@ function updateDashboard() {
     votingStatus.textContent = enabled ? 'Ouverts' : 'Fermés';
     toggleVoting.textContent = enabled ? 'Fermer' : 'Ouvrir';
   }
+
+  // Render charts
+  renderCharts();
+}
+
+// Stockage des instances Chart.js pour destruction avant recréation
+let chartInstances = {
+  topVotes: null,
+  countries: null,
+  topScores: null,
+  inscriptions: null
+};
+
+function renderCharts() {
+  if (!window.Chart) return;
+
+  // Détruire les graphiques existants
+  Object.values(chartInstances).forEach(chart => {
+    if (chart) chart.destroy();
+  });
+
+  // Graphique 1: Top 10 candidats par votes
+  const chartTopVotesCanvas = document.getElementById('chartTopVotes');
+  if (chartTopVotesCanvas) {
+    const top10Votes = votesCache.slice(0, 10);
+    chartInstances.topVotes = new Chart(chartTopVotesCanvas, {
+      type: 'bar',
+      data: {
+        labels: top10Votes.map(v => v.fullName || 'Inconnu'),
+        datasets: [{
+          label: 'Nombre de votes',
+          data: top10Votes.map(v => Number(v.totalVotes || 0)),
+          backgroundColor: 'rgba(11, 111, 79, 0.7)',
+          borderColor: 'rgba(11, 111, 79, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // Graphique 2: Répartition géographique
+  const chartCountriesCanvas = document.getElementById('chartCountries');
+  if (chartCountriesCanvas) {
+    const countryCounts = {};
+    candidatesCache.forEach(c => {
+      const country = (c.country || 'Non renseigné').trim();
+      countryCounts[country] = (countryCounts[country] || 0) + 1;
+    });
+    const countryData = Object.entries(countryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+
+    chartInstances.countries = new Chart(chartCountriesCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: countryData.map(c => c[0]),
+        datasets: [{
+          data: countryData.map(c => c[1]),
+          backgroundColor: [
+            'rgba(11, 111, 79, 0.8)',
+            'rgba(197, 155, 63, 0.8)',
+            'rgba(52, 152, 219, 0.8)',
+            'rgba(231, 76, 60, 0.8)',
+            'rgba(155, 89, 182, 0.8)',
+            'rgba(241, 196, 15, 0.8)',
+            'rgba(46, 204, 113, 0.8)',
+            'rgba(149, 165, 166, 0.8)'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { position: 'right' }
+        }
+      }
+    });
+  }
+
+  // Graphique 3: Top 10 candidats par scores
+  const chartTopScoresCanvas = document.getElementById('chartTopScores');
+  if (chartTopScoresCanvas) {
+    const top10Scores = rankingCache.slice(0, 10);
+    chartInstances.topScores = new Chart(chartTopScoresCanvas, {
+      type: 'bar',
+      data: {
+        labels: top10Scores.map(r => r.fullName || 'Inconnu'),
+        datasets: [{
+          label: 'Score moyen',
+          data: top10Scores.map(r => Number(r.averageScore || 0)),
+          backgroundColor: 'rgba(197, 155, 63, 0.7)',
+          borderColor: 'rgba(197, 155, 63, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // Graphique 4: Évolution des inscriptions (par date)
+  const chartInscriptionsCanvas = document.getElementById('chartInscriptions');
+  if (chartInscriptionsCanvas) {
+    const inscriptionsByDate = {};
+    candidatesCache.forEach(c => {
+      if (c.createdAt) {
+        const date = new Date(c.createdAt).toLocaleDateString('fr-FR');
+        inscriptionsByDate[date] = (inscriptionsByDate[date] || 0) + 1;
+      }
+    });
+
+    const dates = Object.keys(inscriptionsByDate).sort((a, b) => {
+      return new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-'));
+    });
+
+    // Calculer inscriptions cumulées
+    let cumulative = 0;
+    const cumulativeData = dates.map(date => {
+      cumulative += inscriptionsByDate[date];
+      return cumulative;
+    });
+
+    chartInstances.inscriptions = new Chart(chartInscriptionsCanvas, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [{
+          label: 'Inscriptions cumulées',
+          data: cumulativeData,
+          borderColor: 'rgba(11, 111, 79, 1)',
+          backgroundColor: 'rgba(11, 111, 79, 0.1)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: true }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
 }
 
 function buildMediaAdminQuery(page = 1) {

@@ -128,6 +128,26 @@
             <em id="progressText">0%</em>
           </div>
         </div>
+
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Graphiques statistiques</h3>
+        <div class="charts-grid">
+          <div class="chart-container">
+            <h4>Top 10 candidats (votes)</h4>
+            <canvas id="chartTopVotes"></canvas>
+          </div>
+          <div class="chart-container">
+            <h4>Répartition géographique</h4>
+            <canvas id="chartCountries"></canvas>
+          </div>
+          <div class="chart-container">
+            <h4>Top 10 candidats (scores)</h4>
+            <canvas id="chartTopScores"></canvas>
+          </div>
+          <div class="chart-container">
+            <h4>Évolution des inscriptions</h4>
+            <canvas id="chartInscriptions"></canvas>
+          </div>
+        </div>
       </section>
 
       <section class="card accent-olive hidden" id="candidatesPanel">
@@ -315,7 +335,8 @@
       </section>
     </main>
 
-    <script src="utils.js"></script>
-    <script src="admin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="utils.js?v=2.2.0"></script>
+    <script src="admin.js?v=2.2.0"></script>
   </body>
 </html>

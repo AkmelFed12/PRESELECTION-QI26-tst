@@ -1,5 +1,74 @@
+# Python
 __pycache__/
-*.pyc
-data.sqlite
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv
+env/
+venv/
+
+# IDE
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
 .env
+.env.local
+.env.*.local
+
+# Database
+data.sqlite
+*.db
+*.sqlite
+
+# Temporary files
+*.tmp
+*.bak
+*.temp
+
+# Test files
+test_*.py
+reset_*.py
+reset_*.bat
+test_*.bat
+
+# Documentation (temporary)
+AMELIORATIONS_PROFESSIONNELLES.md
+CONFIGURATION_EMAIL.md
+DIAGNOSTIC_DEPLOIEMENT.md
+ETAPE_FINALE_DB.md
+MISSION_ACCOMPLIE.md
+RAPPORT_FINAL_INSPECTION.md
+RESUME_CORRECTIONS.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

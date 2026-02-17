@@ -1262,6 +1262,9 @@ class Handler(BaseHTTPRequestHandler):
             # Envoyer email à l'admin
             send_registration_email(candidate_id, payload.get("fullName"), payload.get("email"), payload.get("whatsapp"), payload.get("phone"))
 
+            # Envoyer email de confirmation au candidat
+            send_candidate_confirmation_email(candidate_id, payload.get("fullName"), payload.get("email"))
+
             msg = (
                 "Assalamou alaykoum, je confirme mon inscription au Quiz Islamique 2026. "
                 f"Mon ID candidat est {candidate_id}."
@@ -1269,7 +1272,7 @@ class Handler(BaseHTTPRequestHandler):
             redirect = f"https://wa.me/{ADMIN_WHATSAPP}?text={msg.replace(' ', '%20')}"
             return self._send_json(
                 {
-                    "message": "Inscription enregistrée.",
+                    "message": "Inscription enregistrée. Un email de confirmation vous a été envoyé.",
                     "candidateId": candidate_id,
                     "whatsappRedirect": redirect,
                 },
@@ -1797,6 +1800,61 @@ def send_registration_email(candidate_id, full_name, email, whatsapp, phone):
         logger.info(f"Email envoyé pour l'inscription de {full_name}")
     except Exception as e:
         logger.error(f"Erreur envoi email inscription: {e}")
+
+
+def send_candidate_confirmation_email(candidate_id, full_name, email):
+    """Envoie un email de confirmation au candidat après son inscription"""
+    if not (SMTP_HOST and SMTP_FROM):
+        logger.info("SMTP non configuré, email de confirmation non envoyé")
+        return
+
+    if not email:
+        logger.info("Email du candidat non fourni, email de confirmation non envoyé")
+        return
+
+    candidate_code = f"QI26-{str(candidate_id).zfill(3)}"
+
+    body = (
+        f"Assalamou alaykoum {full_name},\n\n"
+        f"✅ Votre inscription au Quiz Islamique 2026 a été enregistrée avec succès !\n\n"
+        f"📋 Votre code candidat: {candidate_code}\n\n"
+        f"📅 Prochaines étapes:\n"
+        f"   • Consultez le site régulièrement pour les annonces\n"
+        f"   • Vérifiez que vous êtes dans la liste des candidats\n"
+        f"   • Suivez les instructions pour la phase de présélection\n\n"
+        f"🌐 Site web: https://preselection-qi26.onrender.com\n"
+        f"📱 WhatsApp admin: {ADMIN_WHATSAPP}\n\n"
+        f"Conservez précieusement ce code candidat pour toute communication avec l'organisation.\n\n"
+        f"Qu'Allah vous accorde la réussite dans cette belle initiative !\n\n"
+        f"---\n"
+        f"Association des Serviteurs d'Allah Azawajal\n"
+        f"Quiz Islamique 2026\n"
+        f"https://preselection-qi26.onrender.com\n"
+    )
+
+    headers = [
+        f"From: {SMTP_FROM}",
+        f"To: {email}",
+        f"Subject: ✅ Confirmation d'inscription - Quiz Islamique 2026 ({candidate_code})",
+        "Content-Type: text/plain; charset=utf-8",
+    ]
+    msg = "\r\n".join(headers) + "\r\n\r\n" + body
+
+    try:
+        if SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15)
+        else:
+            server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
+        with server:
+            server.ehlo()
+            if SMTP_PORT != 465:
+                server.starttls()
+            if SMTP_USER and SMTP_PASSWORD:
+                server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, [email], msg.encode("utf-8"))
+        logger.info(f"Email de confirmation envoyé à {email} pour {full_name}")
+    except Exception as e:
+        logger.error(f"Erreur envoi email de confirmation à {email}: {e}")
 
 
 if __name__ == "__main__":
