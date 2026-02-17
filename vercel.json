@@ -1,22 +1,7 @@
 {
   "version": 2,
   "name": "preselection-qi26",
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "ADMIN_USERNAME": "@admin_username",
-    "ADMIN_PASSWORD": "@admin_password",
-    "ADMIN_WHATSAPP": "@admin_whatsapp",
-    "SMTP_HOST": "@smtp_host",
-    "SMTP_PORT": "@smtp_port",
-    "SMTP_USER": "@smtp_user",
-    "SMTP_PASSWORD": "@smtp_password",
-    "SMTP_FROM": "@smtp_from",
-    "SMTP_TO": "@smtp_to",
-    "CLOUDINARY_CLOUD_NAME": "@cloudinary_cloud_name",
-    "CLOUDINARY_API_KEY": "@cloudinary_api_key",
-    "CLOUDINARY_API_SECRET": "@cloudinary_api_secret",
-    "NODE_ENV": "production"
-  },
+  
   "builds": [
     {
       "src": "server.js",
