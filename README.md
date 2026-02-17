@@ -1,7 +1,9 @@
 # Plateforme de présélection — Quiz Islamique 2026
 
 Application web professionnelle pour l'Association des Serviteurs d'Allah Azawajal.  
-**Version 2.0** — Sécurisée, Accessible, Production-Ready ✓
+**Version 2.5** — Node.js/Express, PostgreSQL, Vercel Deployed ✓
+
+---
 
 ## 🎯 Fonctionnalités Principales
 
@@ -12,6 +14,10 @@ Application web professionnelle pour l'Association des Serviteurs d'Allah Azawaj
 - ✅ Résultats publics en temps réel avec classement
 - ✅ Tableau de bord de statistiques avec graphiques Chart.js
 - ✅ Formulaire de contact avec suivi admin
+- ✅ **NEW** 📰 Publications/Feed avec approbation modérateur
+- ✅ **NEW** 📱 Stories 24h avec auto-expiration
+- ✅ **NEW** 💝 Système de donations avec 4 méthodes de paiement
+- ✅ Quiz 2025 en images avec galerie
 - ✅ Responsive design (mobile, tablet, desktop)
 
 ### Pour les Administrateurs
@@ -23,31 +29,58 @@ Application web professionnelle pour l'Association des Serviteurs d'Allah Azawaj
 - ✅ Gestion des messages de contact avec archivage
 - ✅ Journal d'audit complet des actions
 - ✅ Exports CSV/PDF des données
+- ✅ **NEW** ✏️ Modération des publications (approuver/rejeter)
+- ✅ **NEW** 📖 Gestion des stories (approbation + suivi expiration)
+- ✅ **NEW** 💰 Gestion des donations (confirmation de paiement)
+- ✅ **NEW** 📸 Gestion galerie Quiz 2025
 
 ### Sécurité & Qualité
-- ✅ CORS headers + Security headers (HSTS, CSP, X-Frame-Options)
-- ✅ Sanitization XSS complète
+- ✅ CORS configuré + Security headers (HSTS, CSP, X-Frame-Options)
+- ✅ Sanitization XSS complète (HTML removal)
 - ✅ Validation inputs (email, phone, longueurs)
 - ✅ Rate limiting par action
-- ✅ Hash mot de passe SHA256
+- ✅ Authentification Basic Auth sécurisée
+- ✅ Parameterized SQL queries (injection prevention)
+- ✅ Connection pooling PostgreSQL
+- ✅ Sentry error monitoring (optionnel)
 - ✅ Gestion d'erreurs robuste
 - ✅ Accessibilité WCAG AA
 
-## 🚀 Installation
+---
+
+## 🚀 Installation & Déploiement
 
 ### Prérequis
-- Python 3.9+
-- PostgreSQL (Render ou local)
-- pip
+- Node.js 24.x (LTS)
+- PostgreSQL 12+
+- npm ou yarn
+- Compte Vercel (pour déploiement production)
 
 ### Lancer Localement
 
 ```bash
 # 1. Cloner le projet
-git clone <repo>
-cd PRESELECTION-QI26
+git clone https://github.com/AkmelFed12/PRESELECTION-QI26-tst.git
+cd PRESELECTION-QI26-tst
 
 # 2. Installer dépendances
+npm install
+
+# 3. Variables d'environnement
+# Créer fichier .env avec:
+# PORT=3000
+# DATABASE_URL=postgresql://user:pass@localhost:5432/qi26
+# ADMIN_PASSWORD_HASH=... (hash bcryptjs)
+# SENTRY_DSN=... (optionnel)
+
+# 4. Lancer serveur
+npm start
+# → http://localhost:3000
+
+# 5. Accès admin
+# → http://localhost:3000/admin.html
+# Identifiant: admin
+# Mot de passe: (défini en var env)
 pip install -r requirements.txt
 
 # 3. Configurer variables d'environnement
