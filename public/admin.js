@@ -47,6 +47,8 @@ const mediaAdminTableBody = document.querySelector('#mediaAdminTable tbody');
 const statCandidates = document.getElementById('statCandidates');
 const statVotes = document.getElementById('statVotes');
 const statScores = document.getElementById('statScores');
+const statContacts = document.getElementById('statContacts');
+const statDonationsPending = document.getElementById('statDonationsPending');
 const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 const toggleRegistrationLock = document.getElementById('toggleRegistrationLock');
@@ -295,6 +297,8 @@ function updateDashboard() {
   statCandidates.textContent = totalCandidates;
   statVotes.textContent = totalVotes;
   statScores.textContent = totalScores;
+  if (statContacts) statContacts.textContent = contactsCache.length;
+  if (statDonationsPending) statDonationsPending.textContent = lastDashboardStats.donationsPending || 0;
 
   const maxCandidates = Number(settingsCache.maxCandidates || 0);
   const progress = maxCandidates ? Math.min(100, Math.round((totalCandidates / maxCandidates) * 100)) : 0;

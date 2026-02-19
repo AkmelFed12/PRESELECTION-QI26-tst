@@ -2,6 +2,9 @@ const candidateSearch = document.getElementById('candidateSearch');
 const countryFilter = document.getElementById('countryFilter');
 const levelFilter = document.getElementById('levelFilter');
 const sortFilter = document.getElementById('sortFilter');
+const photoFilter = document.getElementById('photoFilter');
+const topFilter = document.getElementById('topFilter');
+const resetFilters = document.getElementById('resetFilters');
 const candidatesGrid = document.getElementById('candidatesGrid');
 const candidatesCount = document.getElementById('candidatesCount');
 const candidatesTitle = document.getElementById('candidatesTitle');
@@ -46,6 +49,8 @@ function renderCandidates() {
   const query = (candidateSearch?.value || '').trim().toLowerCase();
   const country = countryFilter?.value || '';
   const level = levelFilter?.value || '';
+  const photo = photoFilter?.value || '';
+  const top = topFilter?.value || '';
   const sort = sortFilter?.value || 'name';
 
   let filtered = candidatesCache.filter(c => {
@@ -58,8 +63,17 @@ function renderCandidates() {
     if (country && (c.country || '') !== country) return false;
     // Filtre niveau
     if (level && (c.quranLevel || '') !== level) return false;
+    if (photo === 'with' && !safeUrl(c.photoUrl)) return false;
+    if (photo === 'without' && safeUrl(c.photoUrl)) return false;
     return true;
   });
+
+  if (top === 'top10') {
+    filtered = filtered
+      .slice()
+      .sort((a, b) => Number(b.totalVotes || 0) - Number(a.totalVotes || 0))
+      .slice(0, 10);
+  }
 
   // Tri
   if (sort === 'votes-desc') {
@@ -91,6 +105,7 @@ function renderCandidates() {
         ? `<button class="vote-btn" data-candidate-id="${c.id}" type="button">Voter</button>`
         : `<button class="vote-btn" disabled type="button">Votes: ${c.totalVotes || 0}</button>`;
 
+      const rankBadge = top === 'top10' ? `<span class="badge">Top</span>` : '';
       return `
         <article class="candidate-card">
           <div class="photo">${photo}</div>
@@ -98,6 +113,7 @@ function renderCandidates() {
             <h3>${name}</h3>
             <p class="location">${location}</p>
             <p class="level">Niveau: ${level}</p>
+            ${rankBadge}
             ${c.motivation ? `<p class="motivation">"${escapeHtml(c.motivation).substring(0, 100)}..."</p>` : ''}
           </div>
           <div class="vote-stats">
@@ -209,6 +225,17 @@ candidateSearch?.addEventListener('input', renderCandidates);
 countryFilter?.addEventListener('change', renderCandidates);
 levelFilter?.addEventListener('change', renderCandidates);
 sortFilter?.addEventListener('change', renderCandidates);
+photoFilter?.addEventListener('change', renderCandidates);
+topFilter?.addEventListener('change', renderCandidates);
+resetFilters?.addEventListener('click', () => {
+  if (candidateSearch) candidateSearch.value = '';
+  if (countryFilter) countryFilter.value = '';
+  if (levelFilter) levelFilter.value = '';
+  if (photoFilter) photoFilter.value = '';
+  if (topFilter) topFilter.value = '';
+  if (sortFilter) sortFilter.value = 'name';
+  renderCandidates();
+});
 
 voteForm?.addEventListener('submit', submitVote);
 

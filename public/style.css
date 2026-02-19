@@ -70,6 +70,22 @@ body::before {
   pointer-events: none;
   z-index: -1;
 }
+.theme-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  transform: translateY(-1px);
+}
 h1, h2, h3 {
   font-family: "Cinzel", "Georgia", serif;
   letter-spacing: 0.3px;
@@ -395,6 +411,17 @@ button:hover, .btn-link:hover {
 .candidate-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 28px rgba(12, 21, 36, 0.15);
+}
+.candidate-card .badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f2e7c9;
+  color: #6b4d0a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: fit-content;
 }
 .candidate-card .photo {
   width: 100%;

@@ -10,7 +10,7 @@
     <link rel="icon" href="assets/logo-association.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="style.css" />
   </head>
-  
+  <body>
     <div class="page-actions" style="display:flex; justify-content:center; margin-bottom:16px;">
       <a href="index.html" class="btn-link outline">Retour à l'accueil</a>
     </div><a class="skip-link" href="#mainContent">Aller au contenu</a>
@@ -56,6 +56,21 @@
             </select>
           </div>
           <div>
+            <label for="photoFilter">Photo</label>
+            <select id="photoFilter">
+              <option value="">Tous</option>
+              <option value="with">Avec photo</option>
+              <option value="without">Sans photo</option>
+            </select>
+          </div>
+          <div>
+            <label for="topFilter">Top votes</label>
+            <select id="topFilter">
+              <option value="">Tous</option>
+              <option value="top10">Top 10</option>
+            </select>
+          </div>
+          <div>
             <label for="sortFilter">Tri</label>
             <select id="sortFilter">
               <option value="name">Par nom (A-Z)</option>
@@ -63,6 +78,10 @@
               <option value="votes-asc">Par votes (croissant)</option>
               <option value="recent">Plus récents</option>
             </select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="resetFilters" type="button">Réinitialiser</button>
           </div>
         </div>
       </section>

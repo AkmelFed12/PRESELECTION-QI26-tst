@@ -318,6 +318,22 @@ function initUtils() {
   
   // Créer conteneur toasts
   createToastContainer();
+
+  // Theme toggle
+  const savedTheme = SafeStorage.get('theme') || 'light';
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+  }
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'theme-toggle';
+  toggleBtn.type = 'button';
+  toggleBtn.textContent = savedTheme === 'dark' ? '☀️ Mode clair' : '🌙 Mode sombre';
+  toggleBtn.addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('dark-mode');
+    SafeStorage.set('theme', isDark ? 'dark' : 'light');
+    toggleBtn.textContent = isDark ? '☀️ Mode clair' : '🌙 Mode sombre';
+  });
+  document.body.appendChild(toggleBtn);
   
   // Ajouter gestionnaire pour les erreurs globales
   window.addEventListener('error', (event) => {

@@ -17,6 +17,7 @@ const mediaStats = document.getElementById('mediaStats');
 const prevPageBtn = document.getElementById('prevPage');
 const nextPageBtn = document.getElementById('nextPage');
 const pageInfo = document.getElementById('pageInfo');
+const toggleFullscreenBtn = document.getElementById('toggleFullscreen');
 
 const IMAGE_DURATION_MS = 5000;
 const PAGE_SIZE = 30;
@@ -308,6 +309,8 @@ slideVideo?.addEventListener('ended', () => {
   if (!autoEnabled) return;
   nextSlide();
 });
+
+toggleFullscreenBtn?.addEventListener('click', toggleFullscreen);
 
 slideshowStage?.addEventListener('touchstart', (e) => {
   touchStartX = e.changedTouches[0].screenX;
