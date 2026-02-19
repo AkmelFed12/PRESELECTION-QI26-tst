@@ -51,6 +51,7 @@ const statContacts = document.getElementById('statContacts');
 const statDonationsPending = document.getElementById('statDonationsPending');
 const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
+const lastRefresh = document.getElementById('lastRefresh');
 const toggleRegistrationLock = document.getElementById('toggleRegistrationLock');
 const registrationLockStatus = document.getElementById('registrationLockStatus');
 const toggleVoting = document.getElementById('toggleVoting');
@@ -212,6 +213,9 @@ async function loadDashboard() {
 
     renderCandidatesTable();
     updateDashboard();
+    if (lastRefresh) {
+      lastRefresh.textContent = new Date().toLocaleTimeString('fr-FR');
+    }
   } finally {
     dashboardLoading = false;
   }
@@ -297,6 +301,8 @@ function updateDashboard() {
   statCandidates.textContent = totalCandidates;
   statVotes.textContent = totalVotes;
   statScores.textContent = totalScores;
+  if (statContacts) statContacts.textContent = contactsCache.length;
+  if (statDonationsPending) statDonationsPending.textContent = lastDashboardStats.donationsPending || 0;
   if (statContacts) statContacts.textContent = contactsCache.length;
   if (statDonationsPending) statDonationsPending.textContent = lastDashboardStats.donationsPending || 0;
 
@@ -541,6 +547,7 @@ function renderMediaAdminTable() {
 function startAutoRefresh() {
   if (dashboardTimer) clearInterval(dashboardTimer);
   dashboardTimer = setInterval(() => {
+    if (document.hidden) return;
     loadDashboard();
   }, 20000);
 }
@@ -1471,9 +1478,10 @@ document.addEventListener('adminLogin', () => {
 
 // Refresh management data every 60 seconds
 setInterval(() => {
-  if (authHeader && window.location.pathname.includes('admin')) {
+  if (authHeader && window.location.pathname.includes('admin') && !document.hidden) {
     loadPostsAdmin();
     loadStoriesAdmin();
     loadDonationsAdmin();
+    loadMediaAdmin();
   }
 }, 60000);
