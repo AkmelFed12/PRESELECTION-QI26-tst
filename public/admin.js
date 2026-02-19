@@ -52,6 +52,8 @@ const statDonationsPending = document.getElementById('statDonationsPending');
 const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 const lastRefresh = document.getElementById('lastRefresh');
+const refreshNow = document.getElementById('refreshNow');
+const refreshInterval = document.getElementById('refreshInterval');
 const toggleRegistrationLock = document.getElementById('toggleRegistrationLock');
 const registrationLockStatus = document.getElementById('registrationLockStatus');
 const toggleVoting = document.getElementById('toggleVoting');
@@ -546,10 +548,12 @@ function renderMediaAdminTable() {
 
 function startAutoRefresh() {
   if (dashboardTimer) clearInterval(dashboardTimer);
+  const intervalSec = Number(refreshInterval?.value || 20);
+  if (!intervalSec) return;
   dashboardTimer = setInterval(() => {
     if (document.hidden) return;
     loadDashboard();
-  }, 20000);
+  }, intervalSec * 1000);
 }
 
 function stopAutoRefresh() {
@@ -604,6 +608,18 @@ loginForm.addEventListener('submit', async (e) => {
   } finally {
     setFormLoading(loginForm, false);
   }
+});
+
+refreshNow?.addEventListener('click', async () => {
+  await loadDashboard();
+  await loadPostsAdmin();
+  await loadStoriesAdmin();
+  await loadDonationsAdmin();
+  await loadMediaAdmin();
+});
+
+refreshInterval?.addEventListener('change', () => {
+  startAutoRefresh();
 });
 
 settingsForm.addEventListener('submit', async (e) => {

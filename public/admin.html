@@ -99,7 +99,20 @@
 
       <section class="card accent-slate hidden" id="dashboardPanel">
         <h2>Tableau de bord</h2>
-        <p class="muted-note">Dernière mise à jour: <span id="lastRefresh">-</span></p>
+        <div class="table-actions">
+          <span class="muted-note">Dernière mise à jour: <span id="lastRefresh">-</span></span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <label for="refreshInterval">Auto‑refresh</label>
+            <select id="refreshInterval">
+              <option value="15">15s</option>
+              <option value="20" selected>20s</option>
+              <option value="30">30s</option>
+              <option value="60">60s</option>
+              <option value="0">Off</option>
+            </select>
+            <button class="small-btn" id="refreshNow" type="button">Actualiser</button>
+          </div>
+        </div>
         <div class="dash-grid">
           <div class="dash-card">
             <span>Candidats inscrits</span>
