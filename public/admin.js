@@ -168,7 +168,7 @@ async function loadDashboard() {
       candidatesBody.innerHTML = candidatesCache.length > 0
         ? candidatesCache.map(
             (c) =>
-              `<tr><td>${c.id}</td><td>${escapeHtml(c.fullName)}</td><td>${escapeHtml(
+              `<tr><td>${c.id}</td><td>${escapeHtml(c.fullName || 'Inconnu')}</td><td>${escapeHtml(
                 c.whatsapp || '',
               )}</td><td>${escapeHtml(c.country || '')}</td><td>${escapeHtml(c.createdAt || '')}</td></tr>`,
           ).join('')
@@ -177,12 +177,12 @@ async function loadDashboard() {
 
     const votesBody = document.querySelector('#votesTable tbody');
     votesBody.innerHTML = votesCache
-      .map((v) => `<tr><td>${escapeHtml(v.fullName)}</td><td>${v.totalVotes}</td></tr>`)
+      .map((v) => `<tr><td>${escapeHtml(v.fullName || 'Inconnu')}</td><td>${v.totalVotes}</td></tr>`)
       .join('');
 
     const rankingBody = document.querySelector('#rankingTable tbody');
     rankingBody.innerHTML = rankingCache
-      .map((r) => `<tr><td>${escapeHtml(r.fullName)}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
+      .map((r) => `<tr><td>${escapeHtml(r.fullName || 'Inconnu')}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
       .join('');
 
     if (contactTableBody) {

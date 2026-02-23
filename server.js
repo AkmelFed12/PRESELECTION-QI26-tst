@@ -451,6 +451,36 @@ async function initDatabase() {
       WHERE NOT EXISTS (SELECT 1 FROM poll);
     `);
 
+    // Auto-approve existing registrations
+    await pool.query(`UPDATE candidates SET status = 'approved' WHERE status IS NULL OR status != 'approved'`);
+
+    // Hydrate missing names for candidates already registered (from provided list)
+    const manualCandidates = [
+      { name: 'OUATTARA FATOUMATA', whatsapp: '+2250564108763', city: 'BINGERVILLE' },
+      { name: 'OUATTARA HAWA', whatsapp: '+2250501952414', city: 'TREICHVILLE' },
+      { name: 'KONE SIRAH', whatsapp: '+2250103665205', city: 'ADJAMÉ' },
+      { name: 'KAGONE FATIMA AIDA DJAMELLA', whatsapp: '+2250152606015', city: 'YOPOUGON' },
+      { name: 'DIALLO IBRAHIM KHALIL', whatsapp: '+224612694187', city: 'TREICHVILLE' },
+      { name: 'COULIBALY MIRIAM', whatsapp: '+2250554013332', city: '' },
+      { name: 'MOHAMED AWWAL', whatsapp: '+2250171715400', city: 'TREICHVILLE' },
+      { name: 'KAMAGATE MATENIN', whatsapp: '+22676035015', city: 'ABOBO' },
+      { name: 'SAYORE NASSIRATOU', whatsapp: '+2250778762501', city: 'PLATEAU' },
+      { name: 'KOKORA MOHAMED OUATTARA', whatsapp: '+2250140719281', city: 'KOUMASSI' },
+      { name: 'FOFANA SANY', whatsapp: '+2250143513550', city: 'TREICHVILLE' },
+      { name: 'DIAKHITE IBRAHIM', whatsapp: '+2250140443333', city: 'PORT-BOUET' },
+      { name: 'SIDIBE MOHAMED', whatsapp: '+2250575933452', city: 'YOPOUGON' }
+    ];
+
+    for (const entry of manualCandidates) {
+      await pool.query(
+        `UPDATE candidates
+         SET fullName = COALESCE(NULLIF(fullName, ''), $1),
+             city = COALESCE(NULLIF(city, ''), $2)
+         WHERE whatsapp = $3`,
+        [entry.name, entry.city, entry.whatsapp]
+      );
+    }
+
     console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization error:', error.message);
@@ -608,7 +638,7 @@ app.post('/api/register', registerLimiter, async (req, res) => {
       `INSERT INTO candidates (fullName, age, city, country, email, phone, whatsapp, photoUrl, quranLevel, motivation, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id`,
-      [sanitizedName, age || null, sanitizedCity, sanitizedCountry, sanitizedEmail, sanitizedPhone, normalized, sanitizedPhotoUrl, sanitizedQuranLevel, sanitizedMotivation, 'pending']
+      [sanitizedName, age || null, sanitizedCity, sanitizedCountry, sanitizedEmail, sanitizedPhone, normalized, sanitizedPhotoUrl, sanitizedQuranLevel, sanitizedMotivation, 'approved']
     );
 
     const candidateId = insertResult.rows[0].id;
