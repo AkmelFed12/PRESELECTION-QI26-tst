@@ -75,6 +75,48 @@ if (typeof window.setFormLoading !== 'function') {
     });
   };
 }
+
+if (loginMsg) {
+  loginMsg.textContent = 'Prêt à se connecter.';
+}
+
+function showAdminPanels() {
+  adminPanel.classList.remove('hidden');
+  dashboardPanel.classList.remove('hidden');
+  candidatesPanel.classList.remove('hidden');
+  scorePanel.classList.remove('hidden');
+  tablesPanel.classList.remove('hidden');
+  securityPanel.classList.remove('hidden');
+  postsPanel.classList.remove('hidden');
+  storiesPanel.classList.remove('hidden');
+  donationsPanel.classList.remove('hidden');
+  mediaPanel.classList.remove('hidden');
+  logoutBtn.classList.remove('hidden');
+}
+
+async function tryAutoLogin() {
+  const stored = localStorage.getItem('adminAuth');
+  if (!stored) return;
+  authHeader = stored;
+  try {
+    const res = await authedFetch('/api/admin/dashboard');
+    if (res.status === 401) {
+      authHeader = '';
+      localStorage.removeItem('adminAuth');
+      if (loginMsg) loginMsg.textContent = 'Session expirée. Reconnectez-vous.';
+      return;
+    }
+    showAdminPanels();
+    await loadDashboard();
+    await loadMediaAdmin();
+    await loadPostsAdmin();
+    await loadStoriesAdmin();
+    await loadDonationsAdmin();
+    startAutoRefresh();
+  } catch (err) {
+    if (loginMsg) loginMsg.textContent = 'Erreur de connexion automatique.';
+  }
+}
 let candidatesCache = [];
 let votesCache = [];
 let rankingCache = [];
@@ -605,17 +647,8 @@ loginForm.addEventListener('submit', async (e) => {
     }
 
     showToast('✓ Connexion réussie', 'success');
-    adminPanel.classList.remove('hidden');
-    dashboardPanel.classList.remove('hidden');
-    candidatesPanel.classList.remove('hidden');
-    scorePanel.classList.remove('hidden');
-    tablesPanel.classList.remove('hidden');
-    securityPanel.classList.remove('hidden');
-    postsPanel.classList.remove('hidden');
-    storiesPanel.classList.remove('hidden');
-    donationsPanel.classList.remove('hidden');
-    mediaPanel.classList.remove('hidden');
-    logoutBtn.classList.remove('hidden');
+    localStorage.setItem('adminAuth', authHeader);
+    showAdminPanels();
     loginForm.reset();
     await loadDashboard();
     await loadMediaAdmin();
@@ -628,6 +661,7 @@ loginForm.addEventListener('submit', async (e) => {
     showToast(msg, 'error');
     if (loginMsg) loginMsg.textContent = msg;
     authHeader = '';
+    localStorage.removeItem('adminAuth');
   } finally {
     setFormLoading(loginForm, false);
   }
@@ -641,10 +675,13 @@ try {
   if (u && p && loginForm) {
     loginForm.elements.username.value = u;
     loginForm.elements.password.value = p;
+    loginForm.dispatchEvent(new Event('submit', { cancelable: true }));
   }
 } catch {
   // ignore
 }
+
+tryAutoLogin();
 
 refreshNow?.addEventListener('click', async () => {
   await loadDashboard();
