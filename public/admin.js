@@ -806,6 +806,7 @@ candidateForm.addEventListener('submit', async (e) => {
   }
 
   const payload = Object.fromEntries(new FormData(candidateForm).entries());
+  if (payload.city) payload.city = String(payload.city).trim().toUpperCase();
   if (payload.age) payload.age = Number(payload.age);
   if (payload.candidateId) payload.candidateId = Number(payload.candidateId);
   if (!payload.status) payload.status = 'pending';
@@ -819,6 +820,8 @@ candidateForm.addEventListener('submit', async (e) => {
   candidateMsg.textContent = data.message || 'Candidat enregistré.';
   if (res.ok) {
     candidateForm.reset();
+    candidateForm.querySelector('button[type="submit"]').textContent = 'Enregistrer le candidat';
+    candidateMsg.textContent = payload.candidateId ? 'Candidat mis à jour.' : 'Candidat ajouté.';
     await loadDashboard();
   }
 });
@@ -862,11 +865,13 @@ adminCandidatesTable?.addEventListener('click', async (e) => {
   candidateForm.elements.candidateCode.value = candidate.candidateCode || '';
   candidateForm.elements.photoUrl.value = candidate.photoUrl || '';
   candidateForm.elements.status.value = candidate.status || 'pending';
+  candidateForm.querySelector('button[type="submit"]').textContent = 'Mettre à jour';
   if (candidatePreview && candidate.photoUrl) {
     candidatePreview.src = candidate.photoUrl;
     candidatePreview.style.display = 'block';
   }
   candidateMsg.textContent = `Modification du candidat ${candidate.fullName}.`;
+  candidateForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 scoreForm.addEventListener('submit', async (e) => {

@@ -480,35 +480,38 @@ async function initDatabase() {
       [CODE_PREFIX]
     );
 
-    // Import/merge manual candidates from Word list
+    // Replace candidates with manual list once (Word list)
     const manualCandidates = loadManualCandidates();
-    for (const entry of manualCandidates) {
-      const normalizedWhatsapp = normalizeWhatsapp(entry.whatsapp);
-      if (!normalizedWhatsapp) continue;
-      const name = sanitizeString(entry.name, 255);
-      const commune = normalizeCommune(entry.city);
-      const existing = await pool.query('SELECT id FROM candidates WHERE whatsapp = $1', [normalizedWhatsapp]);
-
-      if (existing.rows.length > 0) {
+    if (manualCandidates.length > 0) {
+      const flag = await pool.query(
+        "SELECT value FROM admin_config WHERE key = 'manual_candidates_imported_2026' LIMIT 1"
+      );
+      if (!flag.rows[0]?.value) {
+        await pool.query('BEGIN');
+        await pool.query('DELETE FROM candidates');
+        for (const entry of manualCandidates) {
+          const normalizedWhatsapp = normalizeWhatsapp(entry.whatsapp);
+          if (!normalizedWhatsapp) continue;
+          const name = sanitizeString(entry.name, 255) || 'Inconnu';
+          const commune = normalizeCommune(entry.city);
+          const candidateId = Number(entry.id) || null;
+          const candidateCode = candidateId
+            ? `${CODE_PREFIX}-${String(candidateId).padStart(3, '0')}`
+            : null;
+          await pool.query(
+            `INSERT INTO candidates (id, candidateCode, fullName, city, country, whatsapp, status)
+             VALUES ($1, $2, $3, $4, $5, $6, 'approved')`,
+            [candidateId, candidateCode, name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
+          );
+        }
         await pool.query(
-          `UPDATE candidates
-           SET fullName = COALESCE(NULLIF(fullName, ''), $1),
-               city = COALESCE(NULLIF(city, ''), $2),
-               country = COALESCE(NULLIF(country, ''), $3),
-               status = 'approved'
-           WHERE id = $4`,
-          [name, commune, DEFAULT_COUNTRY, existing.rows[0].id]
+          `SELECT setval(pg_get_serial_sequence('candidates','id'), (SELECT COALESCE(MAX(id), 1) FROM candidates))`
         );
-      } else {
-        const insert = await pool.query(
-          `INSERT INTO candidates (fullName, city, country, whatsapp, status)
-           VALUES ($1, $2, $3, $4, 'approved')
-           RETURNING id`,
-          [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
+        await pool.query(
+          "INSERT INTO admin_config (key, value) VALUES ('manual_candidates_imported_2026', $1)",
+          [new Date().toISOString()]
         );
-        const candidateId = insert.rows[0].id;
-        const candidateCode = `${CODE_PREFIX}-${String(candidateId).padStart(3, '0')}`;
-        await pool.query('UPDATE candidates SET candidateCode = $1 WHERE id = $2', [candidateCode, candidateId]);
+        await pool.query('COMMIT');
       }
     }
 
