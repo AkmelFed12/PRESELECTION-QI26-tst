@@ -606,7 +606,9 @@ function stopAutoRefresh() {
   }
 }
 
-loginForm.addEventListener('submit', async (e) => {
+if (window.__adminLoginHandled) {
+  // login handled by admin-login.js
+} else loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
     setFormLoading(loginForm, true);

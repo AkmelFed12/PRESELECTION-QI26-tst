@@ -19,12 +19,12 @@
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      setLoading(true);
       const { username, password } = Object.fromEntries(new FormData(loginForm).entries());
       if (!username || !password) {
         setMsg('Identifiant et mot de passe requis.');
         return;
       }
+      setLoading(true);
       setMsg('Connexion en cours...');
       const res = await fetch('/api/admin/login', {
         method: 'POST',
@@ -49,4 +49,7 @@
       setLoading(false);
     }
   });
+
+  // prevent duplicate handlers in admin.js
+  window.__adminLoginHandled = true;
 })();
