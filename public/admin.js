@@ -94,29 +94,7 @@ function showAdminPanels() {
   logoutBtn.classList.remove('hidden');
 }
 
-async function tryAutoLogin() {
-  const stored = localStorage.getItem('adminAuth');
-  if (!stored) return;
-  authHeader = stored;
-  try {
-    const res = await authedFetch('/api/admin/dashboard');
-    if (res.status === 401) {
-      authHeader = '';
-      localStorage.removeItem('adminAuth');
-      if (loginMsg) loginMsg.textContent = 'Session expirée. Reconnectez-vous.';
-      return;
-    }
-    showAdminPanels();
-    await loadDashboard();
-    await loadMediaAdmin();
-    await loadPostsAdmin();
-    await loadStoriesAdmin();
-    await loadDonationsAdmin();
-    startAutoRefresh();
-  } catch (err) {
-    if (loginMsg) loginMsg.textContent = 'Erreur de connexion automatique.';
-  }
-}
+// (Auto-login removed: keep simple manual login)
 let candidatesCache = [];
 let votesCache = [];
 let rankingCache = [];
@@ -647,7 +625,6 @@ loginForm.addEventListener('submit', async (e) => {
     }
 
     showToast('✓ Connexion réussie', 'success');
-    localStorage.setItem('adminAuth', authHeader);
     showAdminPanels();
     loginForm.reset();
     await loadDashboard();
@@ -661,27 +638,12 @@ loginForm.addEventListener('submit', async (e) => {
     showToast(msg, 'error');
     if (loginMsg) loginMsg.textContent = msg;
     authHeader = '';
-    localStorage.removeItem('adminAuth');
   } finally {
     setFormLoading(loginForm, false);
   }
 });
 
-// Auto-fill from query params (if present)
-try {
-  const params = new URLSearchParams(window.location.search);
-  const u = params.get('username');
-  const p = params.get('password');
-  if (u && p && loginForm) {
-    loginForm.elements.username.value = u;
-    loginForm.elements.password.value = p;
-    loginForm.dispatchEvent(new Event('submit', { cancelable: true }));
-  }
-} catch {
-  // ignore
-}
-
-tryAutoLogin();
+// Auto-fill from query params removed (optional behavior)
 
 refreshNow?.addEventListener('click', async () => {
   await loadDashboard();
