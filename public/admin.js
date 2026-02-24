@@ -127,16 +127,19 @@ function toBasic(username, password) {
   return 'Basic ' + btoa(`${username}:${password}`);
 }
 
-async function authedFetch(url, options = {}) {
-  try {
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: authHeader,
-        ...(options.headers || {}),
-      },
-    });
+  async function authedFetch(url, options = {}) {
+    try {
+      if (!authHeader && window.__adminAuth) {
+        authHeader = window.__adminAuth;
+      }
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader,
+          ...(options.headers || {}),
+        },
+      });
     
     // Vérifier si la réponse est OK
     if (!res.ok && res.status !== 401) {
@@ -657,6 +660,20 @@ loginForm.addEventListener('submit', async (e) => {
 
 // Auto-fill from query params removed (optional behavior)
 
+window.addEventListener('admin:authed', async () => {
+  try {
+    showAdminPanels();
+    await loadDashboard();
+    await loadMediaAdmin();
+    await loadPostsAdmin();
+    await loadStoriesAdmin();
+    await loadDonationsAdmin();
+    startAutoRefresh();
+  } catch (err) {
+    if (loginMsg) loginMsg.textContent = 'Erreur chargement admin.';
+  }
+});
+
 refreshNow?.addEventListener('click', async () => {
   await loadDashboard();
   await loadPostsAdmin();
@@ -848,7 +865,6 @@ candidateForm.addEventListener('submit', async (e) => {
   }
 
   const payload = Object.fromEntries(new FormData(candidateForm).entries());
-  if (payload.city) payload.city = String(payload.city).trim().toUpperCase();
   if (payload.age) payload.age = Number(payload.age);
   if (payload.candidateId) payload.candidateId = Number(payload.candidateId);
   if (!payload.status) payload.status = 'pending';
@@ -866,8 +882,6 @@ candidateForm.addEventListener('submit', async (e) => {
   candidateMsg.textContent = data.message || 'Candidat enregistré.';
   if (res.ok) {
     candidateForm.reset();
-    candidateForm.querySelector('button[type="submit"]').textContent = 'Enregistrer le candidat';
-    candidateMsg.textContent = payload.candidateId ? 'Candidat mis à jour.' : 'Candidat ajouté.';
     await loadDashboard();
   }
 });
@@ -913,12 +927,12 @@ function handleCandidateAction(e) {
   candidateForm.elements.candidateCode.value = candidate.candidateCode || '';
   candidateForm.elements.photoUrl.value = candidate.photoUrl || '';
   candidateForm.elements.status.value = candidate.status || 'pending';
-  candidateForm.querySelector('button[type="submit"]').textContent = 'Mettre à jour';
   if (candidatePreview && candidate.photoUrl) {
     candidatePreview.src = candidate.photoUrl;
     candidatePreview.style.display = 'block';
   }
   candidateMsg.textContent = `Modification du candidat ${candidate.fullName}.`;
+<<<<<<< ours
   candidateForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -926,6 +940,8 @@ adminCandidatesTable?.addEventListener('click', handleCandidateAction);
 document.addEventListener('click', (e) => {
   if (e.target.closest('#adminCandidatesTable')) return;
   handleCandidateAction(e);
+=======
+>>>>>>> theirs
 });
 
 scoreForm.addEventListener('submit', async (e) => {
