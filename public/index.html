@@ -82,11 +82,7 @@
             <strong id="publicStatCandidates">0</strong>
           </div>
           <div class="stat-card">
-            <span>Pays représentés</span>
-            <strong id="publicStatCountries">0</strong>
-          </div>
-          <div class="stat-card">
-            <span>Villes représentées</span>
+            <span>Communes représentées</span>
             <strong id="publicStatCities">0</strong>
           </div>
         </div>
@@ -116,10 +112,9 @@
           />
           <label for="age">Âge</label>
           <input id="age" name="age" type="number" placeholder="Âge" min="10" max="99" autocomplete="age" />
-          <label for="city" class="required">Ville</label>
-          <input id="city" name="city" placeholder="Ville" autocomplete="address-level2" required aria-required="true" />
-          <label for="country" class="required">Pays</label>
-          <input id="country" name="country" placeholder="Pays" autocomplete="country-name" required aria-required="true" />
+          <label for="city" class="required">Commune</label>
+          <input id="city" name="city" placeholder="Commune" autocomplete="address-level2" required
+            aria-required="true" class="uppercase" />
           <label for="email">Email</label>
           <input id="email" name="email" type="email" placeholder="Email" autocomplete="email" />
           <label for="phone">Téléphone</label>
@@ -163,17 +158,13 @@
 
       <section class="card" id="publicListSection">
         <h2>Candidats inscrits</h2>
-        <p>Consultez la liste publique des candidats et filtrez par pays ou ville.</p>
+        <p>Consultez la liste publique des candidats et filtrez par commune.</p>
         <div class="toolbar">
           <label class="sr-only" for="candidateSearchPublic">Recherche</label>
           <input id="candidateSearchPublic" type="search" placeholder="Rechercher un candidat" />
-          <label class="sr-only" for="candidateCountryFilter">Pays</label>
-          <select id="candidateCountryFilter">
-            <option value="">Tous les pays</option>
-          </select>
-          <label class="sr-only" for="candidateCityFilter">Ville</label>
+          <label class="sr-only" for="candidateCityFilter">Commune</label>
           <select id="candidateCityFilter">
-            <option value="">Toutes les villes</option>
+            <option value="">Toutes les communes</option>
           </select>
         </div>
         <div id="publicCandidatesGrid" class="candidates-grid"></div>

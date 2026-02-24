@@ -12,10 +12,8 @@ const qrCode = document.getElementById('qrCode');
 const scheduleList = document.getElementById('scheduleList');
 const publicCandidatesGrid = document.getElementById('publicCandidatesGrid');
 const candidateSearchPublic = document.getElementById('candidateSearchPublic');
-const candidateCountryFilter = document.getElementById('candidateCountryFilter');
 const candidateCityFilter = document.getElementById('candidateCityFilter');
 const publicStatCandidates = document.getElementById('publicStatCandidates');
-const publicStatCountries = document.getElementById('publicStatCountries');
 const publicStatCities = document.getElementById('publicStatCities');
 const topReactionsList = document.getElementById('topReactionsList');
 
@@ -26,6 +24,9 @@ registrationForm?.addEventListener('submit', async (e) => {
   const submitBtn = registrationForm.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.disabled = true;
   const formData = Object.fromEntries(new FormData(registrationForm).entries());
+  if (formData.city) {
+    formData.city = formData.city.trim().toUpperCase();
+  }
   if (formData.whatsapp && !/^\+?\d{6,20}$/.test(formData.whatsapp.trim())) {
     registerMsg.textContent = "Numéro WhatsApp invalide. Utilisez uniquement chiffres et signe +.";
     if (submitBtn) submitBtn.disabled = false;
@@ -169,7 +170,7 @@ async function loadPublicCandidates() {
       const initials = getInitials(c.fullName);
       const photoUrl = safeUrl(c.photoUrl);
       const name = escapeHtml(c.fullName);
-      const location = escapeHtml(`${c.city ? `${c.city}, ` : ''}${c.country || ''}`.trim());
+    const location = escapeHtml(`${c.city || ''}`.trim());
       const photo = photoUrl
         ? `<img src="${photoUrl}" alt="${name}" loading="lazy" decoding="async" />`
         : `<div class="placeholder">${initials || 'QI'}</div>`;
@@ -190,15 +191,13 @@ async function loadPublicCandidates() {
 function renderPublicCandidatesList() {
   if (!publicCandidatesGrid) return;
   const searchTerm = (candidateSearchPublic?.value || '').trim().toLowerCase();
-  const country = (candidateCountryFilter?.value || '').toLowerCase();
-  const city = (candidateCityFilter?.value || '').toLowerCase();
+    const city = (candidateCityFilter?.value || '').toLowerCase();
 
   const filtered = cachedCandidates.filter((candidate) => {
-    const haystack = `${candidate.fullName || ''} ${candidate.city || ''} ${candidate.country || ''}`.toLowerCase();
+    const haystack = `${candidate.fullName || ''} ${candidate.city || ''}`.toLowerCase();
     const matchesSearch = !searchTerm || haystack.includes(searchTerm);
-    const matchesCountry = !country || (candidate.country || '').toLowerCase() === country;
     const matchesCity = !city || (candidate.city || '').toLowerCase() === city;
-    return matchesSearch && matchesCountry && matchesCity;
+    return matchesSearch && matchesCity;
   });
 
   hydratePublicFilters();
@@ -209,7 +208,7 @@ function renderPublicCandidatesList() {
           const initials = getInitials(c.fullName);
           const photoUrl = safeUrl(c.photoUrl);
           const name = escapeHtml(c.fullName);
-          const location = escapeHtml(`${c.city ? `${c.city}, ` : ''}${c.country || ''}`.trim());
+    const location = escapeHtml(`${c.city || ''}`.trim());
           const photo = photoUrl
             ? `<img src="${photoUrl}" alt="${name}" loading="lazy" decoding="async" />`
             : `<div class="placeholder">${initials || 'QI'}</div>`;
@@ -263,27 +262,14 @@ async function loadTopReactions() {
 }
 
 function hydratePublicFilters() {
-  if (!candidateCountryFilter || !candidateCityFilter) return;
-  const countries = Array.from(
-    new Set(cachedCandidates.map((c) => (c.country || '').trim()).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b, 'fr'));
+  if (!candidateCityFilter) return;
   const cities = Array.from(
     new Set(cachedCandidates.map((c) => (c.city || '').trim()).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b, 'fr'));
 
-  const currentCountry = candidateCountryFilter.value;
   const currentCity = candidateCityFilter.value;
 
-  candidateCountryFilter.innerHTML = '<option value="">Tous les pays</option>';
-  countries.forEach((value) => {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = value;
-    candidateCountryFilter.appendChild(option);
-  });
-  candidateCountryFilter.value = currentCountry;
-
-  candidateCityFilter.innerHTML = '<option value="">Toutes les villes</option>';
+  candidateCityFilter.innerHTML = '<option value="">Toutes les communes</option>';
   cities.forEach((value) => {
     const option = document.createElement('option');
     option.value = value;
@@ -295,14 +281,11 @@ function hydratePublicFilters() {
 
 function updatePublicStats() {
   if (!publicStatCandidates) return;
-  const countries = new Set();
   const cities = new Set();
   cachedCandidates.forEach((c) => {
-    if (c.country) countries.add(c.country.trim().toLowerCase());
     if (c.city) cities.add(c.city.trim().toLowerCase());
   });
   publicStatCandidates.textContent = cachedCandidates.length;
-  if (publicStatCountries) publicStatCountries.textContent = countries.size;
   if (publicStatCities) publicStatCities.textContent = cities.size;
 }
 
@@ -338,7 +321,6 @@ candidatesGrid?.addEventListener('click', async (e) => {
 });
 
 candidateSearchPublic?.addEventListener('input', renderPublicCandidatesList);
-candidateCountryFilter?.addEventListener('change', renderPublicCandidatesList);
 candidateCityFilter?.addEventListener('change', renderPublicCandidatesList);
 
 if (qrCode && window.QRCode) {

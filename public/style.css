@@ -310,6 +310,10 @@ input, select, textarea, button {
   font-size: 0.96rem;
   font-family: inherit;
 }
+
+.uppercase {
+  text-transform: uppercase;
+}
 input:focus, select:focus, textarea:focus {
   outline: 2px solid rgba(11, 111, 79, 0.3);
   border-color: var(--primary);

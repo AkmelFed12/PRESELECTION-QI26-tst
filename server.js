@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readdir, stat, access } from 'fs/promises';
-import { createReadStream } from 'fs';
+import { createReadStream, readFileSync } from 'fs';
 import rateLimit from 'express-rate-limit';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
@@ -70,6 +70,7 @@ const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'asaa2026';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ASAALMO2026';
 const ADMIN_WHATSAPP = process.env.ADMIN_WHATSAPP || '2250150070083';
 const CODE_PREFIX = 'QI26';
+const DEFAULT_COUNTRY = process.env.DEFAULT_COUNTRY || "COTE D'IVOIRE";
 
 // Email config
 const transporter = nodemailer.createTransport({
@@ -125,6 +126,23 @@ function normalizeWhatsapp(value) {
   if (!/^\+?[1-9]\d{6,14}$/.test(raw)) return '';
   if (!raw.startsWith('+')) raw = '+' + raw;
   return raw;
+}
+
+function normalizeCommune(value) {
+  const cleaned = sanitizeString(value, 100);
+  return cleaned ? cleaned.toUpperCase() : '';
+}
+
+function loadManualCandidates() {
+  try {
+    const path = join(__dirname, 'data', 'manual_candidates.json');
+    const raw = readFileSync(path, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+  } catch (error) {
+    console.warn('⚠️ Impossible de charger data/manual_candidates.json:', error.message);
+  }
+  return [];
 }
 
 function getClientIp(req) {
@@ -451,34 +469,47 @@ async function initDatabase() {
       WHERE NOT EXISTS (SELECT 1 FROM poll);
     `);
 
-    // Auto-approve existing registrations
+    // Auto-approve existing registrations + normalize country + candidate codes
     await pool.query(`UPDATE candidates SET status = 'approved' WHERE status IS NULL OR status != 'approved'`);
+    await pool.query(`UPDATE candidates SET country = $1 WHERE country IS NULL OR TRIM(country) = ''`, [DEFAULT_COUNTRY]);
+    await pool.query(`UPDATE candidates SET city = UPPER(city) WHERE city IS NOT NULL`);
+    await pool.query(
+      `UPDATE candidates
+       SET candidateCode = $1 || '-' || LPAD(id::text, 3, '0')
+       WHERE candidateCode IS NULL OR candidateCode = ''`,
+      [CODE_PREFIX]
+    );
 
-    // Hydrate missing names for candidates already registered (from provided list)
-    const manualCandidates = [
-      { name: 'OUATTARA FATOUMATA', whatsapp: '+2250564108763', city: 'BINGERVILLE' },
-      { name: 'OUATTARA HAWA', whatsapp: '+2250501952414', city: 'TREICHVILLE' },
-      { name: 'KONE SIRAH', whatsapp: '+2250103665205', city: 'ADJAMÉ' },
-      { name: 'KAGONE FATIMA AIDA DJAMELLA', whatsapp: '+2250152606015', city: 'YOPOUGON' },
-      { name: 'DIALLO IBRAHIM KHALIL', whatsapp: '+224612694187', city: 'TREICHVILLE' },
-      { name: 'COULIBALY MIRIAM', whatsapp: '+2250554013332', city: '' },
-      { name: 'MOHAMED AWWAL', whatsapp: '+2250171715400', city: 'TREICHVILLE' },
-      { name: 'KAMAGATE MATENIN', whatsapp: '+22676035015', city: 'ABOBO' },
-      { name: 'SAYORE NASSIRATOU', whatsapp: '+2250778762501', city: 'PLATEAU' },
-      { name: 'KOKORA MOHAMED OUATTARA', whatsapp: '+2250140719281', city: 'KOUMASSI' },
-      { name: 'FOFANA SANY', whatsapp: '+2250143513550', city: 'TREICHVILLE' },
-      { name: 'DIAKHITE IBRAHIM', whatsapp: '+2250140443333', city: 'PORT-BOUET' },
-      { name: 'SIDIBE MOHAMED', whatsapp: '+2250575933452', city: 'YOPOUGON' }
-    ];
-
+    // Import/merge manual candidates from Word list
+    const manualCandidates = loadManualCandidates();
     for (const entry of manualCandidates) {
-      await pool.query(
-        `UPDATE candidates
-         SET fullName = COALESCE(NULLIF(fullName, ''), $1),
-             city = COALESCE(NULLIF(city, ''), $2)
-         WHERE whatsapp = $3`,
-        [entry.name, entry.city, entry.whatsapp]
-      );
+      const normalizedWhatsapp = normalizeWhatsapp(entry.whatsapp);
+      if (!normalizedWhatsapp) continue;
+      const name = sanitizeString(entry.name, 255);
+      const commune = normalizeCommune(entry.city);
+      const existing = await pool.query('SELECT id FROM candidates WHERE whatsapp = $1', [normalizedWhatsapp]);
+
+      if (existing.rows.length > 0) {
+        await pool.query(
+          `UPDATE candidates
+           SET fullName = COALESCE(NULLIF(fullName, ''), $1),
+               city = COALESCE(NULLIF(city, ''), $2),
+               country = COALESCE(NULLIF(country, ''), $3),
+               status = 'approved'
+           WHERE id = $4`,
+          [name, commune, DEFAULT_COUNTRY, existing.rows[0].id]
+        );
+      } else {
+        const insert = await pool.query(
+          `INSERT INTO candidates (fullName, city, country, whatsapp, status)
+           VALUES ($1, $2, $3, $4, 'approved')
+           RETURNING id`,
+          [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
+        );
+        const candidateId = insert.rows[0].id;
+        const candidateCode = `${CODE_PREFIX}-${String(candidateId).padStart(3, '0')}`;
+        await pool.query('UPDATE candidates SET candidateCode = $1 WHERE id = $2', [candidateCode, candidateId]);
+      }
     }
 
     console.log('✅ Database initialized successfully');
@@ -582,8 +613,8 @@ app.post('/api/register', registerLimiter, async (req, res) => {
 
     // Sanitize and validate lengths
     const sanitizedName = sanitizeString(fullName, 255);
-    const sanitizedCity = sanitizeString(city, 100);
-    const sanitizedCountry = sanitizeString(country, 100);
+    const sanitizedCity = normalizeCommune(city);
+    const sanitizedCountry = sanitizeString(country, 100) || DEFAULT_COUNTRY;
     const sanitizedEmail = sanitizeString(email, 120);
     const sanitizedPhone = sanitizeString(phone, 30);
     const sanitizedQuranLevel = sanitizeString(quranLevel, 100);
@@ -592,6 +623,9 @@ app.post('/api/register', registerLimiter, async (req, res) => {
 
     if (!sanitizedName || sanitizedName.length < 2) {
       return res.status(400).json({ message: 'Nom invalide.' });
+    }
+    if (!sanitizedCity) {
+      return res.status(400).json({ message: 'Commune obligatoire.' });
     }
 
     const normalized = normalizeWhatsapp(whatsapp);
@@ -848,22 +882,90 @@ app.post('/api/admin/change-password', verifyAdmin, async (req, res) => {
 // Admin candidates management
 app.post('/api/admin/candidates', verifyAdmin, async (req, res) => {
   try {
-    const { fullName, whatsapp, email, phone, city, country, age, quranLevel, motivation } = req.body;
+    const { fullName, whatsapp, email, phone, city, country, age, quranLevel, motivation, status, candidateId: candidateIdRaw } = req.body;
+    const sanitizedName = sanitizeString(fullName, 255);
+    const sanitizedCity = normalizeCommune(city);
+    const sanitizedCountry = sanitizeString(country, 100) || DEFAULT_COUNTRY;
+    const sanitizedEmail = sanitizeString(email, 120);
+    const sanitizedPhone = sanitizeString(phone, 30);
+    const sanitizedLevel = sanitizeString(quranLevel, 100);
+    const sanitizedMotivation = sanitizeString(motivation, 1000);
+
+    if (!sanitizedName || sanitizedName.length < 2) {
+      return res.status(400).json({ message: 'Nom complet invalide.' });
+    }
 
     const normalized = normalizeWhatsapp(whatsapp);
     if (!normalized) {
       return res.status(400).json({ message: 'Numéro WhatsApp invalide.' });
     }
 
-    if (email && !validateEmail(email)) {
+    if (sanitizedEmail && !validateEmail(sanitizedEmail)) {
       return res.status(400).json({ message: 'Email invalide.' });
+    }
+
+    const safeStatus = ['approved', 'pending', 'eliminated'].includes(status) ? status : 'approved';
+    const parsedId = Number(candidateIdRaw || 0);
+    if (parsedId) {
+      const conflict = await pool.query(
+        'SELECT id FROM candidates WHERE whatsapp = $1 AND id <> $2',
+        [normalized, parsedId]
+      );
+      if (conflict.rows.length > 0) {
+        return res.status(409).json({ message: 'WhatsApp déjà utilisé par un autre candidat.' });
+      }
+
+      await pool.query(
+        `UPDATE candidates
+         SET fullName = $1,
+             age = $2,
+             city = $3,
+             country = $4,
+             email = $5,
+             phone = $6,
+             whatsapp = $7,
+             quranLevel = $8,
+             motivation = $9,
+             status = $10
+         WHERE id = $11`,
+        [
+          sanitizedName,
+          age || null,
+          sanitizedCity,
+          sanitizedCountry,
+          sanitizedEmail,
+          sanitizedPhone,
+          normalized,
+          sanitizedLevel,
+          sanitizedMotivation,
+          safeStatus,
+          parsedId
+        ]
+      );
+
+      if (!sanitizedName) {
+        await pool.query('UPDATE candidates SET fullName = $1 WHERE id = $2', ['Inconnu', parsedId]);
+      }
+
+      return res.json({ message: 'Candidat mis à jour.', candidateId: parsedId });
     }
 
     const result = await pool.query(
       `INSERT INTO candidates (fullName, age, city, country, email, phone, whatsapp, quranLevel, motivation, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id`,
-      [fullName, age || null, city, country, email, phone, normalized, quranLevel, motivation, 'pending']
+      [
+        sanitizedName,
+        age || null,
+        sanitizedCity,
+        sanitizedCountry,
+        sanitizedEmail,
+        sanitizedPhone,
+        normalized,
+        sanitizedLevel,
+        sanitizedMotivation,
+        safeStatus
+      ]
     );
 
     const candidateId = result.rows[0].id;

@@ -177,7 +177,7 @@
       <section class="card accent-olive hidden" id="candidatesPanel">
         <h2>Gestion des candidats</h2>
         <div class="toolbar">
-          <input id="candidateSearch" type="search" placeholder="Rechercher un candidat (nom, pays, WhatsApp)" />
+          <input id="candidateSearch" type="search" placeholder="Rechercher un candidat (nom, commune, WhatsApp)" />
           <select id="candidateSort">
             <option value="id-desc">Tri: ID (desc)</option>
             <option value="name-asc">Tri: Nom (A-Z)</option>
@@ -203,8 +203,8 @@
           <input id="candidateFullName" name="fullName" placeholder="Nom complet" required />
           <label for="candidateAge">Âge</label>
           <input id="candidateAge" name="age" type="number" placeholder="Âge" min="10" max="99" />
-          <label for="candidateCity">Ville</label>
-          <input id="candidateCity" name="city" placeholder="Ville" />
+          <label for="candidateCity">Commune</label>
+          <input id="candidateCity" name="city" placeholder="Commune" class="uppercase" />
           <label for="candidateCountry">Pays</label>
           <input id="candidateCountry" name="country" placeholder="Pays" />
           <label for="candidateEmail">Email</label>
@@ -241,7 +241,21 @@
         <div class="table-wrap">
           <h3>Liste des candidats</h3>
           <table id="adminCandidatesTable">
-            <thead><tr><th>Photo</th><th>Code</th><th>Nom</th><th>Pays</th><th>Statut</th><th>Score total</th><th>WhatsApp</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Photo</th>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Commune</th>
+                <th>Pays</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Statut</th>
+                <th>Score total</th>
+                <th>WhatsApp</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody></tbody>
           </table>
         </div>
@@ -273,7 +287,18 @@
             <button class="small-btn" id="exportCandidates" type="button">Exporter CSV</button>
           </div>
           <table id="candidatesTable">
-            <thead><tr><th>ID</th><th>Nom</th><th>WhatsApp</th><th>Pays</th><th>Date</th></tr></thead>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>WhatsApp</th>
+                <th>Commune</th>
+                <th>Pays</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Date</th>
+              </tr>
+            </thead>
             <tbody></tbody>
           </table>
         </div>

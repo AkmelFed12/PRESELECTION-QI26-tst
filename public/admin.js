@@ -170,9 +170,11 @@ async function loadDashboard() {
             (c) =>
               `<tr><td>${c.id}</td><td>${escapeHtml(c.fullName || 'Inconnu')}</td><td>${escapeHtml(
                 c.whatsapp || '',
-              )}</td><td>${escapeHtml(c.country || '')}</td><td>${escapeHtml(c.createdAt || '')}</td></tr>`,
+              )}</td><td>${escapeHtml(c.city || '')}</td><td>${escapeHtml(c.country || '')}</td><td>${escapeHtml(
+                c.email || '',
+              )}</td><td>${escapeHtml(c.phone || '')}</td><td>${escapeHtml(c.createdAt || '')}</td></tr>`,
           ).join('')
-        : '<tr><td colspan="5" class="empty">Aucun candidat inscrit</td></tr>';
+        : '<tr><td colspan="8" class="empty">Aucun candidat inscrit</td></tr>';
     }
 
     const votesBody = document.querySelector('#votesTable tbody');
@@ -232,7 +234,7 @@ function renderCandidatesTable() {
   let list = [...candidatesCache];
   if (query) {
     list = list.filter((c) => {
-      const target = `${c.fullName || ''} ${c.country || ''} ${c.whatsapp || ''}`.toLowerCase();
+      const target = `${c.fullName || ''} ${c.city || ''} ${c.country || ''} ${c.whatsapp || ''} ${c.email || ''} ${c.phone || ''}`.toLowerCase();
       return target.includes(query);
     });
   }
@@ -257,8 +259,11 @@ function renderCandidatesTable() {
             c.photoUrl ? `<img src="${safeUrl(c.photoUrl)}" alt="${escapeHtml(c.fullName)}" class="mini-photo" />` : '-'
           }</td>
           <td>${escapeHtml(c.candidateCode || '-')}</td>
-          <td>${escapeHtml(c.fullName)}</td>
+          <td>${escapeHtml(c.fullName || 'Inconnu')}</td>
+          <td>${escapeHtml(c.city || '')}</td>
           <td>${escapeHtml(c.country || '')}</td>
+          <td>${escapeHtml(c.email || '')}</td>
+          <td>${escapeHtml(c.phone || '')}</td>
           <td>${formatStatus(c.status)}</td>
           <td>${formatTotalScore(c.id)}</td>
           <td>${escapeHtml(c.whatsapp || '')}</td>
