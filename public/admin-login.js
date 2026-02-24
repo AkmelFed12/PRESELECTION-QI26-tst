@@ -42,6 +42,25 @@
         window.__adminAuth = token;
       }
       setMsg('Connexion réussie.');
+      // Fallback: show panels directly even if admin.js failed to load
+      const ids = [
+        'adminPanel',
+        'dashboardPanel',
+        'candidatesPanel',
+        'scorePanel',
+        'tablesPanel',
+        'securityPanel',
+        'postsPanel',
+        'storiesPanel',
+        'donationsPanel',
+        'mediaPanel'
+      ];
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden');
+      });
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) logoutBtn.classList.remove('hidden');
       window.dispatchEvent(new CustomEvent('admin:authed'));
     } catch (err) {
       setMsg('Erreur de connexion.');
