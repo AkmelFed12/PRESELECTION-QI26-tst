@@ -60,6 +60,21 @@ const toggleVoting = document.getElementById('toggleVoting');
 const votingStatus = document.getElementById('votingStatus');
 
 let authHeader = '';
+
+// Fallbacks if utils.js did not load
+if (typeof window.showToast !== 'function') {
+  window.showToast = (message) => {
+    if (loginMsg) loginMsg.textContent = String(message || '');
+  };
+}
+if (typeof window.setFormLoading !== 'function') {
+  window.setFormLoading = (form, loading) => {
+    if (!form) return;
+    form.querySelectorAll('input, button, select, textarea').forEach((el) => {
+      el.disabled = !!loading;
+    });
+  };
+}
 let candidatesCache = [];
 let votesCache = [];
 let rankingCache = [];
@@ -580,6 +595,7 @@ loginForm.addEventListener('submit', async (e) => {
     }
     
     authHeader = toBasic(username, password);
+    if (loginMsg) loginMsg.textContent = 'Connexion en cours...';
 
     // Tester l'authentification avec le dashboard
     const res = await authedFetch('/api/admin/dashboard');
@@ -616,6 +632,19 @@ loginForm.addEventListener('submit', async (e) => {
     setFormLoading(loginForm, false);
   }
 });
+
+// Auto-fill from query params (if present)
+try {
+  const params = new URLSearchParams(window.location.search);
+  const u = params.get('username');
+  const p = params.get('password');
+  if (u && p && loginForm) {
+    loginForm.elements.username.value = u;
+    loginForm.elements.password.value = p;
+  }
+} catch {
+  // ignore
+}
 
 refreshNow?.addEventListener('click', async () => {
   await loadDashboard();
