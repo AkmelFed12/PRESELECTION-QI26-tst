@@ -61,6 +61,39 @@
       });
       const logoutBtn = document.getElementById('logoutBtn');
       if (logoutBtn) logoutBtn.classList.remove('hidden');
+
+      // Fallback: populate basic dashboard stats if admin.js is not running
+      try {
+        const dashRes = await fetch('/api/admin/dashboard', {
+          headers: { Authorization: token },
+        });
+        if (dashRes.ok) {
+          const data = await dashRes.json();
+          const stats = data.stats || {};
+          const statCandidates = document.getElementById('statCandidates');
+          const statVotes = document.getElementById('statVotes');
+          const statScores = document.getElementById('statScores');
+          const statContacts = document.getElementById('statContacts');
+          const statDonationsPending = document.getElementById('statDonationsPending');
+          if (statCandidates) statCandidates.textContent = stats.candidates ?? (data.candidates?.length || 0);
+          if (statVotes) {
+            const totalVotes = Array.isArray(data.votes)
+              ? data.votes.reduce((sum, v) => sum + Number(v.totalVotes || 0), 0)
+              : 0;
+            statVotes.textContent = totalVotes;
+          }
+          if (statScores) {
+            const totalScores = Array.isArray(data.ranking)
+              ? data.ranking.reduce((sum, r) => sum + Number(r.passages || 0), 0)
+              : 0;
+            statScores.textContent = totalScores;
+          }
+          if (statContacts) statContacts.textContent = stats.contacts ?? (data.contacts?.length || 0);
+          if (statDonationsPending) statDonationsPending.textContent = stats.donationsPending ?? 0;
+        }
+      } catch {
+        // ignore
+      }
       window.dispatchEvent(new CustomEvent('admin:authed'));
     } catch (err) {
       setMsg('Erreur de connexion.');
