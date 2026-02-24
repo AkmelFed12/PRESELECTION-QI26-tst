@@ -262,8 +262,24 @@ async function loadDashboard() {
     if (lastRefresh) {
       lastRefresh.textContent = new Date().toLocaleTimeString('fr-FR');
     }
+  } catch (error) {
+    if (loginMsg) loginMsg.textContent = 'Erreur chargement admin.';
+    await loadCandidatesFallback();
   } finally {
     dashboardLoading = false;
+  }
+}
+
+async function loadCandidatesFallback() {
+  try {
+    const res = await authedFetch('/api/admin/candidates');
+    if (res.status === 401) return;
+    const data = await res.json();
+    candidatesCache = Array.isArray(data) ? data : [];
+    renderCandidatesTable();
+    updateDashboard();
+  } catch (error) {
+    console.error('Fallback candidates load failed:', error);
   }
 }
 

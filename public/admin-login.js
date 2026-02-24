@@ -16,6 +16,55 @@
   if (!loginForm) return;
   setMsg('Prêt à se connecter.');
 
+  const renderCandidatesTable = (candidates) => {
+    const tableBody = document.querySelector('#adminCandidatesTable tbody');
+    if (!tableBody) return;
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="11" class="empty">Aucun candidat</td></tr>';
+      return;
+    }
+    tableBody.innerHTML = candidates
+      .map((c) => `
+        <tr>
+          <td>${c.photoUrl ? `<img src="${c.photoUrl}" class="mini-photo" alt="${c.fullName || ''}"/>` : '-'}</td>
+          <td>${c.candidateCode || '-'}</td>
+          <td>${c.fullName || 'Inconnu'}</td>
+          <td>${c.city || ''}</td>
+          <td>${c.country || ''}</td>
+          <td>${c.email || ''}</td>
+          <td>${c.phone || ''}</td>
+          <td>${c.status || 'pending'}</td>
+          <td>-</td>
+          <td>${c.whatsapp || ''}</td>
+          <td>-</td>
+        </tr>
+      `).join('');
+  };
+
+  const updateStats = (data, candidates) => {
+    const stats = data?.stats || {};
+    const statCandidates = document.getElementById('statCandidates');
+    const statVotes = document.getElementById('statVotes');
+    const statScores = document.getElementById('statScores');
+    const statContacts = document.getElementById('statContacts');
+    const statDonationsPending = document.getElementById('statDonationsPending');
+    if (statCandidates) statCandidates.textContent = stats.candidates ?? (candidates?.length || 0);
+    if (statVotes) {
+      const totalVotes = Array.isArray(data?.votes)
+        ? data.votes.reduce((sum, v) => sum + Number(v.totalVotes || 0), 0)
+        : 0;
+      statVotes.textContent = totalVotes;
+    }
+    if (statScores) {
+      const totalScores = Array.isArray(data?.ranking)
+        ? data.ranking.reduce((sum, r) => sum + Number(r.passages || 0), 0)
+        : 0;
+      statScores.textContent = totalScores;
+    }
+    if (statContacts) statContacts.textContent = stats.contacts ?? (data?.contacts?.length || 0);
+    if (statDonationsPending) statDonationsPending.textContent = stats.donationsPending ?? 0;
+  };
+
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
@@ -67,29 +116,22 @@
         const dashRes = await fetch('/api/admin/dashboard', {
           headers: { Authorization: token },
         });
+        let candidates = [];
         if (dashRes.ok) {
           const data = await dashRes.json();
-          const stats = data.stats || {};
-          const statCandidates = document.getElementById('statCandidates');
-          const statVotes = document.getElementById('statVotes');
-          const statScores = document.getElementById('statScores');
-          const statContacts = document.getElementById('statContacts');
-          const statDonationsPending = document.getElementById('statDonationsPending');
-          if (statCandidates) statCandidates.textContent = stats.candidates ?? (data.candidates?.length || 0);
-          if (statVotes) {
-            const totalVotes = Array.isArray(data.votes)
-              ? data.votes.reduce((sum, v) => sum + Number(v.totalVotes || 0), 0)
-              : 0;
-            statVotes.textContent = totalVotes;
+          candidates = Array.isArray(data.candidates) ? data.candidates : [];
+          updateStats(data, candidates);
+          renderCandidatesTable(candidates);
+        }
+
+        if (!candidates.length) {
+          const candRes = await fetch('/api/admin/candidates', {
+            headers: { Authorization: token },
+          });
+          if (candRes.ok) {
+            const candData = await candRes.json();
+            renderCandidatesTable(Array.isArray(candData) ? candData : []);
           }
-          if (statScores) {
-            const totalScores = Array.isArray(data.ranking)
-              ? data.ranking.reduce((sum, r) => sum + Number(r.passages || 0), 0)
-              : 0;
-            statScores.textContent = totalScores;
-          }
-          if (statContacts) statContacts.textContent = stats.contacts ?? (data.contacts?.length || 0);
-          if (statDonationsPending) statDonationsPending.textContent = stats.donationsPending ?? 0;
         }
       } catch {
         // ignore

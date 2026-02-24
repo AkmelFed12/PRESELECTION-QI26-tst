@@ -911,6 +911,17 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
   }
 });
 
+// Admin candidates list (fallback for dashboard)
+app.get('/api/admin/candidates', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM candidates ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Change password
 app.post('/api/admin/change-password', verifyAdmin, async (req, res) => {
   try {
