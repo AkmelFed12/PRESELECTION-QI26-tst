@@ -614,8 +614,20 @@ loginForm.addEventListener('submit', async (e) => {
       throw new Error('Identifiant et mot de passe requis.');
     }
     
-    authHeader = toBasic(username, password);
     if (loginMsg) loginMsg.textContent = 'Connexion en cours...';
+
+    // Login via dedicated endpoint (more reliable than Basic in some browsers)
+    const loginRes = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const loginData = await loginRes.json().catch(() => ({}));
+    if (!loginRes.ok) {
+      throw new Error(loginData.message || 'Identifiants incorrects.');
+    }
+
+    authHeader = `Bearer ${loginData.token}`;
 
     // Tester l'authentification avec le dashboard
     const res = await authedFetch('/api/admin/dashboard');

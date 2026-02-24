@@ -239,6 +239,22 @@ app.use((req, res, next) => {
 // ==================== AUTHENTICATION ====================
 async function verifyAdmin(req, res, next) {
   const auth = req.headers.authorization || '';
+  const token = req.headers['x-admin-token'] || '';
+
+  // Allow token-based auth (simpler for clients)
+  if (auth.startsWith('Bearer ')) {
+    const bearer = auth.slice(7).trim();
+    if (bearer && (bearer === ADMIN_PASSWORD || bearer === ADMIN_USERNAME)) {
+      req.adminUser = ADMIN_USERNAME;
+      return next();
+    }
+  }
+
+  if (token && (token === ADMIN_PASSWORD || token === ADMIN_USERNAME)) {
+    req.adminUser = ADMIN_USERNAME;
+    return next();
+  }
+
   if (!auth.startsWith('Basic ')) {
     return res.status(401).json({ message: 'Accès non autorisé' });
   }
@@ -2090,6 +2106,43 @@ async function listMediaFilesFromDisk() {
     return [];
   }
 }
+
+// Admin login (returns token for subsequent calls)
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Identifiant et mot de passe requis.' });
+    }
+    if (username !== ADMIN_USERNAME) {
+      return res.status(401).json({ message: 'Accès non autorisé' });
+    }
+
+    const result = await pool.query(
+      "SELECT value FROM admin_config WHERE key = 'admin_password_hash' LIMIT 1"
+    );
+    const adminHash = result.rows[0]?.value || await hashPassword(ADMIN_PASSWORD);
+    let valid = await checkPassword(password, adminHash);
+
+    if (!valid && password === ADMIN_PASSWORD) {
+      valid = true;
+      const newHash = await hashPassword(ADMIN_PASSWORD);
+      await pool.query(
+        "INSERT INTO admin_config (key, value) VALUES ('admin_password_hash', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+        [newHash]
+      );
+    }
+
+    if (!valid) {
+      return res.status(401).json({ message: 'Identifiants incorrects.' });
+    }
+
+    return res.json({ token: ADMIN_PASSWORD });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
 
 function classifyMediaType(filename = '') {
   const ext = (filename.split('.').pop() || '').toLowerCase();
