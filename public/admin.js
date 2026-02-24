@@ -608,7 +608,9 @@ loginForm.addEventListener('submit', async (e) => {
     await loadDonationsAdmin();
     startAutoRefresh();
   } catch (error) {
-    showToast(error.message || 'Erreur lors de la connexion', 'error');
+    const msg = error.message || 'Erreur lors de la connexion';
+    showToast(msg, 'error');
+    if (loginMsg) loginMsg.textContent = msg;
     authHeader = '';
   } finally {
     setFormLoading(loginForm, false);

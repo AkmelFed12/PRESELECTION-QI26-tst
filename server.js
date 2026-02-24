@@ -257,7 +257,17 @@ async function verifyAdmin(req, res, next) {
     );
     
     const adminHash = result.rows[0]?.value || await hashPassword(ADMIN_PASSWORD);
-    const valid = await checkPassword(password, adminHash);
+    let valid = await checkPassword(password, adminHash);
+
+    // Fallback: allow current ADMIN_PASSWORD and update stored hash
+    if (!valid && password === ADMIN_PASSWORD) {
+      valid = true;
+      const newHash = await hashPassword(ADMIN_PASSWORD);
+      await pool.query(
+        "INSERT INTO admin_config (key, value) VALUES ('admin_password_hash', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+        [newHash]
+      );
+    }
 
     if (!valid) {
       return res.status(401).json({ message: 'Accès non autorisé' });
