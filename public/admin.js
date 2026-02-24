@@ -812,10 +812,14 @@ candidateForm.addEventListener('submit', async (e) => {
   if (!payload.status) payload.status = 'pending';
   delete payload.photoFile;
 
-  const res = await authedFetch('/api/admin/candidates', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  const isEdit = Number(payload.candidateId || 0) > 0;
+  const res = await authedFetch(
+    isEdit ? `/api/admin/candidates/${payload.candidateId}` : '/api/admin/candidates',
+    {
+      method: isEdit ? 'PUT' : 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
   const data = await res.json();
   candidateMsg.textContent = data.message || 'Candidat enregistré.';
   if (res.ok) {
