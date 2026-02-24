@@ -254,7 +254,7 @@ function renderCandidatesTable() {
   adminCandidatesTable.innerHTML = list
     .map(
       (c) => `
-        <tr>
+        <tr data-candidate-id="${c.id}">
           <td>${
             c.photoUrl ? `<img src="${safeUrl(c.photoUrl)}" alt="${escapeHtml(c.fullName)}" class="mini-photo" />` : '-'
           }</td>
@@ -830,10 +830,12 @@ candidateForm.addEventListener('submit', async (e) => {
   }
 });
 
-adminCandidatesTable?.addEventListener('click', async (e) => {
-  const button = e.target.closest('button[data-id]');
+function handleCandidateAction(e) {
+  const button = e.target.closest('button[data-action]');
   if (!button) return;
-  const candidateId = Number(button.dataset.id);
+  const row = button.closest('tr[data-candidate-id]');
+  const candidateId = Number(button.dataset.id || row?.dataset.candidateId || 0);
+  if (!candidateId) return;
   const action = button.dataset.action || 'edit';
   if (action === 'whatsapp') {
     const candidate = candidatesCache.find((c) => c.id === candidateId);
@@ -876,6 +878,12 @@ adminCandidatesTable?.addEventListener('click', async (e) => {
   }
   candidateMsg.textContent = `Modification du candidat ${candidate.fullName}.`;
   candidateForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+adminCandidatesTable?.addEventListener('click', handleCandidateAction);
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#adminCandidatesTable')) return;
+  handleCandidateAction(e);
 });
 
 scoreForm.addEventListener('submit', async (e) => {

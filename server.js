@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readdir, stat, access } from 'fs/promises';
 import { createReadStream, readFileSync } from 'fs';
+import { createHash } from 'crypto';
 import rateLimit from 'express-rate-limit';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
@@ -143,6 +144,15 @@ function loadManualCandidates() {
     console.warn('⚠️ Impossible de charger data/manual_candidates.json:', error.message);
   }
   return [];
+}
+
+function hashManualCandidates(list) {
+  try {
+    const payload = JSON.stringify(list || []);
+    return createHash('sha256').update(payload).digest('hex');
+  } catch {
+    return '';
+  }
 }
 
 async function replaceCandidatesFromManualList(manualCandidates) {
@@ -515,32 +525,29 @@ async function initDatabase() {
     // Replace candidates with manual list if data mismatch detected
     const manualCandidates = loadManualCandidates();
     if (manualCandidates.length > 0) {
-      let shouldReplace = false;
-      const existingCount = await pool.query('SELECT COUNT(*)::int as count FROM candidates');
-      if ((existingCount.rows[0]?.count || 0) < manualCandidates.length) {
-        shouldReplace = true;
-      } else {
-        for (const entry of manualCandidates) {
-          const digits = String(entry.whatsapp || '').replace(/\D/g, '');
-          if (!digits) continue;
-          const row = await pool.query(
-            "SELECT fullName FROM candidates WHERE regexp_replace(whatsapp, '\\\\D', '', 'g') = $1 LIMIT 1",
-            [digits]
-          );
-          if (!row.rows[0]?.fullName) {
-            shouldReplace = true;
-            break;
-          }
-          const current = String(row.rows[0].fullName || '').trim().toUpperCase();
-          const expected = String(entry.name || '').trim().toUpperCase();
-          if (current !== expected) {
-            shouldReplace = true;
-            break;
-          }
+      const currentHash = hashManualCandidates(manualCandidates);
+      const storedHash = await pool.query(
+        "SELECT value FROM admin_config WHERE key = 'manual_candidates_hash' LIMIT 1"
+      );
+      const previousHash = storedHash.rows[0]?.value || '';
+
+      let shouldReplace = currentHash && currentHash !== previousHash;
+
+      if (!shouldReplace) {
+        const existingCount = await pool.query('SELECT COUNT(*)::int as count FROM candidates');
+        if ((existingCount.rows[0]?.count || 0) < manualCandidates.length) {
+          shouldReplace = true;
         }
       }
+
       if (shouldReplace) {
         await replaceCandidatesFromManualList(manualCandidates);
+        if (currentHash) {
+          await pool.query(
+            "INSERT INTO admin_config (key, value) VALUES ('manual_candidates_hash', $1)\n             ON CONFLICT (key) DO UPDATE SET value = $1",
+            [currentHash]
+          );
+        }
       }
     }
 
