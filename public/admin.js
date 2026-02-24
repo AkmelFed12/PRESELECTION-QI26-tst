@@ -132,6 +132,10 @@ function toBasic(username, password) {
       if (!authHeader && window.__adminAuth) {
         authHeader = window.__adminAuth;
       }
+      if (!authHeader) {
+        const stored = localStorage.getItem('adminAuth');
+        if (stored) authHeader = stored;
+      }
       const res = await fetch(url, {
         ...options,
         headers: {
@@ -675,6 +679,23 @@ window.addEventListener('admin:authed', async () => {
     if (loginMsg) loginMsg.textContent = 'Erreur chargement admin.';
   }
 });
+
+// If token already exists, load data on page load
+try {
+  const stored = window.__adminAuth || localStorage.getItem('adminAuth');
+  if (stored) {
+    authHeader = stored;
+    showAdminPanels();
+    loadDashboard();
+    loadMediaAdmin();
+    loadPostsAdmin();
+    loadStoriesAdmin();
+    loadDonationsAdmin();
+    startAutoRefresh();
+  }
+} catch {
+  // ignore
+}
 
 refreshNow?.addEventListener('click', async () => {
   await loadDashboard();
