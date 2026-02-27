@@ -142,6 +142,31 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
+        .payment-link {
+            margin-top: 16px;
+            padding: 14px;
+            border: 1px dashed #FF9800;
+            border-radius: 6px;
+            background: #fff8e1;
+            text-align: center;
+        }
+
+        .payment-link a {
+            display: inline-block;
+            margin-top: 8px;
+            background: #FF9800;
+            color: white;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .payment-link a:hover {
+            background: #F57C00;
+        }
+
         .payment-method-name {
             font-weight: bold;
             font-size: 16px;
@@ -379,6 +404,12 @@
                     <div class="payment-method-name">👋 Wave</div>
                     <div class="payment-method-number" id="wave-number">0574724233</div>
                     <button class="copy-btn" onclick="copyToClipboard('wave-number', 'Wave', this)">Copier</button>
+                </div>
+
+                <div class="payment-link">
+                    <strong>💳 Paiement en ligne (Djamo)</strong>
+                    <div>Paiement sécurisé par lien</div>
+                    <a href="https://pay.djamo.com/yga5x" target="_blank" rel="noopener">Payer avec Djamo</a>
                 </div>
 
                 <div class="info-section">
