@@ -128,6 +128,10 @@ function normalizeWhatsapp(value) {
   return raw;
 }
 
+function digitsOnly(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
 function normalizeCommune(value) {
   const cleaned = sanitizeString(value, 100);
   return cleaned ? cleaned.toUpperCase() : '';
@@ -265,6 +269,46 @@ async function forceSyncManualCandidates() {
   const manualCandidates = loadManualCandidates();
   if (manualCandidates.length === 0) return 0;
   return await upsertManualCandidates(manualCandidates);
+}
+
+async function applyManualNamesToCandidates(rows) {
+  const manualCandidates = loadManualCandidates();
+  if (!manualCandidates.length || !Array.isArray(rows)) return rows;
+
+  const mapByDigits = new Map();
+  manualCandidates.forEach((entry) => {
+    const d = digitsOnly(entry.whatsapp);
+    if (d) mapByDigits.set(d, entry.name);
+  });
+
+  for (const row of rows) {
+    if (!row) continue;
+    const currentName = row.fullname || row.fullName || '';
+    if (currentName && currentName !== 'Inconnu') continue;
+
+    const d = digitsOnly(row.whatsapp);
+    let name = mapByDigits.get(d);
+    if (!name && d.length >= 8) {
+      const last8 = d.slice(-8);
+      for (const [key, val] of mapByDigits.entries()) {
+        if (key.endsWith(last8)) {
+          name = val;
+          break;
+        }
+      }
+    }
+
+    if (name) {
+      row.fullName = name;
+      row.fullname = name;
+      try {
+        await pool.query('UPDATE candidates SET fullName = $1 WHERE id = $2', [name, row.id]);
+      } catch {
+        // ignore db update failures
+      }
+    }
+  }
+  return rows;
 }
 
 function getClientIp(req) {
@@ -705,7 +749,7 @@ app.get('/api/public-candidates', async (req, res) => {
       GROUP BY c.id
       ORDER BY c.id ASC
     `);
-    res.json(result.rows);
+    res.json(await applyManualNamesToCandidates(result.rows));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Database error' });
@@ -993,7 +1037,7 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
     ]);
 
     res.json({
-      candidates: candidates.rows,
+      candidates: await applyManualNamesToCandidates(candidates.rows),
       votes: votes.rows,
       ranking: ranking.rows,
       settings: settings.rows[0] || {},
