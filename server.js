@@ -207,6 +207,21 @@ async function upsertManualCandidates(manualCandidates) {
     );
 
     if (updateResult.rowCount === 0) {
+      const nameUpdate = await pool.query(
+        `UPDATE candidates
+         SET fullName = $1,
+             city = $2,
+             country = $3,
+             whatsapp = $4,
+             status = 'approved'
+         WHERE LOWER(fullName) = LOWER($1)
+           AND (whatsapp IS NULL OR TRIM(whatsapp) = '')`,
+        [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
+      );
+      if (nameUpdate.rowCount > 0) {
+        updated += 1;
+        continue;
+      }
       await pool.query(
         `INSERT INTO candidates (fullName, city, country, whatsapp, status)
          VALUES ($1, $2, $3, $4, 'approved')

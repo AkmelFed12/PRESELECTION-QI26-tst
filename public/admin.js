@@ -30,6 +30,14 @@ function showAdmin() {
   scoresSection.classList.remove('admin-hidden');
 }
 
+function hideAdmin() {
+  dashboard.classList.add('admin-hidden');
+  settingsSection.classList.add('admin-hidden');
+  candidatesSection.classList.add('admin-hidden');
+  scoresSection.classList.add('admin-hidden');
+  loginCard.classList.remove('admin-hidden');
+}
+
 function setStatus(el, text) {
   if (el) el.textContent = text || '';
 }
@@ -190,13 +198,9 @@ scoreForm?.addEventListener('submit', async (e) => {
   await loadDashboard();
 });
 
-// Auto-login if token exists
-const stored = localStorage.getItem('adminAuth');
-if (stored) {
-  authHeader = stored;
-  showAdmin();
-  loadDashboard();
-}
+// Force login each time for security
+hideAdmin();
+localStorage.removeItem('adminAuth');
 
 exportCandidatesCsv?.addEventListener('click', async () => {
   const res = await authedFetch('/api/admin/export/candidates');
