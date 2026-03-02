@@ -16,6 +16,9 @@ const candidatesTable = document.querySelector('#candidatesTable tbody');
 const scoreForm = document.getElementById('scoreForm');
 const scoreMsg = document.getElementById('scoreMsg');
 const rankingTable = document.querySelector('#rankingTable tbody');
+const exportCandidatesCsv = document.getElementById('exportCandidatesCsv');
+const exportRankingCsv = document.getElementById('exportRankingCsv');
+const exportRankingPdf = document.getElementById('exportRankingPdf');
 
 let authHeader = '';
 
@@ -100,6 +103,16 @@ function renderRanking(list) {
     .join('');
 }
 
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(loginMsg, 'Connexion...');
@@ -181,3 +194,54 @@ if (stored) {
   showAdmin();
   loadDashboard();
 }
+
+exportCandidatesCsv?.addEventListener('click', async () => {
+  const res = await authedFetch('/api/admin/export/candidates');
+  if (!res.ok) return;
+  const text = await res.text();
+  downloadFile('candidats.csv', text);
+});
+
+exportRankingCsv?.addEventListener('click', async () => {
+  const res = await authedFetch('/api/admin/export/ranking');
+  if (!res.ok) return;
+  const text = await res.text();
+  downloadFile('classement.csv', text);
+});
+
+exportRankingPdf?.addEventListener('click', () => {
+  const rows = Array.from(document.querySelectorAll('#rankingTable tbody tr'));
+  if (!rows.length) return;
+  const bodyRows = rows
+    .map((row) => {
+      const cells = row.querySelectorAll('td');
+      return `<tr><td>${cells[0].textContent}</td><td>${cells[1].textContent}</td><td>${cells[2].textContent}</td></tr>`;
+    })
+    .join('');
+  const html = `
+    <html>
+      <head>
+        <title>Classement - Quiz Islamique 2026</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Classement — Quiz Islamique 2026</h1>
+        <table>
+          <thead><tr><th>Candidat</th><th>Moyenne</th><th>Passages</th></tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+});

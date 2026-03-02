@@ -1401,6 +1401,59 @@ app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+function toCsv(rows, headers) {
+  const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const lines = [headers.join(',')];
+  rows.forEach((row) => {
+    lines.push(headers.map((h) => escape(row[h])).join(','));
+  });
+  return lines.join('\n');
+}
+
+app.get('/api/admin/export/candidates', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, candidateCode, fullName, whatsapp, city, email, phone, status, createdAt FROM candidates ORDER BY id ASC'
+    );
+    const csv = toCsv(result.rows, [
+      'id',
+      'candidateCode',
+      'fullName',
+      'whatsapp',
+      'city',
+      'email',
+      'phone',
+      'status',
+      'createdAt'
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.send(csv);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/export/ranking', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.fullName,
+             CAST(AVG(COALESCE(s.themeChosenScore, 0) + COALESCE(s.themeImposedScore, 0)) AS NUMERIC(10,2)) as averageScore,
+             COUNT(s.id) as passages
+      FROM candidates c
+      LEFT JOIN scores s ON c.id = s.candidateId
+      GROUP BY c.id, c.fullName
+      ORDER BY averageScore DESC NULLS LAST
+    `);
+    const csv = toCsv(result.rows, ['fullName', 'averageScore', 'passages']);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.send(csv);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Admin scores (notation)
 app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
   try {

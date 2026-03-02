@@ -20,11 +20,13 @@ body {
   margin: 0;
   font-family: "Source Sans 3", sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at top, #fdfbf7, #f3ede2 70%);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(247, 242, 232, 0.95) 65%),
+    linear-gradient(120deg, #f7f2e8, #f1e7d6);
 }
 
 header.hero {
-  background: linear-gradient(120deg, #0b6f4f, #0f8560);
+  background: linear-gradient(120deg, #0b6f4f, #0f7c5a);
   color: var(--white);
   padding: 32px 20px 28px;
   display: grid;
@@ -46,7 +48,7 @@ header.hero {
   margin: 0;
   font-family: "Playfair Display", serif;
   font-weight: 700;
-  font-size: 28px;
+  font-size: 30px;
 }
 
 .hero .slogan {
@@ -75,12 +77,18 @@ header.hero {
   background: var(--gold);
   color: #1f1f1f;
   text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn.outline {
   background: transparent;
   color: white;
   border-color: rgba(255, 255, 255, 0.6);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(10, 5, 0, 0.15);
 }
 
 main.layout {
@@ -102,6 +110,11 @@ main.layout {
 .card h2 {
   margin-top: 0;
   font-family: "Playfair Display", serif;
+}
+
+.card.highlight {
+  border-left: 6px solid var(--gold);
+  background: #fffbf3;
 }
 
 .muted {
@@ -144,6 +157,7 @@ main.layout {
   border-radius: 8px;
   border: 1px solid var(--border);
   font-family: inherit;
+  background: #fffdf9;
 }
 
 .form-grid textarea {
@@ -173,6 +187,18 @@ main.layout {
   border-radius: 8px;
   background: var(--sand);
   font-weight: 600;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(11, 111, 79, 0.12);
+  color: var(--emerald);
+  font-weight: 700;
+  font-size: 12px;
 }
 
 .pill {
@@ -216,6 +242,33 @@ footer {
   text-align: center;
   color: var(--muted);
   font-size: 14px;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: var(--emerald);
+  font-weight: 600;
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.timeline {
+  border-left: 3px solid var(--gold);
+  padding-left: 16px;
+}
+
+.timeline p {
+  margin: 10px 0;
 }
 
 @media (max-width: 980px) {
