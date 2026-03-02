@@ -185,6 +185,35 @@ async function replaceCandidatesFromManualList(manualCandidates) {
   return inserted;
 }
 
+async function upsertManualCandidates(manualCandidates) {
+  if (!Array.isArray(manualCandidates) || manualCandidates.length === 0) return 0;
+  let updated = 0;
+  for (const entry of manualCandidates) {
+    const normalizedWhatsapp = normalizeWhatsapp(entry.whatsapp);
+    if (!normalizedWhatsapp) continue;
+    const name = sanitizeString(entry.name, 255) || 'Inconnu';
+    const commune = normalizeCommune(entry.city);
+    await pool.query(
+      `INSERT INTO candidates (fullName, city, country, whatsapp, status)
+       VALUES ($1, $2, $3, $4, 'approved')
+       ON CONFLICT (whatsapp)
+       DO UPDATE SET fullName = EXCLUDED.fullName,
+                     city = EXCLUDED.city,
+                     country = EXCLUDED.country,
+                     status = 'approved'`,
+      [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
+    );
+    updated += 1;
+  }
+  await pool.query(
+    `UPDATE candidates
+     SET candidateCode = $1 || '-' || LPAD(id::text, 3, '0')
+     WHERE candidateCode IS NULL OR candidateCode = ''`,
+    [CODE_PREFIX]
+  );
+  return updated;
+}
+
 function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) return forwarded.split(',')[0].trim();
@@ -589,6 +618,9 @@ async function initDatabase() {
         }
       }
     }
+
+    // Ensure names are synchronized even if records already exist
+    await upsertManualCandidates(manualCandidates);
 
     console.log('✅ Database initialized successfully');
   } catch (error) {

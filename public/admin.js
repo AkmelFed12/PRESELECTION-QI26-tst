@@ -85,7 +85,7 @@ function renderCandidates(list) {
       (c) => `
       <tr>
         <td>${c.id}</td>
-        <td>${c.fullName || 'Inconnu'}</td>
+        <td>${c.fullName || c.name || 'Inconnu'}</td>
         <td>${c.whatsapp || ''}</td>
         <td>${c.city || ''}</td>
         <td>${c.status || 'pending'}</td>
