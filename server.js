@@ -224,7 +224,7 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
   );
   
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
@@ -1395,6 +1395,38 @@ app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
       ]
     );
     res.json({ message: 'Candidat mis à jour.', candidateId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin scores (notation)
+app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
+  try {
+    const { candidateId, judgeName, themeChosenScore, themeImposedScore, notes } = req.body || {};
+    if (!candidateId || !judgeName) {
+      return res.status(400).json({ message: 'ID candidat et nom du juge requis.' });
+    }
+
+    const candidate = await pool.query('SELECT id FROM candidates WHERE id = $1', [candidateId]);
+    if (candidate.rows.length === 0) {
+      return res.status(404).json({ message: 'Candidat introuvable.' });
+    }
+
+    await pool.query(
+      `INSERT INTO scores (candidateId, judgeName, themeChosenScore, themeImposedScore, notes)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        candidateId,
+        sanitizeString(judgeName, 100),
+        Number(themeChosenScore || 0),
+        Number(themeImposedScore || 0),
+        sanitizeString(notes, 500),
+      ]
+    );
+
+    res.status(201).json({ message: 'Note enregistrée.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

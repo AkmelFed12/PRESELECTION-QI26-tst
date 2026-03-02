@@ -3,289 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Présélection Quiz Islamique 2026</title>
-    <meta
-      name="description"
-      content="Plateforme officielle de présélection du Quiz Islamique 2026 : inscriptions, calendrier, votes et informations pratiques."
-    />
-    <meta property="og:title" content="Présélection Quiz Islamique 2026" />
-    <meta
-      property="og:description"
-      content="Inscrivez-vous, consultez le calendrier et suivez la présélection officielle du Quiz Islamique 2026."
-    />
-    <meta property="og:image" content="assets/logo-association.jpg" />
-    <link rel="icon" href="assets/logo-association.jpg" type="image/jpeg" />
+    <title>Quiz Islamique 2026 — Présélections</title>
+    <meta name="description" content="Plateforme officielle de présélection du Quiz Islamique 2026." />
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <a class="skip-link" href="#mainContent">Aller au contenu</a>
     <header class="hero">
-      <img src="assets/logo-association.jpg" alt="Logo Les Serviteurs d'Allah" class="logo" />
-      <div class="hero-content">
+      <img src="assets/logo.jpg" alt="Logo Les Serviteurs d'Allah" class="logo" />
+      <div>
         <h1>Association des Serviteurs d'Allah Azawajal</h1>
         <p class="slogan">« La formation, c'est notre priorité. »</p>
-        <p class="subtitle">Plateforme officielle de présélection — Quiz Islamique 2026</p>
-        <div class="hero-badges">
-          <span class="status-pill open" id="registerStatusBadge">Inscriptions ouvertes</span>
-          <span class="status-pill" id="voteStatusBadge">Votes fermés</span>
-        </div>
+        <p class="subtitle">Plateforme officielle — Présélections Quiz Islamique 2026</p>
       </div>
       <div class="hero-actions">
-        <a href="#registrationSection" class="btn-link">S'inscrire</a>
-        <a href="candidats.html" class="btn-link outline">Galerie des candidats</a>
-        <a href="quiz-2025.html" class="btn-link outline">LE QUIZ ISLAMIQUE 2025 en images</a>
-        <a href="posts.html" class="btn-link outline">📰 Actualités</a>
-        <a href="stories.html" class="btn-link outline">📱 Stories</a>
-        <a href="donations.html" class="btn-link outline">💝 Donations</a>
-        <a href="admin.html" class="btn-link outline">Espace administrateur</a>
+        <a class="btn" href="#inscription">S'inscrire</a>
+        <a class="btn outline" href="admin.html">Espace admin</a>
       </div>
     </header>
 
-    <main id="mainContent" class="layout">
-      <section class="card notice">
-        <h2>Infos clés</h2>
-        <ul class="key-list">
-          <li><strong>Inscriptions :</strong> en ligne via ce formulaire</li>
-          <li><strong>Public cible :</strong> passionnés de culture islamique</li>
-          <li><strong>Contact :</strong> WhatsApp +225 01 50 07 00 83</li>
-          <li><strong>Suivi :</strong> calendrier et annonces mis à jour sur cette page</li>
-        </ul>
-      </section>
-
+    <main class="layout">
       <section class="card">
-        <h2>Les étapes</h2>
-        <div class="steps-grid">
-          <div class="step-card">
-            <strong>1. Inscription</strong>
-            <p>Remplissez le formulaire et recevez votre code candidat.</p>
+        <h2>Organisation des phases</h2>
+        <div class="grid-two">
+          <div>
+            <h3>Objectif</h3>
+            <p>64 candidats maximum pour la présélection 2026.</p>
+            <ul class="list-steps">
+              <li>Groupe unique : 16 qualifiés directs.</li>
+              <li>Barrages : 32 autres → 16 qualifiés.</li>
+              <li>Phase de groupes : 8 groupes de 4 candidats.</li>
+              <li>Finale : 8 premiers + 2 meilleurs 2ᵉ = 10 finalistes.</li>
+            </ul>
           </div>
-          <div class="step-card">
-            <strong>2. Calendrier</strong>
-            <p>Consultez les annonces et choisissez votre créneau.</p>
-          </div>
-          <div class="step-card">
-            <strong>3. Passage</strong>
-            <p>Deux thèmes évalués pour un total de 30 points.</p>
-          </div>
-          <div class="step-card">
-            <strong>4. Résultats</strong>
-            <p>Classement et qualification selon le format officiel.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="card accent-emerald">
-        <h2>Chiffres clés</h2>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <span>Candidats inscrits</span>
-            <strong id="publicStatCandidates">0</strong>
-          </div>
-          <div class="stat-card">
-            <span>Communes représentées</span>
-            <strong id="publicStatCities">0</strong>
+          <div>
+            <h3>Barème</h3>
+            <p>Chaque passage est noté sur 30 points (2 thèmes).</p>
+            <div class="status">Les notes et classements sont gérés par l'administration.</div>
           </div>
         </div>
       </section>
 
-      <section class="card notice hidden" id="announcementCard">
-        <h2>Annonce</h2>
-        <p id="announcementText"></p>
-      </section>
-
-      <section class="card" id="registrationSection">
+      <section class="card" id="inscription">
         <h2>Inscription des candidats</h2>
-        <p>Remplissez le formulaire pour rejoindre la présélection officielle.</p>
-        <p class="muted-note" id="registrationHelp">
-          Les champs marqués d'une étoile sont obligatoires. Vos informations restent confidentielles.
-        </p>
-        <form id="registrationForm" class="grid-form">
-          <label for="fullName" class="required">Nom complet</label>
-          <input
-            id="fullName"
-            name="fullName"
-            placeholder="Nom complet"
-            autocomplete="name"
-            required
-            aria-required="true"
-            aria-describedby="registrationHelp"
-          />
-          <label for="age">Âge</label>
-          <input id="age" name="age" type="number" placeholder="Âge" min="10" max="99" autocomplete="age" />
-          <label for="city" class="required">Commune</label>
-          <input id="city" name="city" placeholder="Commune" autocomplete="address-level2" required
-            aria-required="true" class="uppercase" />
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" placeholder="Email" autocomplete="email" />
-          <label for="phone">Téléphone</label>
-          <input id="phone" name="phone" placeholder="Téléphone" autocomplete="tel" />
-          <label for="whatsapp" class="required">WhatsApp</label>
-          <input
-            id="whatsapp"
-            name="whatsapp"
-            placeholder="Ex: +2250150070083"
-            autocomplete="tel"
-            required
-            aria-required="true"
-          />
-          <label for="quranLevel">Niveau en culture islamique</label>
-          <select id="quranLevel" name="quranLevel">
-            <option value="">Sélectionner un niveau</option>
-            <option>Débutant</option>
-            <option>Intermédiaire</option>
-            <option>Avancé</option>
-          </select>
-          <label for="motivation">Motivation (facultatif)</label>
-          <textarea id="motivation" name="motivation" placeholder="Motivation"></textarea>
-          <button type="submit">S'inscrire</button>
+        <p class="muted">Remplissez le formulaire. Un message WhatsApp vers l'administrateur sera proposé après validation.</p>
+        <form id="registrationForm" class="form-grid">
+          <div>
+            <label for="fullName">Nom et prénoms *</label>
+            <input id="fullName" name="fullName" placeholder="Nom complet" required />
+          </div>
+          <div>
+            <label for="age">Âge</label>
+            <input id="age" name="age" type="number" min="10" max="99" placeholder="Âge" />
+          </div>
+          <div>
+            <label for="city">Commune *</label>
+            <input id="city" name="city" placeholder="COMMUNE" required />
+          </div>
+          <div>
+            <label for="whatsapp">WhatsApp *</label>
+            <input id="whatsapp" name="whatsapp" placeholder="+225..." required />
+          </div>
+          <div>
+            <label for="phone">Téléphone</label>
+            <input id="phone" name="phone" placeholder="Téléphone" />
+          </div>
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="Email" />
+          </div>
+          <div>
+            <label for="quranLevel">Niveau en culture islamique</label>
+            <select id="quranLevel" name="quranLevel">
+              <option value="">Sélectionnez un niveau</option>
+              <option>Débutant</option>
+              <option>Intermédiaire</option>
+              <option>Avancé</option>
+            </select>
+          </div>
+          <div class="full">
+            <label for="motivation">Motivation (optionnel)</label>
+            <textarea id="motivation" name="motivation" placeholder="Votre motivation"></textarea>
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Valider l'inscription</button>
+          </div>
         </form>
-        <p id="registerMsg" role="status" aria-live="polite"></p>
+        <p id="registerMsg" class="status"></p>
       </section>
 
       <section class="card">
-        <h2>Vote du public</h2>
-        <p>Choisissez un candidat et confirmez votre vote.</p>
-        <div id="voteStatus" class="status" role="status" aria-live="polite"></div>
-        <form id="voterInfoForm" class="grid-form">
-          <label for="voterName">Votre nom (optionnel)</label>
-          <input id="voterName" name="voterName" placeholder="Votre nom" />
-          <label for="voterContact">Votre contact (optionnel)</label>
-          <input id="voterContact" name="voterContact" placeholder="Votre contact" />
-        </form>
-        <div id="candidatesGrid" class="candidates-grid"></div>
-        <p id="voteMsg" role="status" aria-live="polite"></p>
-      </section>
-
-      <section class="card" id="publicListSection">
-        <h2>Candidats inscrits</h2>
-        <p>Consultez la liste publique des candidats et filtrez par commune.</p>
-        <div class="toolbar">
-          <label class="sr-only" for="candidateSearchPublic">Recherche</label>
-          <input id="candidateSearchPublic" type="search" placeholder="Rechercher un candidat" />
-          <label class="sr-only" for="candidateCityFilter">Commune</label>
-          <select id="candidateCityFilter">
-            <option value="">Toutes les communes</option>
-          </select>
-        </div>
-        <div id="publicCandidatesGrid" class="candidates-grid"></div>
-      </section>
-
-      <section class="card notice">
-        <h2>Accès administration</h2>
-        <p>Cette section est réservée à l'administrateur.</p>
-        <a href="admin.html" class="btn-link">Ouvrir l'espace admin</a>
-      </section>
-
-      <section class="card">
-        <h2>Sponsors & Partenaires</h2>
-        <div class="sponsors-grid">
-          <div class="sponsor-card">Partenaire principal</div>
-          <div class="sponsor-card">Sponsor or</div>
-          <div class="sponsor-card">Sponsor argent</div>
-          <div class="sponsor-card">Sponsor bronze</div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>FAQ</h2>
-        <p>Retrouvez les réponses aux questions fréquentes.</p>
-        <a href="faq.html" class="btn-link">Ouvrir la FAQ</a>
-      </section>
-
-      <section class="card">
-        <h2>Contact & assistance</h2>
-        <p>Une question sur votre inscription ou la présélection ?</p>
-        <div class="contact-grid">
-          <div>
-            <strong>WhatsApp</strong>
-            <p>+225 01 50 07 00 83</p>
-          </div>
-          <div>
-            <strong>Email</strong>
-            <p>ouattaral2@student.iugb.edu.ci</p>
-          </div>
-          <div>
-            <strong>Horaires</strong>
-            <p>Lundi - Vendredi, 9h à 18h</p>
-          </div>
-        </div>
-        <a href="contact.html" class="btn-link">Contacter l'organisation</a>
-      </section>
-
-      <section class="card notice">
-        <h2>Règlement officiel</h2>
-        <p>Consultez les règles et précisions pour la présélection 2026.</p>
-        <a href="reglement.html" class="btn-link">
-          REGLEMENT ET PRECISION SUR LES PRESELECTIONS DU QUIZ ISLAMIQUE 2026 DE L'ASAA
-        </a>
-      </section>
-
-      <section class="card">
-        <h2>Partager l'inscription</h2>
-        <p>Scannez le QR code pour ouvrir la page d'inscription.</p>
-        <div id="qrCode" class="qr-box"></div>
-      </section>
-
-      <section class="card">
-        <h2>Calendrier</h2>
-        <p>Planification des étapes de la compétition.</p>
-        <div id="scheduleList" class="schedule-list"></div>
-      </section>
-
-      <section class="card">
-        <h2>Résultats officiels</h2>
-        <p>Consultez le classement et les statistiques publiques.</p>
-        <div style="display: flex; gap: 12px;">
-          <a href="resultats.html" class="btn-link">Voir les résultats</a>
-          <a href="dashboard.html" class="btn-link outline">Statistiques</a>
-          <a href="quiz-2025.html" class="btn-link outline">LE QUIZ ISLAMIQUE 2025 en images</a>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>🌟 Communauté</h2>
-        <p>Découvrez le mur social et nos partenaires.</p>
-        <div style="display: flex; gap: 12px;">
-          <a href="wall.html" class="btn-link">Mur social</a>
-          <a href="sponsors.html" class="btn-link outline">Sponsors</a>
-        </div>
-      </section>
-
-      <section class="card" id="topReactionsCard">
-        <h2>🔥 Top réactions</h2>
-        <p class="muted-note">Les publications les plus aimées par la communauté.</p>
-        <div id="topReactionsList" class="top-reactions-list">Chargement...</div>
-        <div class="full">
-          <a href="posts.html" class="btn-link outline">Voir toutes les actualités</a>
-        </div>
-      </section>
-
-      <section class="card" id="pollCard">
-        <h2>🗳️ Sondage du jour</h2>
-        <p class="muted-note">Votre avis compte pour améliorer le site.</p>
-        <div id="pollStatus" class="muted-note">Chargement du sondage...</div>
-        <div id="pollOptions" class="poll-options"></div>
-        <div id="pollResults" class="poll-results hidden"></div>
+        <h2>Candidats déjà inscrits</h2>
+        <p class="muted">Cette liste est synchronisée automatiquement.</p>
+        <div id="publicCandidates" class="status">Chargement...</div>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div>
-        <strong>Association des Serviteurs d'Allah Azawajal</strong>
-        <p>Plateforme officielle de présélection du Quiz Islamique 2026.</p>
-        <p class="footer-signature">Design &amp; Development by LMO Web Services</p>
-      </div>
-      <div class="footer-links">
-        <a href="contact.html">Contact</a>
-        <a href="quiz-2025.html">Quiz 2025 en images</a>
-        <a href="wall.html">Mur social</a>
-        <a href="sponsors.html">Sponsors</a>
-        <a href="confidentialite.html">Politique de confidentialité</a>
-        <a href="mentions-legales.html">Mentions légales</a>
-      </div>
+    <footer>
+      <div>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</div>
     </footer>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>    <script src="utils.js?v=2.1.0"></script>    <script defer src="app.js?v=2.1.0"></script>
-    <script defer src="poll.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>

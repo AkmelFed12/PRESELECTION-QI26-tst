@@ -1,337 +1,76 @@
-const registrationForm = document.getElementById('registrationForm');
-const registerMsg = document.getElementById('registerMsg');
-const voterInfoForm = document.getElementById('voterInfoForm');
-const voteMsg = document.getElementById('voteMsg');
-const voteStatus = document.getElementById('voteStatus');
-const candidatesGrid = document.getElementById('candidatesGrid');
-const voteStatusBadge = document.getElementById('voteStatusBadge');
-const registerStatusBadge = document.getElementById('registerStatusBadge');
-const announcementCard = document.getElementById('announcementCard');
-const announcementText = document.getElementById('announcementText');
-const qrCode = document.getElementById('qrCode');
-const scheduleList = document.getElementById('scheduleList');
-const publicCandidatesGrid = document.getElementById('publicCandidatesGrid');
-const candidateSearchPublic = document.getElementById('candidateSearchPublic');
-const candidateCityFilter = document.getElementById('candidateCityFilter');
-const publicStatCandidates = document.getElementById('publicStatCandidates');
-const publicStatCities = document.getElementById('publicStatCities');
-const topReactionsList = document.getElementById('topReactionsList');
+const form = document.getElementById('registrationForm');
+const msg = document.getElementById('registerMsg');
+const publicCandidates = document.getElementById('publicCandidates');
 
-let cachedCandidates = [];
+const toUpper = (value) => (value || '').trim().toUpperCase();
 
-registrationForm?.addEventListener('submit', async (e) => {
+async function loadCandidates() {
+  if (!publicCandidates) return;
+  publicCandidates.textContent = 'Chargement...';
+  try {
+    const res = await fetch('/api/public-candidates');
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      publicCandidates.textContent = 'Aucun candidat inscrit pour le moment.';
+      return;
+    }
+    publicCandidates.innerHTML = `
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nom</th>
+            <th>WhatsApp</th>
+            <th>Commune</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data
+            .map(
+              (c) => `
+              <tr>
+                <td>${c.id}</td>
+                <td>${c.fullName || 'Inconnu'}</td>
+                <td>${c.whatsapp || ''}</td>
+                <td>${c.city || ''}</td>
+              </tr>
+          `,
+            )
+            .join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (e) {
+    publicCandidates.textContent = 'Impossible de charger la liste.';
+  }
+}
+
+form?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const submitBtn = registrationForm.querySelector('button[type="submit"]');
-  if (submitBtn) submitBtn.disabled = true;
-  const formData = Object.fromEntries(new FormData(registrationForm).entries());
-  if (formData.city) {
-    formData.city = formData.city.trim().toUpperCase();
-  }
-  if (formData.whatsapp && !/^\+?\d{6,20}$/.test(formData.whatsapp.trim())) {
-    registerMsg.textContent = "Numéro WhatsApp invalide. Utilisez uniquement chiffres et signe +.";
-    if (submitBtn) submitBtn.disabled = false;
-    return;
-  }
+  msg.textContent = 'Enregistrement en cours...';
+  const payload = Object.fromEntries(new FormData(form).entries());
+  payload.city = toUpper(payload.city);
 
   try {
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
+      body: JSON.stringify(payload),
     });
-
     const data = await res.json();
     if (!res.ok) {
-      registerMsg.textContent = data.message || 'Erreur lors de l’inscription.';
-      if (submitBtn) submitBtn.disabled = false;
+      msg.textContent = data.message || 'Erreur lors de l’inscription.';
       return;
     }
-
-    registerMsg.textContent = `${data.message} Redirection WhatsApp en cours...`;
-    registrationForm.reset();
-    setTimeout(() => {
-      window.location.href = data.whatsappRedirect;
-    }, 1000);
-  } catch (err) {
-    registerMsg.textContent = 'Erreur réseau. Réessayez.';
-    if (submitBtn) submitBtn.disabled = false;
+    msg.textContent = data.message || 'Inscription réussie.';
+    form.reset();
+    await loadCandidates();
+    if (data.whatsappRedirect) {
+      window.open(data.whatsappRedirect, '_blank');
+    }
+  } catch (e) {
+    msg.textContent = 'Erreur réseau, réessayez.';
   }
 });
 
-function getInitials(name = '') {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0].toUpperCase())
-    .join('');
-}
-
-async function loadPublicCandidates() {
-  if (!candidatesGrid) return;
-  let settings;
-  let candidates;
-  try {
-    const [settingsRes, candidatesRes] = await Promise.all([
-      fetch('/api/public-settings', { cache: 'no-store' }),
-      fetch('/api/public-candidates', { cache: 'no-store' }),
-    ]);
-    if (!settingsRes.ok || !candidatesRes.ok) {
-      throw new Error('Erreur lors du chargement des données publiques.');
-    }
-    settings = await settingsRes.json();
-    candidates = await candidatesRes.json();
-  } catch (error) {
-    voteStatus.textContent = 'Impossible de charger les données pour le moment.';
-    return;
-  }
-
-  if (registerStatusBadge) {
-    const locked = Number(settings.registrationLocked || 0) === 1;
-    const closed = Number(settings.competitionClosed || 0) === 1;
-    const statusText = closed ? 'Compétition clôturée' : locked ? 'Inscriptions fermées' : 'Inscriptions ouvertes';
-    registerStatusBadge.textContent = statusText;
-    registerStatusBadge.classList.toggle('open', !locked && !closed);
-  }
-
-  if (announcementCard && announcementText) {
-    const text = (settings.announcementText || '').trim();
-    if (text) {
-      announcementText.textContent = text;
-      announcementCard.classList.remove('hidden');
-    } else {
-      announcementCard.classList.add('hidden');
-    }
-  }
-
-  if (scheduleList) {
-    let items = [];
-    try {
-      items = JSON.parse(settings.scheduleJson || '[]');
-    } catch {
-      items = [];
-    }
-    scheduleList.innerHTML = Array.isArray(items) && items.length
-      ? items
-          .map(
-            (item) => `
-              <div class="schedule-item">
-                <strong>${escapeHtml(item.title || 'Événement')}</strong>
-                <span>${escapeHtml(`${item.date || ''} ${item.time || ''}`.trim())}</span>
-                <span>${escapeHtml(item.place || '')}</span>
-              </div>
-            `,
-          )
-          .join('')
-      : '<div class="empty">Calendrier à venir.</div>';
-  }
-
-  if ((Number(settings.registrationLocked || 0) === 1 || Number(settings.competitionClosed || 0) === 1) && registrationForm) {
-    registrationForm.querySelectorAll('input, select, textarea, button').forEach((el) => {
-      el.disabled = true;
-    });
-    registerMsg.textContent = Number(settings.competitionClosed || 0) === 1
-      ? 'Compétition clôturée.'
-      : 'Inscriptions temporairement fermées.';
-  } else if (registrationForm) {
-    registrationForm.querySelectorAll('input, select, textarea, button').forEach((el) => {
-      el.disabled = false;
-    });
-  }
-
-  cachedCandidates = Array.isArray(candidates) ? candidates : [];
-  updatePublicStats();
-  renderPublicCandidatesList();
-
-  const votingEnabled = Number(settings.votingEnabled || 0) === 1;
-  const competitionClosed = Number(settings.competitionClosed || 0) === 1;
-  if (!votingEnabled || competitionClosed) {
-    if (voteStatusBadge) {
-      voteStatusBadge.textContent = competitionClosed ? 'Compétition clôturée' : 'Votes fermés';
-      voteStatusBadge.classList.remove('open');
-    }
-    voteStatus.textContent = 'Les votes seront ouverts prochainement.';
-    candidatesGrid.innerHTML = '';
-    return;
-  }
-
-  if (voteStatusBadge) {
-    voteStatusBadge.textContent = 'Votes ouverts';
-    voteStatusBadge.classList.add('open');
-  }
-  voteStatus.textContent = '';
-  if (!Array.isArray(candidates) || candidates.length === 0) {
-    candidatesGrid.innerHTML = '<div class="empty">Aucun candidat disponible.</div>';
-    return;
-  }
-
-  candidatesGrid.innerHTML = candidates
-    .map((c) => {
-      const initials = getInitials(c.fullName);
-      const photoUrl = safeUrl(c.photoUrl);
-      const name = escapeHtml(c.fullName);
-    const location = escapeHtml(`${c.city || ''}`.trim());
-      const photo = photoUrl
-        ? `<img src="${photoUrl}" alt="${name}" loading="lazy" decoding="async" />`
-        : `<div class="placeholder">${initials || 'QI'}</div>`;
-      return `
-        <article class="candidate-card">
-          <div class="photo">${photo}</div>
-          <div class="candidate-info">
-            <h3>${name}</h3>
-            <p>${location}</p>
-          </div>
-          <button class="vote-btn" data-id="${c.id}" data-name="${name}">Voter</button>
-        </article>
-      `;
-    })
-    .join('');
-}
-
-function renderPublicCandidatesList() {
-  if (!publicCandidatesGrid) return;
-  const searchTerm = (candidateSearchPublic?.value || '').trim().toLowerCase();
-    const city = (candidateCityFilter?.value || '').toLowerCase();
-
-  const filtered = cachedCandidates.filter((candidate) => {
-    const haystack = `${candidate.fullName || ''} ${candidate.city || ''}`.toLowerCase();
-    const matchesSearch = !searchTerm || haystack.includes(searchTerm);
-    const matchesCity = !city || (candidate.city || '').toLowerCase() === city;
-    return matchesSearch && matchesCity;
-  });
-
-  hydratePublicFilters();
-
-  publicCandidatesGrid.innerHTML = filtered.length
-    ? filtered
-        .map((c) => {
-          const initials = getInitials(c.fullName);
-          const photoUrl = safeUrl(c.photoUrl);
-          const name = escapeHtml(c.fullName);
-    const location = escapeHtml(`${c.city || ''}`.trim());
-          const photo = photoUrl
-            ? `<img src="${photoUrl}" alt="${name}" loading="lazy" decoding="async" />`
-            : `<div class="placeholder">${initials || 'QI'}</div>`;
-          return `
-            <article class="candidate-card">
-              <div class="photo">${photo}</div>
-              <div class="candidate-info">
-                <h3>${name}</h3>
-                <p>${location}</p>
-              </div>
-            </article>
-          `;
-        })
-        .join('')
-    : '<div class="empty">Aucun candidat ne correspond à ces filtres.</div>';
-}
-
-async function loadTopReactions() {
-  if (!topReactionsList) return;
-  try {
-    const res = await fetch('/api/posts?limit=50', { cache: 'no-store' });
-    const posts = await res.json();
-    if (!Array.isArray(posts) || posts.length === 0) {
-      topReactionsList.textContent = 'Aucune publication pour le moment.';
-      return;
-    }
-    const ranked = posts
-      .map((p) => {
-        const score =
-          Number(p.reactions_heart || 0) +
-          Number(p.reactions_thumb || 0) +
-          Number(p.reactions_laugh || 0);
-        return { ...p, score };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-
-    topReactionsList.innerHTML = ranked
-      .map(
-        (p, idx) => `
-          <div class="top-reactions-item">
-            <span>${idx + 1}. ${escapeHtml(p.authorName)} — ${escapeHtml((p.content || '').slice(0, 60))}${(p.content || '').length > 60 ? '…' : ''}</span>
-            <strong>${p.score}</strong>
-          </div>
-        `
-      )
-      .join('');
-  } catch (error) {
-    topReactionsList.textContent = 'Erreur chargement des réactions.';
-  }
-}
-
-function hydratePublicFilters() {
-  if (!candidateCityFilter) return;
-  const cities = Array.from(
-    new Set(cachedCandidates.map((c) => (c.city || '').trim()).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b, 'fr'));
-
-  const currentCity = candidateCityFilter.value;
-
-  candidateCityFilter.innerHTML = '<option value="">Toutes les communes</option>';
-  cities.forEach((value) => {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = value;
-    candidateCityFilter.appendChild(option);
-  });
-  candidateCityFilter.value = currentCity;
-}
-
-function updatePublicStats() {
-  if (!publicStatCandidates) return;
-  const cities = new Set();
-  cachedCandidates.forEach((c) => {
-    if (c.city) cities.add(c.city.trim().toLowerCase());
-  });
-  publicStatCandidates.textContent = cachedCandidates.length;
-  if (publicStatCities) publicStatCities.textContent = cities.size;
-}
-
-candidatesGrid?.addEventListener('click', async (e) => {
-  const button = e.target.closest('.vote-btn');
-  if (!button) return;
-  button.disabled = true;
-  const candidateId = Number(button.dataset.id);
-  const voterInfo = Object.fromEntries(new FormData(voterInfoForm).entries());
-
-  try {
-    const res = await fetch('/api/votes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        candidateId,
-        voterName: voterInfo.voterName,
-        voterContact: voterInfo.voterContact,
-      }),
-    });
-    const data = await res.json();
-    voteMsg.textContent = data.message || 'Vote enregistré.';
-    if (res.ok) {
-      voterInfoForm.reset();
-      button.textContent = 'Merci !';
-      button.disabled = true;
-      return;
-    }
-  } catch (err) {
-    voteMsg.textContent = 'Erreur réseau. Réessayez.';
-  }
-  button.disabled = false;
-});
-
-candidateSearchPublic?.addEventListener('input', renderPublicCandidatesList);
-candidateCityFilter?.addEventListener('change', renderPublicCandidatesList);
-
-if (qrCode && window.QRCode) {
-  const url = `${window.location.origin}/`;
-  window.QRCode.toCanvas(url, { width: 180, margin: 1 }, (err, canvas) => {
-    if (err) return;
-    qrCode.innerHTML = '';
-    qrCode.appendChild(canvas);
-  });
-}
-
-loadPublicCandidates();
-setInterval(loadPublicCandidates, 30000);
-loadTopReactions();
+loadCandidates();
