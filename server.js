@@ -195,7 +195,7 @@ async function upsertManualCandidates(manualCandidates) {
     const commune = normalizeCommune(entry.city);
     const digits = normalizedWhatsapp.replace(/\D/g, '');
 
-    const updateResult = await pool.query(
+    let updateResult = await pool.query(
       `UPDATE candidates
        SET fullName = $1,
            city = $2,
@@ -205,6 +205,23 @@ async function upsertManualCandidates(manualCandidates) {
        WHERE regexp_replace(whatsapp, '\\D', '', 'g') = $5`,
       [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp, digits]
     );
+
+    // Fallback: match by last 8 digits (some numbers were stored without country/format)
+    if (updateResult.rowCount === 0) {
+      const last8 = digits.slice(-8);
+      if (last8) {
+        updateResult = await pool.query(
+          `UPDATE candidates
+           SET fullName = $1,
+               city = $2,
+               country = $3,
+               whatsapp = $4,
+               status = 'approved'
+           WHERE regexp_replace(whatsapp, '\\D', '', 'g') LIKE $5`,
+          [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp, `%${last8}`]
+        );
+      }
+    }
 
     if (updateResult.rowCount === 0) {
       const nameUpdate = await pool.query(
