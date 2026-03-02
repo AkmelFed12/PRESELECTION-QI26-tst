@@ -66,8 +66,8 @@ const contactLimiter = rateLimit({
 });
 
 // Constants
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'asaa2026';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ASAALMO2026';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'asaa';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ASAA';
 const ADMIN_WHATSAPP = process.env.ADMIN_WHATSAPP || '2250150070083';
 const CODE_PREFIX = 'QI26';
 const DEFAULT_COUNTRY = process.env.DEFAULT_COUNTRY || "COTE D'IVOIRE";
@@ -157,26 +157,25 @@ function hashManualCandidates(list) {
 async function replaceCandidatesFromManualList(manualCandidates) {
   if (!Array.isArray(manualCandidates) || manualCandidates.length === 0) return 0;
   await pool.query('BEGIN');
-  await pool.query('DELETE FROM candidates');
+  await pool.query('TRUNCATE TABLE candidates RESTART IDENTITY CASCADE');
   let inserted = 0;
   for (const entry of manualCandidates) {
     const normalizedWhatsapp = normalizeWhatsapp(entry.whatsapp);
     if (!normalizedWhatsapp) continue;
     const name = sanitizeString(entry.name, 255) || 'Inconnu';
     const commune = normalizeCommune(entry.city);
-    const candidateId = Number(entry.id) || null;
-    const candidateCode = candidateId
-      ? `${CODE_PREFIX}-${String(candidateId).padStart(3, '0')}`
-      : null;
     await pool.query(
-      `INSERT INTO candidates (id, candidateCode, fullName, city, country, whatsapp, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'approved')`,
-      [candidateId, candidateCode, name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
+      `INSERT INTO candidates (fullName, city, country, whatsapp, status)
+       VALUES ($1, $2, $3, $4, 'approved')`,
+      [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
     );
     inserted += 1;
   }
   await pool.query(
-    `SELECT setval(pg_get_serial_sequence('candidates','id'), (SELECT COALESCE(MAX(id), 1) FROM candidates))`
+    `UPDATE candidates
+     SET candidateCode = $1 || '-' || LPAD(id::text, 3, '0')
+     WHERE candidateCode IS NULL OR candidateCode = ''`,
+    [CODE_PREFIX]
   );
   await pool.query(
     "INSERT INTO admin_config (key, value) VALUES ('manual_candidates_imported_2026', $1)\n     ON CONFLICT (key) DO UPDATE SET value = $1",
@@ -545,6 +544,21 @@ async function initDatabase() {
        SET candidateCode = $1 || '-' || LPAD(id::text, 3, '0')
        WHERE candidateCode IS NULL OR candidateCode = ''`,
       [CODE_PREFIX]
+    );
+
+    // Defaults for 2026 format (modifiable in admin)
+    await pool.query(
+      `UPDATE tournament_settings
+       SET maxCandidates = COALESCE(NULLIF(maxCandidates, 0), 64),
+           directQualified = COALESCE(NULLIF(directQualified, 0), 16),
+           playoffParticipants = COALESCE(NULLIF(playoffParticipants, 0), 32),
+           playoffWinners = COALESCE(NULLIF(playoffWinners, 0), 16),
+           groupsCount = COALESCE(NULLIF(groupsCount, 0), 8),
+           candidatesPerGroup = COALESCE(NULLIF(candidatesPerGroup, 0), 4),
+           finalistsFromWinners = COALESCE(NULLIF(finalistsFromWinners, 0), 8),
+           finalistsFromBestSecond = COALESCE(NULLIF(finalistsFromBestSecond, 0), 2),
+           totalFinalists = COALESCE(NULLIF(totalFinalists, 0), 10)
+       WHERE id = 1`
     );
 
     // Replace candidates with manual list if data mismatch detected
