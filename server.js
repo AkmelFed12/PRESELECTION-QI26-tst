@@ -229,6 +229,12 @@ async function upsertManualCandidates(manualCandidates) {
   return updated;
 }
 
+async function forceSyncManualCandidates() {
+  const manualCandidates = loadManualCandidates();
+  if (manualCandidates.length === 0) return 0;
+  return await upsertManualCandidates(manualCandidates);
+}
+
 function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) return forwarded.split(',')[0].trim();
@@ -1495,6 +1501,17 @@ app.get('/api/admin/export/ranking', verifyAdmin, async (req, res) => {
     const csv = toCsv(result.rows, ['fullName', 'averageScore', 'passages']);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.send(csv);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: force sync manual candidates (fix "Inconnu")
+app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
+  try {
+    const count = await forceSyncManualCandidates();
+    res.json({ message: 'Synchronisation terminée.', count });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

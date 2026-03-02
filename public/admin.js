@@ -130,6 +130,9 @@ loginForm?.addEventListener('submit', async (e) => {
   authHeader = `Bearer ${data.token}`;
   localStorage.setItem('adminAuth', authHeader);
   showAdmin();
+  try {
+    await authedFetch('/api/admin/sync-manual-candidates', { method: 'POST' });
+  } catch {}
   await loadDashboard();
 });
 
