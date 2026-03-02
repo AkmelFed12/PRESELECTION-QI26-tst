@@ -4,6 +4,62 @@ const publicCandidates = document.getElementById('publicCandidates');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
+const manualNameMap = {
+  "2250564108763": "OUATTARA FATOUMATA",
+  "2250501952414": "OUATTARA HAWA",
+  "2250103665205": "KONE SIRAH",
+  "2250152606015": "KAGONE FATIMA AIDA DJAMELLA",
+  "224612694187": "DIALLO IBRAHIM KHALIL",
+  "2250554013332": "COULIBALY MIRIAM",
+  "2250171715400": "MOHAMED AWWAL",
+  "22676035015": "KAMAGATE MATENIN",
+  "2250778762501": "SAYORE NASSIRATOU",
+  "2250140719281": "KOKORA MOHAMED OUATTARA",
+  "2250143513550": "FOFANA SANY",
+  "2250105721307": "DIABY AWA",
+  "2250140443333": "DIAKHITE IBRAHIM",
+  "2250575933452": "SIDIBE MOHAMED",
+  "2250502118573": "DIALLO RAMATOULAYE WALIYA",
+  "2250787898322": "BALLO KASSIM",
+  "2250779831850": "TARNAGUEDA OUMOU",
+  "2250555821712": "BAH KHADIDJA",
+  "2250501514168": "DIALLO AICHA",
+  "2250594716937": "TRAORE ABDOUL RAOUL",
+  "2250720710513": "KABA MARIAM",
+  "2250101664229": "TRAORE MOUHAMMAD ABOUBAKR",
+  "2250546051686": "BAMBA VASSI SOULEYMANE",
+  "2250503525546": "SYLLA ABOUBAKAR SIDIK ABDOUL AZIZ",
+  "2250102138333": "KONE MAIMOUNA",
+  "2250748375320": "DIABATÉ AWA",
+  "2250586403819": "OYEWO FATIATOU OLAMIDE",
+  "2250160311520": "DIALLO FATIMA",
+  "2250564292128": "KOUYATE AMARA",
+  "2250151728966": "TRAORE MOHAMED AMINE",
+  "2250502203868": "COULIBALY ROKIA",
+  "2250170703125": "KONDA AMSETOU",
+  "2250595194172": "BAH MARIAM",
+  "2250747964642": "TRAORE ADJARA",
+  "2250748745910": "KOUASSI SAHRA LESLIE",
+  "2250584233531": "OUATTARA FAOUZIYA"
+};
+
+function digitsOnly(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function resolveName(candidate) {
+  const current = candidate.fullName || candidate.name || '';
+  if (current && current !== 'Inconnu') return current;
+  const digits = digitsOnly(candidate.whatsapp);
+  if (manualNameMap[digits]) return manualNameMap[digits];
+  if (digits.length >= 8) {
+    const last8 = digits.slice(-8);
+    const entry = Object.entries(manualNameMap).find(([key]) => key.endsWith(last8));
+    if (entry) return entry[1];
+  }
+  return 'Inconnu';
+}
+
 async function loadCandidates() {
   if (!publicCandidates) return;
   publicCandidates.textContent = 'Chargement...';
@@ -30,7 +86,7 @@ async function loadCandidates() {
               (c) => `
               <tr>
                 <td>${c.id}</td>
-                <td>${c.fullName || 'Inconnu'}</td>
+                <td>${resolveName(c)}</td>
                 <td>${c.whatsapp || ''}</td>
                 <td>${c.city || ''}</td>
               </tr>
