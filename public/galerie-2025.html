@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Galerie Quiz Islamique 2025</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo" class="logo" />
+      <div>
+        <h1>Galerie Quiz Islamique 2025</h1>
+        <p class="subtitle">Finale — photos officielles</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="index.html">Accueil</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Diaporama</h2>
+        <div class="status" id="galleryStatus">Chargement...</div>
+        <div id="sliderWrap" class="card highlight" style="display:none;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <button class="btn-primary" id="prevBtn" type="button">Précédent</button>
+            <div class="status" id="slideCounter">1 / 1</div>
+            <button class="btn-primary" id="nextBtn" type="button">Suivant</button>
+          </div>
+          <div style="margin-top:16px; text-align:center;">
+            <img id="slideImage" alt="Photo finale 2025" style="max-width:100%; max-height:70vh; border-radius:12px;" />
+          </div>
+          <div style="margin-top:16px; display:flex; justify-content:center;">
+            <a id="downloadBtn" class="btn" href="#" download>Télécharger</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</footer>
+    <script src="galerie-2025.js"></script>
+  </body>
+</html>
