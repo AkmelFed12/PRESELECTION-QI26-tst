@@ -1583,6 +1583,52 @@ app.get('/api/admin/export/ranking', verifyAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/export/candidates-xls', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, candidateCode, fullName, whatsapp, city, email, phone, status, createdAt FROM candidates ORDER BY id ASC'
+    );
+    const rows = result.rows
+      .map(
+        (r) =>
+          `<tr><td>${r.id}</td><td>${r.candidatecode || ''}</td><td>${r.fullname || ''}</td><td>${r.whatsapp || ''}</td><td>${r.city || ''}</td><td>${r.email || ''}</td><td>${r.phone || ''}</td><td>${r.status || ''}</td><td>${r.createdat || ''}</td></tr>`,
+      )
+      .join('');
+    const html = `<table><tr><th>ID</th><th>Code</th><th>Nom</th><th>WhatsApp</th><th>Commune</th><th>Email</th><th>Téléphone</th><th>Statut</th><th>Date</th></tr>${rows}</table>`;
+    res.setHeader('Content-Type', 'application/vnd.ms-excel');
+    res.send(html);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/export/ranking-xls', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.fullName,
+             CAST(AVG(COALESCE(s.themeChosenScore, 0) + COALESCE(s.themeImposedScore, 0)) AS NUMERIC(10,2)) as averageScore,
+             COUNT(s.id) as passages
+      FROM candidates c
+      LEFT JOIN scores s ON c.id = s.candidateId
+      GROUP BY c.id, c.fullName
+      ORDER BY averageScore DESC NULLS LAST
+    `);
+    const rows = result.rows
+      .map(
+        (r) =>
+          `<tr><td>${r.fullname || ''}</td><td>${r.averagescore || ''}</td><td>${r.passages || ''}</td></tr>`,
+      )
+      .join('');
+    const html = `<table><tr><th>Nom</th><th>Moyenne</th><th>Passages</th></tr>${rows}</table>`;
+    res.setHeader('Content-Type', 'application/vnd.ms-excel');
+    res.send(html);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Admin: force sync manual candidates (fix "Inconnu")
 app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
   try {

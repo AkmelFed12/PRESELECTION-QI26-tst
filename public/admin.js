@@ -8,6 +8,11 @@ const scoresSection = document.getElementById('scoresSection');
 
 const settingsForm = document.getElementById('settingsForm');
 const settingsMsg = document.getElementById('settingsMsg');
+const eventDate = document.getElementById('eventDate');
+const eventTime = document.getElementById('eventTime');
+const eventTitle = document.getElementById('eventTitle');
+const addEventBtn = document.getElementById('addEventBtn');
+const eventList = document.getElementById('eventList');
 
 const candidateForm = document.getElementById('candidateForm');
 const candidateMsg = document.getElementById('candidateMsg');
@@ -21,6 +26,7 @@ const exportRankingCsv = document.getElementById('exportRankingCsv');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
 
 let authHeader = '';
+let scheduleCache = [];
 
 const manualNameMap = {
   "2250564108763": "OUATTARA FATOUMATA",
@@ -134,6 +140,11 @@ async function loadDashboard() {
     if (!el.name) return;
     el.value = settings[el.name] ?? '';
   });
+  scheduleCache = [];
+  try {
+    scheduleCache = JSON.parse(settings.scheduleJson || '[]') || [];
+  } catch {}
+  renderSchedule();
 
   // candidates
   renderCandidates(data.candidates || []);
@@ -205,6 +216,7 @@ settingsForm?.addEventListener('submit', async (e) => {
   setStatus(settingsMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(settingsForm).entries());
   Object.keys(payload).forEach((k) => (payload[k] = Number(payload[k])));
+  payload.scheduleJson = JSON.stringify(scheduleCache);
   const res = await authedFetch('/api/tournament-settings', {
     method: 'PUT',
     body: JSON.stringify(payload),
@@ -272,6 +284,32 @@ exportRankingCsv?.addEventListener('click', async () => {
   downloadFile('classement.csv', text);
 });
 
+const exportCandidatesXls = document.createElement('button');
+exportCandidatesXls.className = 'btn-primary';
+exportCandidatesXls.type = 'button';
+exportCandidatesXls.textContent = 'Exporter candidats (Excel)';
+exportCandidatesCsv?.parentElement?.appendChild(exportCandidatesXls);
+
+const exportRankingXls = document.createElement('button');
+exportRankingXls.className = 'btn-primary';
+exportRankingXls.type = 'button';
+exportRankingXls.textContent = 'Exporter classement (Excel)';
+exportRankingCsv?.parentElement?.appendChild(exportRankingXls);
+
+exportCandidatesXls.addEventListener('click', async () => {
+  const res = await authedFetch('/api/admin/export/candidates-xls');
+  if (!res.ok) return;
+  const text = await res.text();
+  downloadFile('candidats.xls', text);
+});
+
+exportRankingXls.addEventListener('click', async () => {
+  const res = await authedFetch('/api/admin/export/ranking-xls');
+  if (!res.ok) return;
+  const text = await res.text();
+  downloadFile('classement.xls', text);
+});
+
 exportRankingPdf?.addEventListener('click', () => {
   const rows = Array.from(document.querySelectorAll('#rankingTable tbody tr'));
   if (!rows.length) return;
@@ -307,4 +345,48 @@ exportRankingPdf?.addEventListener('click', () => {
   win.document.close();
   win.focus();
   win.print();
+});
+function renderSchedule() {
+  if (!eventList) return;
+  if (!scheduleCache.length) {
+    eventList.textContent = 'Aucun événement';
+    return;
+  }
+  eventList.innerHTML = `
+    <table class="table">
+      <thead><tr><th>Date</th><th>Heure</th><th>Événement</th><th>Action</th></tr></thead>
+      <tbody>
+        ${scheduleCache
+          .map(
+            (e, idx) => `<tr>
+              <td>${e.date || ''}</td>
+              <td>${e.time || ''}</td>
+              <td>${e.title || ''}</td>
+              <td><button data-remove="${idx}">Supprimer</button></td>
+            </tr>`,
+          )
+          .join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+addEventBtn?.addEventListener('click', () => {
+  const date = eventDate?.value || '';
+  const time = eventTime?.value || '';
+  const title = eventTitle?.value || '';
+  if (!date || !title) return;
+  scheduleCache.push({ date, time, title });
+  if (eventDate) eventDate.value = '';
+  if (eventTime) eventTime.value = '';
+  if (eventTitle) eventTitle.value = '';
+  renderSchedule();
+});
+
+eventList?.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-remove]');
+  if (!btn) return;
+  const idx = Number(btn.dataset.remove);
+  scheduleCache.splice(idx, 1);
+  renderSchedule();
 });

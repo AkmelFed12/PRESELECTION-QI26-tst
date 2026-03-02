@@ -61,6 +61,18 @@
           <div><label>Finalistes (1ers)</label><input name="finalistsFromWinners" type="number" /></div>
           <div><label>Finalistes (meilleurs 2e)</label><input name="finalistsFromBestSecond" type="number" /></div>
           <div><label>Total finalistes</label><input name="totalFinalists" type="number" /></div>
+          <div class="full">
+            <label>Calendrier (événements)</label>
+            <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px;">
+              <input id="eventDate" type="date" />
+              <input id="eventTime" type="time" />
+              <input id="eventTitle" type="text" placeholder="Titre de l'événement" />
+            </div>
+            <div style="margin-top:8px;">
+              <button class="btn-primary" type="button" id="addEventBtn">Ajouter l'événement</button>
+            </div>
+            <div id="eventList" class="status" style="margin-top:12px;">Aucun événement</div>
+          </div>
           <div class="full"><button class="btn-primary" type="submit">Enregistrer</button></div>
         </form>
         <p id="settingsMsg" class="status"></p>

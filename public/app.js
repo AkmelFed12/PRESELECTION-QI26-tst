@@ -1,6 +1,9 @@
 const form = document.getElementById('registrationForm');
 const msg = document.getElementById('registerMsg');
 const publicCandidates = document.getElementById('publicCandidates');
+const calendarList = document.getElementById('calendarList');
+const registrationBadge = document.getElementById('registrationBadge');
+const votingBadge = document.getElementById('votingBadge');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -130,3 +133,35 @@ form?.addEventListener('submit', async (e) => {
 });
 
 loadCandidates();
+
+async function loadPublicSettings() {
+  try {
+    const res = await fetch('/api/public-settings');
+    const data = await res.json();
+    if (registrationBadge) {
+      registrationBadge.textContent = data.registrationLocked ? 'Inscriptions: fermées' : 'Inscriptions: ouvertes';
+    }
+    if (votingBadge) {
+      votingBadge.textContent = data.votingEnabled ? 'Votes: ouverts' : 'Votes: fermés';
+    }
+    if (calendarList) {
+      const schedule = Array.isArray(JSON.parse(data.scheduleJson || '[]')) ? JSON.parse(data.scheduleJson || '[]') : [];
+      if (!schedule.length) {
+        calendarList.textContent = 'Calendrier en cours de préparation.';
+      } else {
+        calendarList.innerHTML = `
+          <table class="table">
+            <thead><tr><th>Date</th><th>Heure</th><th>Événement</th></tr></thead>
+            <tbody>
+              ${schedule.map((s) => `<tr><td>${s.date || ''}</td><td>${s.time || ''}</td><td>${s.title || ''}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+    }
+  } catch {
+    if (calendarList) calendarList.textContent = 'Calendrier indisponible.';
+  }
+}
+
+loadPublicSettings();
