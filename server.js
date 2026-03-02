@@ -193,16 +193,31 @@ async function upsertManualCandidates(manualCandidates) {
     if (!normalizedWhatsapp) continue;
     const name = sanitizeString(entry.name, 255) || 'Inconnu';
     const commune = normalizeCommune(entry.city);
-    await pool.query(
-      `INSERT INTO candidates (fullName, city, country, whatsapp, status)
-       VALUES ($1, $2, $3, $4, 'approved')
-       ON CONFLICT (whatsapp)
-       DO UPDATE SET fullName = EXCLUDED.fullName,
-                     city = EXCLUDED.city,
-                     country = EXCLUDED.country,
-                     status = 'approved'`,
-      [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
+    const digits = normalizedWhatsapp.replace(/\D/g, '');
+
+    const updateResult = await pool.query(
+      `UPDATE candidates
+       SET fullName = $1,
+           city = $2,
+           country = $3,
+           whatsapp = $4,
+           status = 'approved'
+       WHERE regexp_replace(whatsapp, '\\D', '', 'g') = $5`,
+      [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp, digits]
     );
+
+    if (updateResult.rowCount === 0) {
+      await pool.query(
+        `INSERT INTO candidates (fullName, city, country, whatsapp, status)
+         VALUES ($1, $2, $3, $4, 'approved')
+         ON CONFLICT (whatsapp)
+         DO UPDATE SET fullName = EXCLUDED.fullName,
+                       city = EXCLUDED.city,
+                       country = EXCLUDED.country,
+                       status = 'approved'`,
+        [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
+      );
+    }
     updated += 1;
   }
   await pool.query(
