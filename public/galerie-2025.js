@@ -360,6 +360,7 @@ const nextBtn = document.getElementById('nextBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 
 let index = 0;
+let timer = null;
 
 function showSlide(i) {
   if (!images.length) return;
@@ -379,5 +380,20 @@ if (!images.length) {
   showSlide(0);
 }
 
-prevBtn?.addEventListener('click', () => showSlide(index - 1));
-nextBtn?.addEventListener('click', () => showSlide(index + 1));
+function restartTimer() {
+  if (timer) clearInterval(timer);
+  timer = setInterval(() => showSlide(index + 1), 5000);
+}
+
+prevBtn?.addEventListener('click', () => {
+  showSlide(index - 1);
+  restartTimer();
+});
+nextBtn?.addEventListener('click', () => {
+  showSlide(index + 1);
+  restartTimer();
+});
+
+if (images.length) {
+  restartTimer();
+}
