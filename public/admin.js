@@ -24,6 +24,7 @@ const rankingTable = document.querySelector('#rankingTable tbody');
 const exportCandidatesCsv = document.getElementById('exportCandidatesCsv');
 const exportRankingCsv = document.getElementById('exportRankingCsv');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
+const exportCandidatesPdf = document.getElementById('exportCandidatesPdf');
 
 let authHeader = '';
 let scheduleCache = [];
@@ -335,6 +336,43 @@ exportRankingPdf?.addEventListener('click', () => {
         <h1>Classement — Quiz Islamique 2026</h1>
         <table>
           <thead><tr><th>Candidat</th><th>Moyenne</th><th>Passages</th></tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+});
+
+exportCandidatesPdf?.addEventListener('click', () => {
+  const rows = Array.from(document.querySelectorAll('#candidatesTable tbody tr'));
+  if (!rows.length) return;
+  const bodyRows = rows
+    .map((row) => {
+      const cells = row.querySelectorAll('td');
+      return `<tr><td>${cells[0].textContent}</td><td>${cells[1].textContent}</td><td>${cells[2].textContent}</td><td>${cells[3].textContent}</td><td>${cells[4].textContent}</td></tr>`;
+    })
+    .join('');
+  const html = `
+    <html>
+      <head>
+        <title>Liste des candidats</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Liste des candidats — Quiz Islamique 2026</h1>
+        <table>
+          <thead><tr><th>ID</th><th>Nom</th><th>WhatsApp</th><th>Commune</th><th>Statut</th></tr></thead>
           <tbody>${bodyRows}</tbody>
         </table>
       </body>

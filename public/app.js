@@ -4,6 +4,9 @@ const publicCandidates = document.getElementById('publicCandidates');
 const calendarList = document.getElementById('calendarList');
 const registrationBadge = document.getElementById('registrationBadge');
 const votingBadge = document.getElementById('votingBadge');
+const statPublicCandidates = document.getElementById('statPublicCandidates');
+const statPublicCities = document.getElementById('statPublicCities');
+const statPublicVotes = document.getElementById('statPublicVotes');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -99,6 +102,11 @@ async function loadCandidates() {
         </tbody>
       </table>
     `;
+    const cities = new Set(data.map((c) => (c.city || '').toUpperCase()).filter(Boolean));
+    const totalVotes = data.reduce((sum, c) => sum + Number(c.totalVotes || 0), 0);
+    if (statPublicCandidates) statPublicCandidates.textContent = data.length;
+    if (statPublicCities) statPublicCities.textContent = cities.size;
+    if (statPublicVotes) statPublicVotes.textContent = totalVotes;
   } catch (e) {
     publicCandidates.textContent = 'Impossible de charger la liste.';
   }
@@ -165,3 +173,11 @@ async function loadPublicSettings() {
 }
 
 loadPublicSettings();
+
+const darkToggle = document.getElementById('darkToggle');
+const isDark = localStorage.getItem('theme') === 'dark';
+if (isDark) document.body.classList.add('dark');
+darkToggle?.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+});
