@@ -315,6 +315,16 @@ main.layout {
   border-color: var(--gold);
 }
 
+.badge-new {
+  display: inline-block;
+  background: #ff6b6b;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

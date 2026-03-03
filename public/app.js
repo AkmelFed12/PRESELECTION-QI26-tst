@@ -87,6 +87,7 @@ async function loadCandidates() {
           <tr>
             <th>ID</th>
             <th>Nom</th>
+            <th>Nouveau</th>
             <th>WhatsApp</th>
             <th>Commune</th>
           </tr>
@@ -98,6 +99,7 @@ async function loadCandidates() {
               <tr>
                 <td>${c.id}</td>
                 <td>${resolveName(c)}</td>
+                <td>${isNewCandidate(c.createdAt) ? '<span class="badge-new">Nouveau</span>' : ''}</td>
                 <td>${c.whatsapp || ''}</td>
                 <td>${c.city || ''}</td>
               </tr>
@@ -130,6 +132,14 @@ async function loadCandidates() {
   } catch (e) {
     publicCandidates.textContent = 'Impossible de charger la liste.';
   }
+}
+
+function isNewCandidate(createdAt) {
+  if (!createdAt) return false;
+  const created = new Date(createdAt).getTime();
+  if (Number.isNaN(created)) return false;
+  const diff = Date.now() - created;
+  return diff <= 48 * 60 * 60 * 1000;
 }
 
 form?.addEventListener('submit', async (e) => {
