@@ -10,6 +10,8 @@ const statPublicVotes = document.getElementById('statPublicVotes');
 const communeStats = document.getElementById('communeStats');
 const announcementCard = document.getElementById('announcementCard');
 const announcementText = document.getElementById('announcementText');
+const announcementBanner = document.getElementById('announcementBanner');
+const announcementBannerText = document.getElementById('announcementBannerText');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -191,8 +193,13 @@ async function loadPublicSettings() {
       if (text) {
         announcementText.textContent = text;
         announcementCard.style.display = 'block';
+        if (announcementBanner && announcementBannerText) {
+          announcementBannerText.textContent = text;
+          announcementBanner.style.display = 'block';
+        }
       } else {
         announcementCard.style.display = 'none';
+        if (announcementBanner) announcementBanner.style.display = 'none';
       }
     }
   } catch {

@@ -167,6 +167,19 @@ main.layout {
   background: #fffbf3;
 }
 
+.announcement-banner {
+  background: #1a7f5a;
+  color: #fff;
+  padding: 12px 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.announcement-banner span {
+  display: inline-block;
+  max-width: 1000px;
+}
+
 .muted {
   color: var(--muted);
 }
