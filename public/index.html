@@ -70,7 +70,22 @@
           </div>
           <div>
             <label for="city">Commune *</label>
-            <input id="city" name="city" placeholder="COMMUNE" required />
+            <select id="city" name="city" required>
+              <option value="">Choisir une commune</option>
+              <option>TREICHVILLE</option>
+              <option>ADJAMÉ</option>
+              <option>YOPOUGON</option>
+              <option>ABOBO</option>
+              <option>PLATEAU</option>
+              <option>KOUMASSI</option>
+              <option>COCODY</option>
+              <option>PORT-BOUET</option>
+              <option>MARCORY</option>
+              <option>ANYAMA</option>
+              <option>BINGERVILLE</option>
+              <option>SONGON</option>
+              <option>ATTECOUBE</option>
+            </select>
           </div>
           <div>
             <label for="whatsapp">WhatsApp *</label>
@@ -117,6 +132,11 @@
           <div class="status">Communes: <strong id="statPublicCities">0</strong></div>
           <div class="status">Votes: <strong id="statPublicVotes">0</strong></div>
         </div>
+      </section>
+
+      <section class="card">
+        <h2>Répartition par commune</h2>
+        <div id="communeStats" class="status">Chargement...</div>
       </section>
 
       <section class="card">

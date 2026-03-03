@@ -7,6 +7,7 @@ const votingBadge = document.getElementById('votingBadge');
 const statPublicCandidates = document.getElementById('statPublicCandidates');
 const statPublicCities = document.getElementById('statPublicCities');
 const statPublicVotes = document.getElementById('statPublicVotes');
+const communeStats = document.getElementById('communeStats');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -107,6 +108,21 @@ async function loadCandidates() {
     if (statPublicCandidates) statPublicCandidates.textContent = data.length;
     if (statPublicCities) statPublicCities.textContent = cities.size;
     if (statPublicVotes) statPublicVotes.textContent = totalVotes;
+
+    if (communeStats) {
+      const counts = {};
+      data.forEach((c) => {
+        const commune = (c.city || '').toUpperCase().trim();
+        if (!commune) return;
+        counts[commune] = (counts[commune] || 0) + 1;
+      });
+      const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      communeStats.innerHTML = rows.length
+        ? `<table class="table"><thead><tr><th>Commune</th><th>Candidats</th></tr></thead><tbody>${
+            rows.map(([name, count]) => `<tr><td>${name}</td><td>${count}</td></tr>`).join('')
+          }</tbody></table>`
+        : 'Aucune donnée.';
+    }
   } catch (e) {
     publicCandidates.textContent = 'Impossible de charger la liste.';
   }
