@@ -578,6 +578,7 @@ async function initDatabase() {
         title TEXT NOT NULL,
         body TEXT NOT NULL,
         status TEXT DEFAULT 'published',
+        featured BOOLEAN DEFAULT FALSE,
         createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
@@ -663,6 +664,7 @@ async function initDatabase() {
     `);
 
     await pool.query(`ALTER TABLE media_events ADD COLUMN IF NOT EXISTS favorites BIGINT DEFAULT 0;`);
+    await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT FALSE;`);
 
     await pool.query(`
       INSERT INTO poll (question, optionsJson, active)
@@ -1067,10 +1069,10 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
 app.get('/api/public-news', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, title, body, createdAt
+      `SELECT id, title, body, createdAt, featured
        FROM news_posts
        WHERE status = 'published'
-       ORDER BY createdAt DESC
+       ORDER BY featured DESC, createdAt DESC
        LIMIT 50`
     );
     res.json(result.rows);
@@ -1104,14 +1106,18 @@ app.get('/api/admin/news', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/news', verifyAdmin, async (req, res) => {
   try {
-    const { title, body, status } = req.body || {};
+    const { title, body, status, featured } = req.body || {};
     if (!title || !body) {
       return res.status(400).json({ message: 'Titre et contenu requis.' });
     }
     const safeStatus = status === 'draft' ? 'draft' : 'published';
+    const isFeatured = Boolean(featured);
+    if (isFeatured) {
+      await pool.query(`UPDATE news_posts SET featured = FALSE`);
+    }
     await pool.query(
-      'INSERT INTO news_posts (title, body, status) VALUES ($1, $2, $3)',
-      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus]
+      'INSERT INTO news_posts (title, body, status, featured) VALUES ($1, $2, $3, $4)',
+      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus, isFeatured]
     );
     res.status(201).json({ message: 'Actualité enregistrée.' });
   } catch (error) {
@@ -1122,11 +1128,15 @@ app.post('/api/admin/news', verifyAdmin, async (req, res) => {
 
 app.put('/api/admin/news/:id', verifyAdmin, async (req, res) => {
   try {
-    const { title, body, status } = req.body || {};
+    const { title, body, status, featured } = req.body || {};
     const safeStatus = status === 'draft' ? 'draft' : 'published';
+    const isFeatured = Boolean(featured);
+    if (isFeatured) {
+      await pool.query(`UPDATE news_posts SET featured = FALSE`);
+    }
     await pool.query(
-      'UPDATE news_posts SET title = $1, body = $2, status = $3 WHERE id = $4',
-      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus, req.params.id]
+      'UPDATE news_posts SET title = $1, body = $2, status = $3, featured = $4 WHERE id = $5',
+      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus, isFeatured, req.params.id]
     );
     res.json({ message: 'Actualité mise à jour.' });
   } catch (error) {
@@ -1139,6 +1149,33 @@ app.delete('/api/admin/news/:id', verifyAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM news_posts WHERE id = $1', [req.params.id]);
     res.json({ message: 'Actualité supprimée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.patch('/api/admin/news/:id/status', verifyAdmin, async (req, res) => {
+  try {
+    const { status } = req.body || {};
+    const safeStatus = status === 'draft' ? 'draft' : 'published';
+    await pool.query('UPDATE news_posts SET status = $1 WHERE id = $2', [safeStatus, req.params.id]);
+    res.json({ message: 'Statut mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.patch('/api/admin/news/:id/feature', verifyAdmin, async (req, res) => {
+  try {
+    const { featured } = req.body || {};
+    const isFeatured = Boolean(featured);
+    if (isFeatured) {
+      await pool.query('UPDATE news_posts SET featured = FALSE');
+    }
+    await pool.query('UPDATE news_posts SET featured = $1 WHERE id = $2', [isFeatured, req.params.id]);
+    res.json({ message: 'Mise à la une mise à jour.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

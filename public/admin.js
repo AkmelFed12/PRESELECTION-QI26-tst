@@ -29,6 +29,7 @@ const newsSection = document.getElementById('newsSection');
 const newsForm = document.getElementById('newsForm');
 const newsMsg = document.getElementById('newsMsg');
 const newsTable = document.querySelector('#newsTable tbody');
+const newsFeatured = document.getElementById('newsFeatured');
 
 let authHeader = '';
 let scheduleCache = [];
@@ -203,10 +204,16 @@ function renderNews(list) {
       <tr>
         <td>${n.id}</td>
         <td>${n.title || ''}</td>
-        <td>${n.status || 'draft'}</td>
+        <td>${n.status || 'draft'}${n.featured ? ' · À la une' : ''}</td>
         <td>${formatDate(n.createdAt)}</td>
         <td>
           <button data-edit-news="${n.id}">Modifier</button>
+          <button data-toggle-status="${n.id}" data-next-status="${n.status === 'published' ? 'draft' : 'published'}">
+            ${n.status === 'published' ? 'Dépublier' : 'Publier'}
+          </button>
+          <button data-toggle-feature="${n.id}" data-next-feature="${n.featured ? 'false' : 'true'}">
+            ${n.featured ? 'Retirer la une' : 'Mettre à la une'}
+          </button>
           <button data-delete-news="${n.id}">Supprimer</button>
         </td>
       </tr>
@@ -318,6 +325,7 @@ newsForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(newsMsg, 'Sauvegarde...');
   const payload = Object.fromEntries(new FormData(newsForm).entries());
+  payload.featured = payload.featured === 'true';
   const id = payload.id;
   delete payload.id;
   const res = await authedFetch(id ? `/api/admin/news/${id}` : '/api/admin/news', {
@@ -335,12 +343,13 @@ newsForm?.addEventListener('submit', async (e) => {
 newsTable?.addEventListener('click', async (e) => {
   const editBtn = e.target.closest('button[data-edit-news]');
   const deleteBtn = e.target.closest('button[data-delete-news]');
+  const toggleStatusBtn = e.target.closest('button[data-toggle-status]');
+  const toggleFeatureBtn = e.target.closest('button[data-toggle-feature]');
   if (editBtn) {
     const row = editBtn.closest('tr');
     const cells = row.querySelectorAll('td');
     newsForm.querySelector('#newsId').value = cells[0].textContent;
     newsForm.querySelector('#newsTitle').value = cells[1].textContent;
-    newsForm.querySelector('#newsStatus').value = cells[2].textContent || 'draft';
     const res = await authedFetch(`/api/admin/news`);
     if (res.ok) {
       const data = await res.json();
@@ -348,8 +357,30 @@ newsTable?.addEventListener('click', async (e) => {
       const item = items.find((n) => String(n.id) === String(cells[0].textContent));
       if (item) {
         newsForm.querySelector('#newsBody').value = item.body || '';
+        newsForm.querySelector('#newsStatus').value = item.status || 'draft';
+        if (newsFeatured) newsFeatured.value = item.featured ? 'true' : 'false';
       }
     }
+    return;
+  }
+  if (toggleStatusBtn) {
+    const id = toggleStatusBtn.dataset.toggleStatus;
+    const nextStatus = toggleStatusBtn.dataset.nextStatus || 'draft';
+    await authedFetch(`/api/admin/news/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: nextStatus }),
+    });
+    await loadNewsAdmin();
+    return;
+  }
+  if (toggleFeatureBtn) {
+    const id = toggleFeatureBtn.dataset.toggleFeature;
+    const nextFeature = toggleFeatureBtn.dataset.nextFeature === 'true';
+    await authedFetch(`/api/admin/news/${id}/feature`, {
+      method: 'PATCH',
+      body: JSON.stringify({ featured: nextFeature }),
+    });
+    await loadNewsAdmin();
     return;
   }
   if (deleteBtn) {
