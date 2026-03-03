@@ -25,6 +25,10 @@ const exportCandidatesCsv = document.getElementById('exportCandidatesCsv');
 const exportRankingCsv = document.getElementById('exportRankingCsv');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
 const exportCandidatesPdf = document.getElementById('exportCandidatesPdf');
+const newsSection = document.getElementById('newsSection');
+const newsForm = document.getElementById('newsForm');
+const newsMsg = document.getElementById('newsMsg');
+const newsTable = document.querySelector('#newsTable tbody');
 
 let authHeader = '';
 let scheduleCache = [];
@@ -91,6 +95,7 @@ function showAdmin() {
   settingsSection.classList.remove('admin-hidden');
   candidatesSection.classList.remove('admin-hidden');
   scoresSection.classList.remove('admin-hidden');
+  newsSection?.classList.remove('admin-hidden');
 }
 
 function hideAdmin() {
@@ -98,6 +103,7 @@ function hideAdmin() {
   settingsSection.classList.add('admin-hidden');
   candidatesSection.classList.add('admin-hidden');
   scoresSection.classList.add('admin-hidden');
+  newsSection?.classList.add('admin-hidden');
   loginCard.classList.remove('admin-hidden');
 }
 
@@ -152,6 +158,9 @@ async function loadDashboard() {
 
   // ranking
   renderRanking(data.ranking || []);
+
+  // news
+  await loadNewsAdmin();
 }
 
 function renderCandidates(list) {
@@ -177,6 +186,41 @@ function renderRanking(list) {
   rankingTable.innerHTML = list
     .map((r) => `<tr><td>${r.fullName || 'Inconnu'}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
     .join('');
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('fr-FR');
+}
+
+function renderNews(list) {
+  if (!newsTable) return;
+  newsTable.innerHTML = list
+    .map(
+      (n) => `
+      <tr>
+        <td>${n.id}</td>
+        <td>${n.title || ''}</td>
+        <td>${n.status || 'draft'}</td>
+        <td>${formatDate(n.createdAt)}</td>
+        <td>
+          <button data-edit-news="${n.id}">Modifier</button>
+          <button data-delete-news="${n.id}">Supprimer</button>
+        </td>
+      </tr>
+    `,
+    )
+    .join('');
+}
+
+async function loadNewsAdmin() {
+  const res = await authedFetch('/api/admin/news');
+  if (!res.ok) return;
+  const data = await res.json();
+  const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+  renderNews(items);
 }
 
 function downloadFile(filename, content) {
@@ -268,6 +312,54 @@ scoreForm?.addEventListener('submit', async (e) => {
   const data = await res.json().catch(() => ({}));
   setStatus(scoreMsg, data.message || (res.ok ? 'Note enregistrée.' : 'Erreur.'));
   await loadDashboard();
+});
+
+newsForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setStatus(newsMsg, 'Sauvegarde...');
+  const payload = Object.fromEntries(new FormData(newsForm).entries());
+  const id = payload.id;
+  delete payload.id;
+  const res = await authedFetch(id ? `/api/admin/news/${id}` : '/api/admin/news', {
+    method: id ? 'PUT' : 'POST',
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(newsMsg, data.message || (res.ok ? 'Actualité enregistrée.' : 'Erreur.'));
+  if (res.ok) {
+    newsForm.reset();
+  }
+  await loadNewsAdmin();
+});
+
+newsTable?.addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('button[data-edit-news]');
+  const deleteBtn = e.target.closest('button[data-delete-news]');
+  if (editBtn) {
+    const row = editBtn.closest('tr');
+    const cells = row.querySelectorAll('td');
+    newsForm.querySelector('#newsId').value = cells[0].textContent;
+    newsForm.querySelector('#newsTitle').value = cells[1].textContent;
+    newsForm.querySelector('#newsStatus').value = cells[2].textContent || 'draft';
+    const res = await authedFetch(`/api/admin/news`);
+    if (res.ok) {
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+      const item = items.find((n) => String(n.id) === String(cells[0].textContent));
+      if (item) {
+        newsForm.querySelector('#newsBody').value = item.body || '';
+      }
+    }
+    return;
+  }
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.deleteNews;
+    const res = await authedFetch(`/api/admin/news/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setStatus(newsMsg, 'Supprimé.');
+      await loadNewsAdmin();
+    }
+  }
 });
 
 // Force login each time for security

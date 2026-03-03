@@ -144,6 +144,35 @@
           <tbody></tbody>
         </table>
       </section>
+
+      <section class="card admin-hidden" id="newsSection">
+        <h2>Actualités (plusieurs annonces)</h2>
+        <form id="newsForm" class="form-grid">
+          <div><label>ID (pour modifier)</label><input name="id" id="newsId" type="number" /></div>
+          <div><label>Titre</label><input name="title" id="newsTitle" required /></div>
+          <div class="full"><label>Contenu</label><textarea name="body" id="newsBody" rows="4" required></textarea></div>
+          <div><label>Statut</label>
+            <select name="status" id="newsStatus">
+              <option value="published">Publié</option>
+              <option value="draft">Brouillon</option>
+            </select>
+          </div>
+          <div class="full"><button class="btn-primary" type="submit">Enregistrer l'actualité</button></div>
+        </form>
+        <p id="newsMsg" class="status"></p>
+        <table class="table" id="newsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Titre</th>
+              <th>Statut</th>
+              <th>Créé le</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
     </main>
 
     <footer>

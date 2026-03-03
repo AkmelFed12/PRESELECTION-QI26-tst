@@ -573,6 +573,14 @@ async function initDatabase() {
         UNIQUE(pollId, ip)
       );
 
+      CREATE TABLE IF NOT EXISTS news_posts (
+        id BIGSERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        status TEXT DEFAULT 'published',
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS donations (
         id BIGSERIAL PRIMARY KEY,
         donorName TEXT NOT NULL,
@@ -651,6 +659,7 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_post_reactions_post ON post_reactions(postId);
       CREATE INDEX IF NOT EXISTS idx_post_reactions_ip ON post_reactions(ip);
       CREATE INDEX IF NOT EXISTS idx_poll_active ON poll(active);
+      CREATE INDEX IF NOT EXISTS idx_news_status ON news_posts(status);
     `);
 
     await pool.query(`ALTER TABLE media_events ADD COLUMN IF NOT EXISTS favorites BIGINT DEFAULT 0;`);
@@ -1054,6 +1063,23 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
   }
 });
 
+// Public news
+app.get('/api/public-news', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, title, body, createdAt
+       FROM news_posts
+       WHERE status = 'published'
+       ORDER BY createdAt DESC
+       LIMIT 50`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Admin candidates list (fallback for dashboard)
 app.get('/api/admin/candidates', verifyAdmin, async (req, res) => {
   try {
@@ -1062,6 +1088,60 @@ app.get('/api/admin/candidates', verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Admin news
+app.get('/api/admin/news', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM news_posts ORDER BY createdAt DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/news', verifyAdmin, async (req, res) => {
+  try {
+    const { title, body, status } = req.body || {};
+    if (!title || !body) {
+      return res.status(400).json({ message: 'Titre et contenu requis.' });
+    }
+    const safeStatus = status === 'draft' ? 'draft' : 'published';
+    await pool.query(
+      'INSERT INTO news_posts (title, body, status) VALUES ($1, $2, $3)',
+      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus]
+    );
+    res.status(201).json({ message: 'Actualité enregistrée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/admin/news/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { title, body, status } = req.body || {};
+    const safeStatus = status === 'draft' ? 'draft' : 'published';
+    await pool.query(
+      'UPDATE news_posts SET title = $1, body = $2, status = $3 WHERE id = $4',
+      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus, req.params.id]
+    );
+    res.json({ message: 'Actualité mise à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/admin/news/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM news_posts WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Actualité supprimée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
