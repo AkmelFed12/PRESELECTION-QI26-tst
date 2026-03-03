@@ -232,6 +232,11 @@ main.layout {
   z-index: 1000;
 }
 
+.thumb.active {
+  border-color: var(--gold);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

@@ -358,9 +358,12 @@ const slideCounter = document.getElementById('slideCounter');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const downloadBtn = document.getElementById('downloadBtn');
+const togglePlay = document.getElementById('togglePlay');
+const thumbs = document.getElementById('thumbs');
 
 let index = 0;
 let timer = null;
+let isPlaying = true;
 
 function showSlide(i) {
   if (!images.length) return;
@@ -370,6 +373,12 @@ function showSlide(i) {
   downloadBtn.href = src;
   downloadBtn.setAttribute('download', images[index]);
   slideCounter.textContent = `${index + 1} / ${images.length}`;
+  if (thumbs) {
+    const active = thumbs.querySelector('.thumb.active');
+    if (active) active.classList.remove('active');
+    const current = thumbs.querySelector(`[data-idx="${index}"]`);
+    if (current) current.classList.add('active');
+  }
 }
 
 if (!images.length) {
@@ -382,6 +391,7 @@ if (!images.length) {
 
 function restartTimer() {
   if (timer) clearInterval(timer);
+  if (!isPlaying) return;
   timer = setInterval(() => showSlide(index + 1), 5000);
 }
 
@@ -396,4 +406,26 @@ nextBtn?.addEventListener('click', () => {
 
 if (images.length) {
   restartTimer();
+}
+
+togglePlay?.addEventListener('click', () => {
+  isPlaying = !isPlaying;
+  togglePlay.textContent = isPlaying ? 'Pause' : 'Lecture';
+  restartTimer();
+});
+
+if (thumbs) {
+  thumbs.innerHTML = images
+    .map(
+      (name, idx) =>
+        `<img class="thumb${idx === 0 ? ' active' : ''}" data-idx="${idx}" src="galerie-2025/${encodeURIComponent(name)}" alt="thumb" style="width:70px;height:50px;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;" />`,
+    )
+    .join('');
+  thumbs.addEventListener('click', (e) => {
+    const img = e.target.closest('img[data-idx]');
+    if (!img) return;
+    const idx = Number(img.dataset.idx);
+    showSlide(idx);
+    restartTimer();
+  });
 }
