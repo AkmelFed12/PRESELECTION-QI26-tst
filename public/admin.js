@@ -216,7 +216,10 @@ settingsForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(settingsMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(settingsForm).entries());
-  Object.keys(payload).forEach((k) => (payload[k] = Number(payload[k])));
+  Object.keys(payload).forEach((k) => {
+    if (k === 'announcementText') return;
+    payload[k] = Number(payload[k]);
+  });
   payload.scheduleJson = JSON.stringify(scheduleCache);
   const res = await authedFetch('/api/tournament-settings', {
     method: 'PUT',
