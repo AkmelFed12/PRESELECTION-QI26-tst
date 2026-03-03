@@ -29,8 +29,17 @@
             <div class="status" id="slideCounter">1 / 1</div>
             <button class="btn-primary" id="nextBtn" type="button">Suivant</button>
           </div>
-          <div style="margin-top:12px; display:flex; justify-content:center;">
+          <div style="margin-top:12px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
             <button class="btn-primary" id="togglePlay" type="button">Pause</button>
+            <label class="status" style="display:flex; align-items:center; gap:8px;">
+              Vitesse
+              <select id="speedSelect">
+                <option value="3000">3s</option>
+                <option value="5000" selected>5s</option>
+                <option value="8000">8s</option>
+                <option value="10000">10s</option>
+              </select>
+            </label>
           </div>
           <div style="margin-top:16px; text-align:center;">
             <img id="slideImage" alt="Photo finale 2025" style="max-width:100%; max-height:70vh; border-radius:12px;" />
@@ -40,6 +49,11 @@
           </div>
           <div id="thumbs" style="margin-top:16px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
         </div>
+      </section>
+
+      <section class="card">
+        <h2>Galerie (grille)</h2>
+        <div id="gridGallery" class="grid-gallery"></div>
       </section>
     </main>
 

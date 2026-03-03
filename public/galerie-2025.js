@@ -360,10 +360,13 @@ const nextBtn = document.getElementById('nextBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const togglePlay = document.getElementById('togglePlay');
 const thumbs = document.getElementById('thumbs');
+const speedSelect = document.getElementById('speedSelect');
+const gridGallery = document.getElementById('gridGallery');
 
 let index = 0;
 let timer = null;
 let isPlaying = true;
+let intervalMs = 5000;
 
 function showSlide(i) {
   if (!images.length) return;
@@ -392,7 +395,7 @@ if (!images.length) {
 function restartTimer() {
   if (timer) clearInterval(timer);
   if (!isPlaying) return;
-  timer = setInterval(() => showSlide(index + 1), 5000);
+  timer = setInterval(() => showSlide(index + 1), intervalMs);
 }
 
 prevBtn?.addEventListener('click', () => {
@@ -426,6 +429,28 @@ if (thumbs) {
     if (!img) return;
     const idx = Number(img.dataset.idx);
     showSlide(idx);
+    restartTimer();
+  });
+}
+
+speedSelect?.addEventListener('change', () => {
+  intervalMs = Number(speedSelect.value || 5000);
+  restartTimer();
+});
+
+if (gridGallery) {
+  gridGallery.innerHTML = images
+    .map(
+      (name, idx) =>
+        `<img class="grid-thumb" data-idx="${idx}" src="galerie-2025/${encodeURIComponent(name)}" alt="photo" />`,
+    )
+    .join('');
+  gridGallery.addEventListener('click', (e) => {
+    const img = e.target.closest('img[data-idx]');
+    if (!img) return;
+    const idx = Number(img.dataset.idx);
+    showSlide(idx);
+    sliderWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
     restartTimer();
   });
 }

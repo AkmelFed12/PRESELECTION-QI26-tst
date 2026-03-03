@@ -237,6 +237,28 @@ main.layout {
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
+.grid-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.grid-thumb {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.grid-thumb:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+  border-color: var(--gold);
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
