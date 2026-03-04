@@ -196,13 +196,20 @@ async function loadPoll() {
       return;
     }
     pollQuestion.textContent = data.poll.question;
-    pollOptions.innerHTML = data.poll.options
+    const options = (data.poll.options || []).map((opt, idx) => {
+      if (typeof opt === 'string') {
+        return { key: opt.toLowerCase().replace(/\s+/g, '_') || `opt_${idx + 1}`, label: opt };
+      }
+      return opt;
+    });
+    pollOptions.innerHTML = options
       .map((opt) => `<button class="btn outline" data-poll-option="${opt.key}">${opt.label}</button>`)
       .join('');
     const results = data.poll.results || [];
     pollResults.innerHTML = results.length
       ? results.map((r) => `<div>${r.label}: <strong>${r.count}</strong></div>`).join('')
       : 'Aucun vote pour le moment.';
+    pollOptions.dataset.pollId = data.poll.id;
   } catch {
     pollQuestion.textContent = 'Impossible de charger le sondage.';
   }
@@ -212,10 +219,11 @@ pollOptions?.addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-poll-option]');
   if (!btn) return;
   const optionKey = btn.dataset.pollOption;
+  const pollId = Number(pollOptions.dataset.pollId || 0);
   const res = await fetch('/api/poll/vote', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pollId: 1, optionKey }),
+    body: JSON.stringify({ pollId, optionKey }),
   });
   if (res.ok) {
     loadPoll();
