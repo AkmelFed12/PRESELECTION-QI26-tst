@@ -47,6 +47,10 @@
           <div class="status">Votes exprimés: <strong id="statVotes">0</strong></div>
           <div class="status">Passages notés: <strong id="statScores">0</strong></div>
         </div>
+        <div class="status" style="margin-top:12px;">
+          <strong>Statistiques par commune</strong>
+          <div id="communeStats" style="margin-top:8px;">Aucune donnée.</div>
+        </div>
       </section>
 
       <section class="card admin-hidden" id="settingsSection">
@@ -84,6 +88,12 @@
 
       <section class="card admin-hidden" id="candidatesSection">
         <h2>Gestion des candidats</h2>
+        <div class="form-grid" style="margin-bottom:12px;">
+          <div class="full">
+            <label>Recherche rapide (nom / commune / WhatsApp)</label>
+            <input id="candidateSearch" placeholder="Ex: ABOBO ou +22505..." />
+          </div>
+        </div>
         <form id="candidateForm" class="form-grid">
           <div><label>ID (pour modifier)</label><input name="id" id="candidateId" type="number" /></div>
           <div><label>Nom & prénoms</label><input name="fullName" id="candidateName" required /></div>
@@ -136,6 +146,7 @@
           <button class="btn-primary" id="exportRankingCsv" type="button">Exporter classement (CSV)</button>
           <button class="btn-primary" id="exportRankingPdf" type="button">Exporter classement (PDF)</button>
           <button class="btn-primary" id="exportCandidatesPdf" type="button">Exporter candidats (PDF)</button>
+          <button class="btn-primary" id="exportFullPdf" type="button">Exporter rapport complet (PDF)</button>
         </div>
         <table class="table" id="rankingTable">
           <thead>
@@ -150,19 +161,39 @@
         <form id="newsForm" class="form-grid">
           <div><label>ID (pour modifier)</label><input name="id" id="newsId" type="number" /></div>
           <div><label>Titre</label><input name="title" id="newsTitle" required /></div>
+          <div><label>Catégorie</label>
+            <select name="category" id="newsCategory">
+              <option value="">Général</option>
+              <option value="Info">Info</option>
+              <option value="Résultats">Résultats</option>
+              <option value="Urgent">Urgent</option>
+              <option value="Organisation">Organisation</option>
+            </select>
+          </div>
           <div class="full"><label>Contenu</label><textarea name="body" id="newsBody" rows="4" required></textarea></div>
           <div><label>Statut</label>
             <select name="status" id="newsStatus">
               <option value="published">Publié</option>
               <option value="draft">Brouillon</option>
+              <option value="scheduled">Programmé</option>
             </select>
           </div>
+          <div><label>Date/heure publication</label><input type="datetime-local" name="publishAt" id="newsPublishAt" /></div>
           <div>
             <label for="newsFeatured">Mettre à la une</label>
             <select name="featured" id="newsFeatured">
               <option value="false">Non</option>
               <option value="true">Oui</option>
             </select>
+          </div>
+          <div class="full">
+            <label>Image (URL)</label>
+            <input name="imageUrl" id="newsImageUrl" placeholder="https://..." />
+          </div>
+          <div class="full">
+            <label>Image (upload)</label>
+            <input type="file" id="newsImageFile" accept="image/*" />
+            <div id="newsImagePreview" class="status" style="margin-top:8px;">Aucun aperçu</div>
           </div>
           <div class="full"><button class="btn-primary" type="submit">Enregistrer l'actualité</button></div>
         </form>
@@ -174,6 +205,40 @@
               <th>Titre</th>
               <th>Statut</th>
               <th>Créé le</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="card admin-hidden" id="sponsorsSection">
+        <h2>Sponsors (gestion admin)</h2>
+        <form id="sponsorForm" class="form-grid">
+          <div><label>ID (pour modifier)</label><input name="id" id="sponsorId" type="number" /></div>
+          <div><label>Nom sponsor</label><input name="name" id="sponsorName" required /></div>
+          <div><label>Contact</label><input name="contactName" id="sponsorContact" /></div>
+          <div><label>Email</label><input name="email" id="sponsorEmail" type="email" /></div>
+          <div><label>Téléphone</label><input name="phone" id="sponsorPhone" /></div>
+          <div><label>Montant</label><input name="amount" id="sponsorAmount" type="number" step="0.01" /></div>
+          <div><label>Site web</label><input name="website" id="sponsorWebsite" /></div>
+          <div class="full"><label>Logo (URL)</label><input name="logoUrl" id="sponsorLogoUrl" /></div>
+          <div><label>Statut</label>
+            <select name="status" id="sponsorStatus">
+              <option value="approved">Approuvé</option>
+              <option value="pending">En attente</option>
+            </select>
+          </div>
+          <div class="full"><button class="btn-primary" type="submit">Enregistrer sponsor</button></div>
+        </form>
+        <p id="sponsorMsg" class="status"></p>
+        <table class="table" id="sponsorsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Contact</th>
+              <th>Statut</th>
               <th>Action</th>
             </tr>
           </thead>

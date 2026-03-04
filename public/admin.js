@@ -5,6 +5,7 @@ const dashboard = document.getElementById('dashboard');
 const settingsSection = document.getElementById('settingsSection');
 const candidatesSection = document.getElementById('candidatesSection');
 const scoresSection = document.getElementById('scoresSection');
+const communeStats = document.getElementById('communeStats');
 
 const settingsForm = document.getElementById('settingsForm');
 const settingsMsg = document.getElementById('settingsMsg');
@@ -17,6 +18,7 @@ const eventList = document.getElementById('eventList');
 const candidateForm = document.getElementById('candidateForm');
 const candidateMsg = document.getElementById('candidateMsg');
 const candidatesTable = document.querySelector('#candidatesTable tbody');
+const candidateSearch = document.getElementById('candidateSearch');
 
 const scoreForm = document.getElementById('scoreForm');
 const scoreMsg = document.getElementById('scoreMsg');
@@ -25,14 +27,26 @@ const exportCandidatesCsv = document.getElementById('exportCandidatesCsv');
 const exportRankingCsv = document.getElementById('exportRankingCsv');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
 const exportCandidatesPdf = document.getElementById('exportCandidatesPdf');
+const exportFullPdf = document.getElementById('exportFullPdf');
 const newsSection = document.getElementById('newsSection');
 const newsForm = document.getElementById('newsForm');
 const newsMsg = document.getElementById('newsMsg');
 const newsTable = document.querySelector('#newsTable tbody');
 const newsFeatured = document.getElementById('newsFeatured');
+const newsCategory = document.getElementById('newsCategory');
+const newsPublishAt = document.getElementById('newsPublishAt');
+const newsImageUrl = document.getElementById('newsImageUrl');
+const newsImageFile = document.getElementById('newsImageFile');
+const newsImagePreview = document.getElementById('newsImagePreview');
+
+const sponsorsSection = document.getElementById('sponsorsSection');
+const sponsorForm = document.getElementById('sponsorForm');
+const sponsorMsg = document.getElementById('sponsorMsg');
+const sponsorsTable = document.querySelector('#sponsorsTable tbody');
 
 let authHeader = '';
 let scheduleCache = [];
+let candidatesCache = [];
 
 const manualNameMap = {
   "2250564108763": "OUATTARA FATOUMATA",
@@ -97,6 +111,7 @@ function showAdmin() {
   candidatesSection.classList.remove('admin-hidden');
   scoresSection.classList.remove('admin-hidden');
   newsSection?.classList.remove('admin-hidden');
+  sponsorsSection?.classList.remove('admin-hidden');
 }
 
 function hideAdmin() {
@@ -105,6 +120,7 @@ function hideAdmin() {
   candidatesSection.classList.add('admin-hidden');
   scoresSection.classList.add('admin-hidden');
   newsSection?.classList.add('admin-hidden');
+  sponsorsSection?.classList.add('admin-hidden');
   loginCard.classList.remove('admin-hidden');
 }
 
@@ -117,10 +133,11 @@ async function authedFetch(url, options = {}) {
     const stored = localStorage.getItem('adminAuth');
     if (stored) authHeader = stored;
   }
+  const isFormData = options.body instanceof FormData;
   return fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       Authorization: authHeader,
       ...(options.headers || {})
     }
@@ -155,13 +172,18 @@ async function loadDashboard() {
   renderSchedule();
 
   // candidates
-  renderCandidates(data.candidates || []);
+  candidatesCache = data.candidates || [];
+  renderCandidates(candidatesCache);
+  renderCommuneStats(candidatesCache);
 
   // ranking
   renderRanking(data.ranking || []);
 
   // news
   await loadNewsAdmin();
+
+  // sponsors
+  await loadSponsors();
 }
 
 function renderCandidates(list) {
@@ -182,10 +204,53 @@ function renderCandidates(list) {
     .join('');
 }
 
+function filterCandidates() {
+  const query = (candidateSearch?.value || '').trim().toLowerCase();
+  if (!query) {
+    renderCandidates(candidatesCache);
+    return;
+  }
+  const filtered = candidatesCache.filter((c) => {
+    const name = resolveName(c).toLowerCase();
+    const city = (c.city || '').toLowerCase();
+    const phone = (c.whatsapp || '').toLowerCase();
+    return name.includes(query) || city.includes(query) || phone.includes(query);
+  });
+  renderCandidates(filtered);
+}
+
 function renderRanking(list) {
   if (!rankingTable) return;
   rankingTable.innerHTML = list
     .map((r) => `<tr><td>${r.fullName || 'Inconnu'}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
+    .join('');
+}
+
+function renderCommuneStats(list) {
+  if (!communeStats) return;
+  if (!list.length) {
+    communeStats.textContent = 'Aucune donnée.';
+    return;
+  }
+  const counts = list.reduce((acc, c) => {
+    const key = (c.city || 'INCONNU').toUpperCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(...entries.map(([, v]) => v));
+  communeStats.innerHTML = entries
+    .map(
+      ([name, value]) => `
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+        <div style="min-width:90px; font-weight:600;">${name}</div>
+        <div style="flex:1; background:#efe6d6; border-radius:999px; height:10px; position:relative;">
+          <div style="background:var(--emerald); width:${Math.round((value / max) * 100)}%; height:10px; border-radius:999px;"></div>
+        </div>
+        <div style="width:32px; text-align:right;">${value}</div>
+      </div>
+    `,
+    )
     .join('');
 }
 
@@ -196,6 +261,19 @@ function formatDate(value) {
   return date.toLocaleDateString('fr-FR');
 }
 
+async function uploadNewsImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await authedFetch('/api/upload/photo', {
+    method: 'POST',
+    headers: {},
+    body: formData,
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({}));
+  return data.url || null;
+}
+
 function renderNews(list) {
   if (!newsTable) return;
   newsTable.innerHTML = list
@@ -204,7 +282,7 @@ function renderNews(list) {
       <tr>
         <td>${n.id}</td>
         <td>${n.title || ''}</td>
-        <td>${n.status || 'draft'}${n.featured ? ' · À la une' : ''}</td>
+        <td>${n.status || 'draft'}${n.featured ? ' · À la une' : ''}${n.category ? ` · ${n.category}` : ''}</td>
         <td>${formatDate(n.createdAt)}</td>
         <td>
           <button data-edit-news="${n.id}">Modifier</button>
@@ -228,6 +306,34 @@ async function loadNewsAdmin() {
   const data = await res.json();
   const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
   renderNews(items);
+}
+
+function renderSponsors(list) {
+  if (!sponsorsTable) return;
+  sponsorsTable.innerHTML = list
+    .map(
+      (s) => `
+      <tr>
+        <td>${s.id}</td>
+        <td>${s.name || ''}</td>
+        <td>${s.contactname || s.contactName || ''}</td>
+        <td>${s.status || 'pending'}</td>
+        <td>
+          <button data-edit-sponsor="${s.id}">Modifier</button>
+          <button data-delete-sponsor="${s.id}">Supprimer</button>
+        </td>
+      </tr>
+    `,
+    )
+    .join('');
+}
+
+async function loadSponsors() {
+  const res = await authedFetch('/api/admin/sponsors');
+  if (!res.ok) return;
+  const data = await res.json();
+  const items = Array.isArray(data) ? data : [];
+  renderSponsors(items);
 }
 
 function downloadFile(filename, content) {
@@ -296,6 +402,10 @@ candidateForm?.addEventListener('submit', async (e) => {
   await loadDashboard();
 });
 
+candidateSearch?.addEventListener('input', () => {
+  filterCandidates();
+});
+
 candidatesTable?.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-edit]');
   if (!btn) return;
@@ -326,6 +436,9 @@ newsForm?.addEventListener('submit', async (e) => {
   setStatus(newsMsg, 'Sauvegarde...');
   const payload = Object.fromEntries(new FormData(newsForm).entries());
   payload.featured = payload.featured === 'true';
+  if (payload.publishAt) {
+    payload.publishAt = new Date(payload.publishAt).toISOString();
+  }
   const id = payload.id;
   delete payload.id;
   const res = await authedFetch(id ? `/api/admin/news/${id}` : '/api/admin/news', {
@@ -336,8 +449,25 @@ newsForm?.addEventListener('submit', async (e) => {
   setStatus(newsMsg, data.message || (res.ok ? 'Actualité enregistrée.' : 'Erreur.'));
   if (res.ok) {
     newsForm.reset();
+    if (newsImagePreview) newsImagePreview.textContent = 'Aucun aperçu';
   }
   await loadNewsAdmin();
+});
+
+newsImageFile?.addEventListener('change', async () => {
+  const file = newsImageFile.files?.[0];
+  if (!file) return;
+  setStatus(newsMsg, 'Upload image...');
+  const url = await uploadNewsImage(file);
+  if (url && newsImageUrl) {
+    newsImageUrl.value = url;
+    if (newsImagePreview) {
+      newsImagePreview.innerHTML = `<img src="${url}" alt="Aperçu" style="max-width:180px; border-radius:8px;" />`;
+    }
+    setStatus(newsMsg, 'Image téléversée.');
+  } else {
+    setStatus(newsMsg, 'Erreur upload image.');
+  }
 });
 
 newsTable?.addEventListener('click', async (e) => {
@@ -359,6 +489,18 @@ newsTable?.addEventListener('click', async (e) => {
         newsForm.querySelector('#newsBody').value = item.body || '';
         newsForm.querySelector('#newsStatus').value = item.status || 'draft';
         if (newsFeatured) newsFeatured.value = item.featured ? 'true' : 'false';
+        if (newsCategory) newsCategory.value = item.category || '';
+        if (newsImageUrl) newsImageUrl.value = item.imageurl || item.imageUrl || '';
+        if (newsPublishAt) {
+          const ts = item.publishat || item.publishAt;
+          newsPublishAt.value = ts ? new Date(ts).toISOString().slice(0, 16) : '';
+        }
+        if (newsImagePreview) {
+          const url = item.imageurl || item.imageUrl;
+          newsImagePreview.innerHTML = url
+            ? `<img src="${url}" alt="Aperçu" style="max-width:180px; border-radius:8px;" />`
+            : 'Aucun aperçu';
+        }
       }
     }
     return;
@@ -389,6 +531,55 @@ newsTable?.addEventListener('click', async (e) => {
     if (res.ok) {
       setStatus(newsMsg, 'Supprimé.');
       await loadNewsAdmin();
+    }
+  }
+});
+
+sponsorForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setStatus(sponsorMsg, 'Sauvegarde...');
+  const payload = Object.fromEntries(new FormData(sponsorForm).entries());
+  const id = payload.id;
+  delete payload.id;
+  const res = await authedFetch(id ? `/api/admin/sponsors/${id}` : '/api/admin/sponsors', {
+    method: id ? 'PUT' : 'POST',
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(sponsorMsg, data.message || (res.ok ? 'Sponsor enregistré.' : 'Erreur.'));
+  if (res.ok) sponsorForm.reset();
+  await loadSponsors();
+});
+
+sponsorsTable?.addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('button[data-edit-sponsor]');
+  const deleteBtn = e.target.closest('button[data-delete-sponsor]');
+  if (editBtn) {
+    const id = editBtn.dataset.editSponsor;
+    const res = await authedFetch('/api/admin/sponsors');
+    if (res.ok) {
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : [];
+      const item = items.find((s) => String(s.id) === String(id));
+      if (item) {
+        sponsorForm.querySelector('#sponsorId').value = item.id;
+        sponsorForm.querySelector('#sponsorName').value = item.name || '';
+        sponsorForm.querySelector('#sponsorContact').value = item.contactname || item.contactName || '';
+        sponsorForm.querySelector('#sponsorEmail').value = item.email || '';
+        sponsorForm.querySelector('#sponsorPhone').value = item.phone || '';
+        sponsorForm.querySelector('#sponsorAmount').value = item.amount || '';
+        sponsorForm.querySelector('#sponsorWebsite').value = item.website || '';
+        sponsorForm.querySelector('#sponsorLogoUrl').value = item.logourl || item.logoUrl || '';
+        sponsorForm.querySelector('#sponsorStatus').value = item.status || 'pending';
+      }
+    }
+  }
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.deleteSponsor;
+    const res = await authedFetch(`/api/admin/sponsors/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setStatus(sponsorMsg, 'Supprimé.');
+      await loadSponsors();
     }
   }
 });
@@ -500,6 +691,64 @@ exportCandidatesPdf?.addEventListener('click', () => {
         <table>
           <thead><tr><th>ID</th><th>Nom</th><th>WhatsApp</th><th>Commune</th><th>Statut</th></tr></thead>
           <tbody>${bodyRows}</tbody>
+        </table>
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+});
+
+exportFullPdf?.addEventListener('click', () => {
+  const statsCandidates = document.getElementById('statCandidates')?.textContent || '0';
+  const statsVotes = document.getElementById('statVotes')?.textContent || '0';
+  const statsScores = document.getElementById('statScores')?.textContent || '0';
+  const candidateRows = Array.from(document.querySelectorAll('#candidatesTable tbody tr'))
+    .map((row) => {
+      const cells = row.querySelectorAll('td');
+      return `<tr><td>${cells[0].textContent}</td><td>${cells[1].textContent}</td><td>${cells[2].textContent}</td><td>${cells[3].textContent}</td><td>${cells[4].textContent}</td></tr>`;
+    })
+    .join('');
+  const rankingRows = Array.from(document.querySelectorAll('#rankingTable tbody tr'))
+    .map((row) => {
+      const cells = row.querySelectorAll('td');
+      return `<tr><td>${cells[0].textContent}</td><td>${cells[1].textContent}</td><td>${cells[2].textContent}</td></tr>`;
+    })
+    .join('');
+  const communeHtml = communeStats?.innerHTML || '';
+  const html = `
+    <html>
+      <head>
+        <title>Rapport complet — Quiz Islamique 2026</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; }
+          h2 { margin-top: 24px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Rapport complet — Quiz Islamique 2026</h1>
+        <h2>Statistiques</h2>
+        <p>Candidats inscrits: <strong>${statsCandidates}</strong></p>
+        <p>Votes exprimés: <strong>${statsVotes}</strong></p>
+        <p>Passages notés: <strong>${statsScores}</strong></p>
+        <h2>Statistiques par commune</h2>
+        <div>${communeHtml}</div>
+        <h2>Liste des candidats</h2>
+        <table>
+          <thead><tr><th>ID</th><th>Nom</th><th>WhatsApp</th><th>Commune</th><th>Statut</th></tr></thead>
+          <tbody>${candidateRows}</tbody>
+        </table>
+        <h2>Classement</h2>
+        <table>
+          <thead><tr><th>Candidat</th><th>Moyenne</th><th>Passages</th></tr></thead>
+          <tbody>${rankingRows}</tbody>
         </table>
       </body>
     </html>`;

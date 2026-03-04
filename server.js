@@ -579,6 +579,22 @@ async function initDatabase() {
         body TEXT NOT NULL,
         status TEXT DEFAULT 'published',
         featured BOOLEAN DEFAULT FALSE,
+        category TEXT,
+        imageUrl TEXT,
+        publishAt TIMESTAMP WITH TIME ZONE,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS sponsors (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        contactName TEXT,
+        email TEXT,
+        phone TEXT,
+        amount DECIMAL(10, 2),
+        logoUrl TEXT,
+        website TEXT,
+        status TEXT DEFAULT 'pending',
         createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
@@ -661,10 +677,14 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_post_reactions_ip ON post_reactions(ip);
       CREATE INDEX IF NOT EXISTS idx_poll_active ON poll(active);
       CREATE INDEX IF NOT EXISTS idx_news_status ON news_posts(status);
+      CREATE INDEX IF NOT EXISTS idx_sponsors_status ON sponsors(status);
     `);
 
     await pool.query(`ALTER TABLE media_events ADD COLUMN IF NOT EXISTS favorites BIGINT DEFAULT 0;`);
     await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT FALSE;`);
+    await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS category TEXT;`);
+    await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS imageUrl TEXT;`);
+    await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS publishAt TIMESTAMP WITH TIME ZONE;`);
 
     await pool.query(`
       INSERT INTO poll (question, optionsJson, active)
@@ -1069,9 +1089,10 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
 app.get('/api/public-news', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, title, body, createdAt, featured
+      `SELECT id, title, body, createdAt, featured, category, imageUrl, publishAt
        FROM news_posts
        WHERE status = 'published'
+          OR (status = 'scheduled' AND publishAt IS NOT NULL AND publishAt <= NOW())
        ORDER BY featured DESC, createdAt DESC
        LIMIT 50`
     );
@@ -1106,18 +1127,22 @@ app.get('/api/admin/news', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/news', verifyAdmin, async (req, res) => {
   try {
-    const { title, body, status, featured } = req.body || {};
+    const { title, body, status, featured, category, imageUrl, publishAt } = req.body || {};
     if (!title || !body) {
       return res.status(400).json({ message: 'Titre et contenu requis.' });
     }
-    const safeStatus = status === 'draft' ? 'draft' : 'published';
+    const safeStatus = status === 'draft' || status === 'scheduled' ? status : 'published';
     const isFeatured = Boolean(featured);
+    const safeCategory = category ? sanitizeString(category, 50) : null;
+    const safeImageUrl = imageUrl ? sanitizeString(imageUrl, 500) : null;
+    const parsedPublishAt = publishAt ? new Date(publishAt) : null;
+    const safePublishAt = parsedPublishAt && !Number.isNaN(parsedPublishAt.getTime()) ? parsedPublishAt : null;
     if (isFeatured) {
       await pool.query(`UPDATE news_posts SET featured = FALSE`);
     }
     await pool.query(
-      'INSERT INTO news_posts (title, body, status, featured) VALUES ($1, $2, $3, $4)',
-      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus, isFeatured]
+      'INSERT INTO news_posts (title, body, status, featured, category, imageUrl, publishAt) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus, isFeatured, safeCategory, safeImageUrl, safePublishAt]
     );
     res.status(201).json({ message: 'Actualité enregistrée.' });
   } catch (error) {
@@ -1128,15 +1153,19 @@ app.post('/api/admin/news', verifyAdmin, async (req, res) => {
 
 app.put('/api/admin/news/:id', verifyAdmin, async (req, res) => {
   try {
-    const { title, body, status, featured } = req.body || {};
-    const safeStatus = status === 'draft' ? 'draft' : 'published';
+    const { title, body, status, featured, category, imageUrl, publishAt } = req.body || {};
+    const safeStatus = status === 'draft' || status === 'scheduled' ? status : 'published';
     const isFeatured = Boolean(featured);
+    const safeCategory = category ? sanitizeString(category, 50) : null;
+    const safeImageUrl = imageUrl ? sanitizeString(imageUrl, 500) : null;
+    const parsedPublishAt = publishAt ? new Date(publishAt) : null;
+    const safePublishAt = parsedPublishAt && !Number.isNaN(parsedPublishAt.getTime()) ? parsedPublishAt : null;
     if (isFeatured) {
       await pool.query(`UPDATE news_posts SET featured = FALSE`);
     }
     await pool.query(
-      'UPDATE news_posts SET title = $1, body = $2, status = $3, featured = $4 WHERE id = $5',
-      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus, isFeatured, req.params.id]
+      'UPDATE news_posts SET title = $1, body = $2, status = $3, featured = $4, category = $5, imageUrl = $6, publishAt = $7 WHERE id = $8',
+      [sanitizeString(title, 200), sanitizeString(body, 2000), safeStatus, isFeatured, safeCategory, safeImageUrl, safePublishAt, req.params.id]
     );
     res.json({ message: 'Actualité mise à jour.' });
   } catch (error) {
@@ -1158,7 +1187,7 @@ app.delete('/api/admin/news/:id', verifyAdmin, async (req, res) => {
 app.patch('/api/admin/news/:id/status', verifyAdmin, async (req, res) => {
   try {
     const { status } = req.body || {};
-    const safeStatus = status === 'draft' ? 'draft' : 'published';
+    const safeStatus = status === 'draft' || status === 'scheduled' ? status : 'published';
     await pool.query('UPDATE news_posts SET status = $1 WHERE id = $2', [safeStatus, req.params.id]);
     res.json({ message: 'Statut mis à jour.' });
   } catch (error) {
@@ -1176,6 +1205,96 @@ app.patch('/api/admin/news/:id/feature', verifyAdmin, async (req, res) => {
     }
     await pool.query('UPDATE news_posts SET featured = $1 WHERE id = $2', [isFeatured, req.params.id]);
     res.json({ message: 'Mise à la une mise à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public sponsors
+app.get('/api/public-sponsors', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, logoUrl, website, amount, createdAt
+       FROM sponsors
+       WHERE status = 'approved'
+       ORDER BY createdAt DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin sponsors
+app.get('/api/admin/sponsors', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM sponsors ORDER BY createdAt DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/sponsors', verifyAdmin, async (req, res) => {
+  try {
+    const { name, contactName, email, phone, amount, logoUrl, website, status } = req.body || {};
+    if (!name) return res.status(400).json({ message: 'Nom requis.' });
+    const safeStatus = status === 'approved' ? 'approved' : 'pending';
+    await pool.query(
+      `INSERT INTO sponsors (name, contactName, email, phone, amount, logoUrl, website, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        sanitizeString(name, 200),
+        contactName ? sanitizeString(contactName, 200) : null,
+        email ? sanitizeString(email, 200) : null,
+        phone ? sanitizeString(phone, 50) : null,
+        amount ? Number(amount) : null,
+        logoUrl ? sanitizeString(logoUrl, 500) : null,
+        website ? sanitizeString(website, 300) : null,
+        safeStatus
+      ]
+    );
+    res.status(201).json({ message: 'Sponsor enregistré.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/admin/sponsors/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { name, contactName, email, phone, amount, logoUrl, website, status } = req.body || {};
+    const safeStatus = status === 'approved' ? 'approved' : 'pending';
+    await pool.query(
+      `UPDATE sponsors
+       SET name = $1, contactName = $2, email = $3, phone = $4, amount = $5, logoUrl = $6, website = $7, status = $8
+       WHERE id = $9`,
+      [
+        sanitizeString(name || '', 200),
+        contactName ? sanitizeString(contactName, 200) : null,
+        email ? sanitizeString(email, 200) : null,
+        phone ? sanitizeString(phone, 50) : null,
+        amount ? Number(amount) : null,
+        logoUrl ? sanitizeString(logoUrl, 500) : null,
+        website ? sanitizeString(website, 300) : null,
+        safeStatus,
+        req.params.id
+      ]
+    );
+    res.json({ message: 'Sponsor mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/admin/sponsors/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM sponsors WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Sponsor supprimé.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
