@@ -38,6 +38,8 @@ const newsPublishAt = document.getElementById('newsPublishAt');
 const newsImageUrl = document.getElementById('newsImageUrl');
 const newsImageFile = document.getElementById('newsImageFile');
 const newsImagePreview = document.getElementById('newsImagePreview');
+const newsImagesList = document.getElementById('newsImagesList');
+const newsImagesClear = document.getElementById('newsImagesClear');
 
 const sponsorsSection = document.getElementById('sponsorsSection');
 const sponsorForm = document.getElementById('sponsorForm');
@@ -47,6 +49,7 @@ const sponsorsTable = document.querySelector('#sponsorsTable tbody');
 let authHeader = '';
 let scheduleCache = [];
 let candidatesCache = [];
+let newsImages = [];
 
 const manualNameMap = {
   "2250564108763": "OUATTARA FATOUMATA",
@@ -300,6 +303,28 @@ function renderNews(list) {
     .join('');
 }
 
+function parseImagesInput(value) {
+  if (!value) return [];
+  return value
+    .split(/[\n,]+/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function renderNewsImagesPreview() {
+  if (!newsImagePreview) return;
+  if (!newsImages.length) {
+    newsImagePreview.textContent = 'Aucun aperçu';
+    return;
+  }
+  newsImagePreview.innerHTML = newsImages
+    .map(
+      (url) =>
+        `<img src="${url}" alt="Aperçu" style="max-width:120px; border-radius:8px; margin:4px;" />`,
+    )
+    .join('');
+}
+
 async function loadNewsAdmin() {
   const res = await authedFetch('/api/admin/news');
   if (!res.ok) return;
@@ -436,6 +461,9 @@ newsForm?.addEventListener('submit', async (e) => {
   setStatus(newsMsg, 'Sauvegarde...');
   const payload = Object.fromEntries(new FormData(newsForm).entries());
   payload.featured = payload.featured === 'true';
+  const manualImages = parseImagesInput(newsImagesList?.value || '');
+  newsImages = Array.from(new Set([...newsImages, ...manualImages]));
+  payload.images = newsImages;
   if (payload.publishAt) {
     payload.publishAt = new Date(payload.publishAt).toISOString();
   }
@@ -449,25 +477,37 @@ newsForm?.addEventListener('submit', async (e) => {
   setStatus(newsMsg, data.message || (res.ok ? 'Actualité enregistrée.' : 'Erreur.'));
   if (res.ok) {
     newsForm.reset();
+    newsImages = [];
     if (newsImagePreview) newsImagePreview.textContent = 'Aucun aperçu';
   }
   await loadNewsAdmin();
 });
 
 newsImageFile?.addEventListener('change', async () => {
-  const file = newsImageFile.files?.[0];
-  if (!file) return;
-  setStatus(newsMsg, 'Upload image...');
-  const url = await uploadNewsImage(file);
-  if (url && newsImageUrl) {
-    newsImageUrl.value = url;
-    if (newsImagePreview) {
-      newsImagePreview.innerHTML = `<img src="${url}" alt="Aperçu" style="max-width:180px; border-radius:8px;" />`;
+  const files = Array.from(newsImageFile.files || []);
+  if (!files.length) return;
+  setStatus(newsMsg, 'Upload images...');
+  for (const file of files) {
+    const url = await uploadNewsImage(file);
+    if (url) {
+      newsImages.push(url);
     }
-    setStatus(newsMsg, 'Image téléversée.');
-  } else {
-    setStatus(newsMsg, 'Erreur upload image.');
   }
+  newsImages = Array.from(new Set(newsImages));
+  renderNewsImagesPreview();
+  setStatus(newsMsg, 'Images téléversées.');
+});
+
+newsImagesClear?.addEventListener('click', () => {
+  newsImages = [];
+  if (newsImagesList) newsImagesList.value = '';
+  renderNewsImagesPreview();
+});
+
+newsImagesList?.addEventListener('input', () => {
+  const manualImages = parseImagesInput(newsImagesList.value);
+  newsImages = Array.from(new Set(manualImages));
+  renderNewsImagesPreview();
 });
 
 newsTable?.addEventListener('click', async (e) => {
@@ -495,12 +535,17 @@ newsTable?.addEventListener('click', async (e) => {
           const ts = item.publishat || item.publishAt;
           newsPublishAt.value = ts ? new Date(ts).toISOString().slice(0, 16) : '';
         }
-        if (newsImagePreview) {
-          const url = item.imageurl || item.imageUrl;
-          newsImagePreview.innerHTML = url
-            ? `<img src="${url}" alt="Aperçu" style="max-width:180px; border-radius:8px;" />`
-            : 'Aucun aperçu';
+        const rawImages = item.imagesjson || item.imagesJson;
+        try {
+          newsImages = rawImages ? JSON.parse(rawImages) : [];
+        } catch {
+          newsImages = [];
         }
+        const mainUrl = item.imageurl || item.imageUrl;
+        if (mainUrl) newsImages.unshift(mainUrl);
+        newsImages = Array.from(new Set(newsImages));
+        if (newsImagesList) newsImagesList.value = newsImages.join(', ');
+        renderNewsImagesPreview();
       }
     }
     return;

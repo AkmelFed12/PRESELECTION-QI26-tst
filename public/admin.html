@@ -191,8 +191,15 @@
             <input name="imageUrl" id="newsImageUrl" placeholder="https://..." />
           </div>
           <div class="full">
+            <label>Images multiples (URLs séparées par virgule ou ligne)</label>
+            <textarea id="newsImagesList" placeholder="https://... , https://..."></textarea>
+          </div>
+          <div class="full">
             <label>Image (upload)</label>
-            <input type="file" id="newsImageFile" accept="image/*" />
+            <input type="file" id="newsImageFile" accept="image/*" multiple />
+            <div style="margin-top:8px;">
+              <button class="btn outline" type="button" id="newsImagesClear">Vider les images</button>
+            </div>
             <div id="newsImagePreview" class="status" style="margin-top:8px;">Aucun aperçu</div>
           </div>
           <div class="full"><button class="btn-primary" type="submit">Enregistrer l'actualité</button></div>

@@ -24,6 +24,21 @@
         <h2>Nos partenaires</h2>
         <div id="sponsorsList" class="grid-two">Chargement...</div>
       </section>
+
+      <section class="card">
+        <h2>Devenir sponsor</h2>
+        <form id="sponsorPublicForm" class="form-grid">
+          <div><label>Nom du sponsor *</label><input name="name" required /></div>
+          <div><label>Contact</label><input name="contactName" /></div>
+          <div><label>Email</label><input name="email" type="email" /></div>
+          <div><label>Téléphone</label><input name="phone" /></div>
+          <div><label>Montant (XOF)</label><input name="amount" type="number" step="0.01" /></div>
+          <div><label>Site web</label><input name="website" /></div>
+          <div class="full"><label>Logo (URL)</label><input name="logoUrl" /></div>
+          <div class="full"><button class="btn-primary" type="submit">Envoyer la demande</button></div>
+        </form>
+        <p id="sponsorPublicMsg" class="status"></p>
+      </section>
     </main>
 
     <footer>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</footer>

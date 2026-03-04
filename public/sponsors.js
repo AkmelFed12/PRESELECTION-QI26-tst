@@ -1,4 +1,6 @@
 const sponsorsList = document.getElementById('sponsorsList');
+const sponsorPublicForm = document.getElementById('sponsorPublicForm');
+const sponsorPublicMsg = document.getElementById('sponsorPublicMsg');
 
 async function loadSponsors() {
   try {
@@ -30,3 +32,19 @@ async function loadSponsors() {
 }
 
 loadSponsors();
+
+sponsorPublicForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  sponsorPublicMsg.textContent = 'Envoi en cours...';
+  const payload = Object.fromEntries(new FormData(sponsorPublicForm).entries());
+  const res = await fetch('/api/public-sponsors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  sponsorPublicMsg.textContent = data.message || (res.ok ? 'Demande envoyée.' : 'Erreur.');
+  if (res.ok) {
+    sponsorPublicForm.reset();
+  }
+});
