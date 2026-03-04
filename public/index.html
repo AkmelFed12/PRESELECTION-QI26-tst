@@ -133,7 +133,20 @@
       <section class="card highlight" id="don">
         <h2>Faire un don</h2>
         <p class="muted">Soutenez l'association via Wave, Orange Money, MTN Money, Moov Money ou Djamo.</p>
-        <a class="btn-primary" href="https://pay.djamo.com/yga5x" target="_blank" rel="noopener">Faire un don</a>
+        <form id="donationForm" class="form-grid">
+          <div>
+            <label for="donorName">Nom (optionnel)</label>
+            <input id="donorName" name="donorName" placeholder="Votre nom" />
+          </div>
+          <div>
+            <label for="donorAmount">Montant (XOF)</label>
+            <input id="donorAmount" name="donorAmount" type="number" step="0.01" placeholder="Ex: 5000" />
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Faire un don</button>
+          </div>
+        </form>
+        <p id="donationMsg" class="status">Après paiement, envoyez votre reçu via WhatsApp pour validation.</p>
       </section>
 
       <section class="card">
@@ -174,6 +187,11 @@
 
     <footer>
       <div>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</div>
+      <div class="footer-donate">
+        <span>Soutenir l’association :</span>
+        <a class="btn outline" href="https://pay.djamo.com/yga5x" target="_blank" rel="noopener">Faire un don</a>
+      </div>
+      <div class="footer-signature">Design & Created by LMO Web Services</div>
     </footer>
 
     <button class="dark-toggle" id="darkToggle">Mode sombre</button>

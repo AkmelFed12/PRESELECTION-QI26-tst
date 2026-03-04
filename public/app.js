@@ -12,6 +12,8 @@ const announcementCard = document.getElementById('announcementCard');
 const announcementText = document.getElementById('announcementText');
 const announcementBanner = document.getElementById('announcementBanner');
 const announcementBannerText = document.getElementById('announcementBannerText');
+const donationForm = document.getElementById('donationForm');
+const donationMsg = document.getElementById('donationMsg');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -171,6 +173,14 @@ form?.addEventListener('submit', async (e) => {
 });
 
 loadCandidates();
+
+donationForm?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (donationMsg) {
+    donationMsg.textContent = 'Redirection vers le paiement...';
+  }
+  window.open('https://pay.djamo.com/yga5x', '_blank');
+});
 
 async function loadPublicSettings() {
   try {

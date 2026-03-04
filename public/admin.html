@@ -276,10 +276,34 @@
           <tbody></tbody>
         </table>
       </section>
+
+      <section class="card admin-hidden" id="financeSection">
+        <h2>Finances & dons</h2>
+        <div class="grid-three">
+          <div class="status">Dons confirmés: <strong id="donationCount">0</strong></div>
+          <div class="status">Total dons (XOF): <strong id="donationTotal">0</strong></div>
+          <div class="status">Sponsors approuvés: <strong id="sponsorApprovedCount">0</strong></div>
+        </div>
+        <div class="status" style="margin-top:12px;">Sponsors en attente: <strong id="sponsorPendingCount">0</strong></div>
+        <h3 style="margin-top:16px;">Derniers dons</h3>
+        <table class="table" id="donationsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Email</th>
+              <th>Montant</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
     </main>
 
     <footer>
       <div>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</div>
+      <div class="footer-signature">Design & Created by LMO Web Services</div>
     </footer>
 
     <script src="admin.js"></script>

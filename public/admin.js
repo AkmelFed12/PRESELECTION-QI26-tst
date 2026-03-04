@@ -56,6 +56,13 @@ const sponsorLogoPreview = document.getElementById('sponsorLogoPreview');
 const sponsorLogoReplace = document.getElementById('sponsorLogoReplace');
 const sponsorLogoRemove = document.getElementById('sponsorLogoRemove');
 
+const financeSection = document.getElementById('financeSection');
+const donationsTable = document.querySelector('#donationsTable tbody');
+const donationCount = document.getElementById('donationCount');
+const donationTotal = document.getElementById('donationTotal');
+const sponsorApprovedCount = document.getElementById('sponsorApprovedCount');
+const sponsorPendingCount = document.getElementById('sponsorPendingCount');
+
 let authHeader = '';
 let scheduleCache = [];
 let candidatesCache = [];
@@ -128,6 +135,7 @@ function showAdmin() {
   newsSection?.classList.remove('admin-hidden');
   sponsorsSection?.classList.remove('admin-hidden');
   globalSearchSection?.classList.remove('admin-hidden');
+  financeSection?.classList.remove('admin-hidden');
 }
 
 function hideAdmin() {
@@ -138,6 +146,7 @@ function hideAdmin() {
   newsSection?.classList.add('admin-hidden');
   sponsorsSection?.classList.add('admin-hidden');
   globalSearchSection?.classList.add('admin-hidden');
+  financeSection?.classList.add('admin-hidden');
   loginCard.classList.remove('admin-hidden');
 }
 
@@ -213,6 +222,7 @@ async function loadDashboard() {
   await loadSponsors();
 
   renderGlobalSearch();
+  await loadFinances();
 }
 
 function renderFromCache(data) {
@@ -460,6 +470,40 @@ async function loadSponsors() {
   const items = Array.isArray(data) ? data : [];
   sponsorsCache = items;
   renderSponsors(items);
+}
+
+async function loadFinances() {
+  const res = await authedFetch('/api/admin/donations');
+  if (res.ok) {
+    const donations = await res.json();
+    const list = Array.isArray(donations) ? donations : [];
+    const confirmed = list.filter((d) => (d.status || '').toLowerCase() === 'confirmed');
+    if (donationCount) donationCount.textContent = confirmed.length;
+    if (donationTotal) {
+      const total = confirmed.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+      donationTotal.textContent = total.toFixed(0);
+    }
+    if (donationsTable) {
+      donationsTable.innerHTML = list
+        .slice(0, 20)
+        .map(
+          (d) => `
+          <tr>
+            <td>${d.id}</td>
+            <td>${d.donorname || d.donorName || ''}</td>
+            <td>${d.donoremail || d.donorEmail || ''}</td>
+            <td>${d.amount || ''}</td>
+            <td>${d.status || ''}</td>
+          </tr>
+        `,
+        )
+        .join('');
+    }
+  }
+  const approved = sponsorsCache.filter((s) => (s.status || '').toLowerCase() === 'approved').length;
+  const pending = sponsorsCache.filter((s) => (s.status || '').toLowerCase() === 'pending').length;
+  if (sponsorApprovedCount) sponsorApprovedCount.textContent = approved;
+  if (sponsorPendingCount) sponsorPendingCount.textContent = pending;
 }
 
 function downloadFile(filename, content) {

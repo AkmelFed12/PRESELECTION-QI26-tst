@@ -358,6 +358,21 @@ footer {
   font-size: 14px;
 }
 
+.footer-donate {
+  margin-top: 10px;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.footer-signature {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .nav-links {
   display: flex;
   flex-wrap: wrap;
