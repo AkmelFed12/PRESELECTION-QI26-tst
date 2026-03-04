@@ -399,6 +399,44 @@ footer {
   height: 16px;
 }
 
+.sponsor-carousel {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fffaf2;
+}
+
+.sponsor-track {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  animation: sponsor-scroll 22s linear infinite;
+}
+
+.sponsor-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: white;
+  white-space: nowrap;
+}
+
+.sponsor-item img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+@keyframes sponsor-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 .nav-links {
   display: flex;
   flex-wrap: wrap;

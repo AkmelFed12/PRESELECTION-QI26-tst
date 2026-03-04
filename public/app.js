@@ -14,6 +14,7 @@ const announcementBanner = document.getElementById('announcementBanner');
 const announcementBannerText = document.getElementById('announcementBannerText');
 const donationForm = document.getElementById('donationForm');
 const donationMsg = document.getElementById('donationMsg');
+const sponsorTrack = document.getElementById('sponsorTrack');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -181,6 +182,36 @@ donationForm?.addEventListener('submit', (e) => {
   }
   window.open('https://pay.djamo.com/yga5x', '_blank');
 });
+
+async function loadSponsorCarousel() {
+  if (!sponsorTrack) return;
+  try {
+    const res = await fetch('/api/public-sponsors');
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : [];
+    if (!items.length) {
+      sponsorTrack.textContent = 'Aucun sponsor pour le moment.';
+      return;
+    }
+    const markup = items
+      .map((s) => {
+        const logo = s.logourl || s.logoUrl;
+        const website = s.website || '#';
+        return `
+          <a class="sponsor-item" href="${website}" target="_blank" rel="noopener">
+            ${logo ? `<img src="${logo}" alt="${s.name || 'Sponsor'}" />` : ''}
+            <strong>${s.name || ''}</strong>
+          </a>`;
+      })
+      .join('');
+    // Duplicate for seamless scroll
+    sponsorTrack.innerHTML = `${markup}${markup}`;
+  } catch {
+    sponsorTrack.textContent = 'Impossible de charger les sponsors.';
+  }
+}
+
+loadSponsorCarousel();
 
 async function loadPublicSettings() {
   try {

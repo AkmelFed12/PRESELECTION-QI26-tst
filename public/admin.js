@@ -62,6 +62,8 @@ const donationCount = document.getElementById('donationCount');
 const donationTotal = document.getElementById('donationTotal');
 const sponsorApprovedCount = document.getElementById('sponsorApprovedCount');
 const sponsorPendingCount = document.getElementById('sponsorPendingCount');
+const donationChart = document.getElementById('donationChart');
+const registrationChart = document.getElementById('registrationChart');
 
 let authHeader = '';
 let scheduleCache = [];
@@ -318,6 +320,50 @@ function renderCommuneStats(list) {
     .join('');
 }
 
+function renderMonthlyBarChart(target, data) {
+  if (!target) return;
+  if (!data.length) {
+    target.textContent = 'Aucune donnée.';
+    return;
+  }
+  const max = Math.max(...data.map((d) => d.value));
+  target.innerHTML = data
+    .map(
+      (d) => `
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+        <div style="min-width:48px;">${d.label}</div>
+        <div style="flex:1; background:#efe6d6; border-radius:999px; height:10px;">
+          <div style="background:var(--emerald); width:${max ? Math.round((d.value / max) * 100) : 0}%; height:10px; border-radius:999px;"></div>
+        </div>
+        <div style="width:36px; text-align:right;">${d.value}</div>
+      </div>
+    `,
+    )
+    .join('');
+}
+
+function buildMonthlySeries(items, dateKey, months = 6) {
+  const now = new Date();
+  const series = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = d.toLocaleDateString('fr-FR', { month: 'short' });
+    series.push({ year: d.getFullYear(), month: d.getMonth(), label, value: 0 });
+  }
+  items.forEach((item) => {
+    const raw = item[dateKey] || item[dateKey.toLowerCase()];
+    if (!raw) return;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return;
+    series.forEach((s) => {
+      if (s.year === d.getFullYear() && s.month === d.getMonth()) {
+        s.value += 1;
+      }
+    });
+  });
+  return series.map(({ label, value }) => ({ label, value }));
+}
+
 function renderGlobalSearch() {
   if (!globalSearchResults) return;
   const query = (globalSearchInput?.value || '').trim().toLowerCase();
@@ -455,6 +501,8 @@ function renderSponsors(list) {
         <td>${s.status || 'pending'}</td>
         <td>
           <button data-edit-sponsor="${s.id}">Modifier</button>
+          <button data-approve-sponsor="${s.id}">Approuver</button>
+          <button data-pending-sponsor="${s.id}">Mettre en attente</button>
           <button data-delete-sponsor="${s.id}">Supprimer</button>
         </td>
       </tr>
@@ -494,16 +542,23 @@ async function loadFinances() {
             <td>${d.donoremail || d.donorEmail || ''}</td>
             <td>${d.amount || ''}</td>
             <td>${d.status || ''}</td>
+            <td>
+              <button data-confirm-donation="${d.id}">Confirmer</button>
+            </td>
           </tr>
         `,
         )
         .join('');
     }
+    const donationSeries = buildMonthlySeries(list, 'createdAt', 6);
+    renderMonthlyBarChart(donationChart, donationSeries);
   }
   const approved = sponsorsCache.filter((s) => (s.status || '').toLowerCase() === 'approved').length;
   const pending = sponsorsCache.filter((s) => (s.status || '').toLowerCase() === 'pending').length;
   if (sponsorApprovedCount) sponsorApprovedCount.textContent = approved;
   if (sponsorPendingCount) sponsorPendingCount.textContent = pending;
+  const registrationSeries = buildMonthlySeries(candidatesCache, 'createdAt', 6);
+  renderMonthlyBarChart(registrationChart, registrationSeries);
 }
 
 function downloadFile(filename, content) {
@@ -781,6 +836,8 @@ sponsorLogoRemove?.addEventListener('click', () => {
 sponsorsTable?.addEventListener('click', async (e) => {
   const editBtn = e.target.closest('button[data-edit-sponsor]');
   const deleteBtn = e.target.closest('button[data-delete-sponsor]');
+  const approveBtn = e.target.closest('button[data-approve-sponsor]');
+  const pendingBtn = e.target.closest('button[data-pending-sponsor]');
   if (editBtn) {
     const id = editBtn.dataset.editSponsor;
     const res = await authedFetch('/api/admin/sponsors');
@@ -823,6 +880,67 @@ sponsorsTable?.addEventListener('click', async (e) => {
       await loadSponsors();
     }
   }
+  if (approveBtn) {
+    const id = approveBtn.dataset.approveSponsor;
+    const item = sponsorsCache.find((s) => String(s.id) === String(id));
+    if (item) {
+      await authedFetch(`/api/admin/sponsors/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: item.name || '',
+          contactName: item.contactname || item.contactName || '',
+          email: item.email || '',
+          phone: item.phone || '',
+          amount: item.amount || '',
+          logoUrl: item.logourl || item.logoUrl || '',
+          website: item.website || '',
+          files: (() => {
+            try { return item.filesjson ? JSON.parse(item.filesjson) : item.filesJson ? JSON.parse(item.filesJson) : []; }
+            catch { return []; }
+          })(),
+          status: 'approved'
+        })
+      });
+    }
+    await loadSponsors();
+    await loadFinances();
+  }
+  if (pendingBtn) {
+    const id = pendingBtn.dataset.pendingSponsor;
+    const item = sponsorsCache.find((s) => String(s.id) === String(id));
+    if (item) {
+      await authedFetch(`/api/admin/sponsors/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: item.name || '',
+          contactName: item.contactname || item.contactName || '',
+          email: item.email || '',
+          phone: item.phone || '',
+          amount: item.amount || '',
+          logoUrl: item.logourl || item.logoUrl || '',
+          website: item.website || '',
+          files: (() => {
+            try { return item.filesjson ? JSON.parse(item.filesjson) : item.filesJson ? JSON.parse(item.filesJson) : []; }
+            catch { return []; }
+          })(),
+          status: 'pending'
+        })
+      });
+    }
+    await loadSponsors();
+    await loadFinances();
+  }
+});
+
+donationsTable?.addEventListener('click', async (e) => {
+  const confirmBtn = e.target.closest('button[data-confirm-donation]');
+  if (!confirmBtn) return;
+  const id = confirmBtn.dataset.confirmDonation;
+  await authedFetch(`/api/admin/donations/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'confirmed' })
+  });
+  await loadFinances();
 });
 
 // Force login each time for security
