@@ -1,6 +1,9 @@
 const sponsorsList = document.getElementById('sponsorsList');
 const sponsorPublicForm = document.getElementById('sponsorPublicForm');
 const sponsorPublicMsg = document.getElementById('sponsorPublicMsg');
+const sponsorLogoUrl = document.getElementById('sponsorLogoUrl');
+const sponsorLogoFile = document.getElementById('sponsorLogoFile');
+const sponsorLogoPreview = document.getElementById('sponsorLogoPreview');
 
 async function loadSponsors() {
   try {
@@ -32,6 +35,34 @@ async function loadSponsors() {
 }
 
 loadSponsors();
+
+async function uploadLogo(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/upload/photo', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({}));
+  return data.url || null;
+}
+
+sponsorLogoFile?.addEventListener('change', async () => {
+  const file = sponsorLogoFile.files?.[0];
+  if (!file) return;
+  sponsorPublicMsg.textContent = 'Upload du logo...';
+  const url = await uploadLogo(file);
+  if (url) {
+    if (sponsorLogoUrl) sponsorLogoUrl.value = url;
+    if (sponsorLogoPreview) {
+      sponsorLogoPreview.innerHTML = `<img src="${url}" alt="Logo" style="max-width:160px; border-radius:8px;" />`;
+    }
+    sponsorPublicMsg.textContent = 'Logo téléversé.';
+  } else {
+    sponsorPublicMsg.textContent = 'Erreur upload logo.';
+  }
+});
 
 sponsorPublicForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
