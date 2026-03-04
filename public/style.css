@@ -370,12 +370,16 @@ footer {
 .footer-signature {
   margin-top: 12px;
   font-size: 12px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #7a6b4f;
+  font-family: "Playfair Display", serif;
   display: inline-block;
   padding-top: 6px;
   border-top: 1px dashed #e7dcc5;
+  background: linear-gradient(90deg, #8b6a2f, #d7b56b, #8b6a2f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .social-links {
