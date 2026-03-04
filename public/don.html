@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Résultats — Quiz Islamique 2026</title>
+    <title>Faire un don — Quiz Islamique 2026</title>
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -11,39 +11,32 @@
     <header class="hero">
       <img src="assets/logo.jpg" alt="Logo" class="logo" />
       <div>
-        <h1>Résultats & classement</h1>
-        <p class="subtitle">Mise à jour officielle des scores</p>
+        <h1>Faire un don</h1>
+        <p class="subtitle">Soutenir l'Association des Serviteurs d'Allah Azawajal</p>
       </div>
       <div class="hero-actions">
         <a class="btn outline" href="index.html">Accueil</a>
-        <a class="btn outline" href="reglement.html">Règlement</a>
-        <a class="btn outline" href="index.html#don">Faire un don</a>
+        <a class="btn outline" href="sponsors.html">Sponsors</a>
       </div>
     </header>
 
     <main class="layout">
+      <section class="card highlight">
+        <h2>Votre soutien est précieux</h2>
+        <p class="muted">
+          Paiement possible via Wave, Orange Money, MTN Money, Moov Money ou Djamo.
+        </p>
+        <a class="btn-primary" href="https://pay.djamo.com/yga5x" target="_blank" rel="noopener">Payer via Djamo</a>
+        <p class="status" style="margin-top:10px;">Après paiement, envoyez votre reçu via WhatsApp pour validation.</p>
+      </section>
+
       <section class="card">
-        <h2>Classement actuel</h2>
-        <p class="muted">Les résultats sont publiés par l’administration.</p>
-        <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; margin-bottom:12px;">
-          <div>
-            <label>Auto-refresh</label>
-            <select id="refreshSelect">
-              <option value="0">Désactivé</option>
-              <option value="10000">10s</option>
-              <option value="20000" selected>20s</option>
-              <option value="60000">60s</option>
-            </select>
-          </div>
-          <div>
-            <label>Dernière mise à jour</label>
-            <div id="lastUpdate" class="status">-</div>
-          </div>
-          <div style="display:flex; align-items:flex-end;">
-            <button class="btn-primary" id="refreshNow" type="button">Actualiser</button>
-          </div>
-        </div>
-        <div id="rankingWrap" class="status">Chargement...</div>
+        <h2>Comment utiliser votre don ?</h2>
+        <ul class="list-steps">
+          <li>Organisation des présélections et finale.</li>
+          <li>Support logistique et matériel.</li>
+          <li>Amélioration de la plateforme et communication.</li>
+        </ul>
       </section>
     </main>
 
@@ -65,6 +58,5 @@
       </div>
       <div class="footer-signature">Design & Created by LMO Web Services</div>
     </footer>
-    <script src="resultats.js"></script>
   </body>
 </html>

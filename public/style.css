@@ -373,6 +373,32 @@ footer {
   color: var(--muted);
 }
 
+.social-links {
+  margin-top: 12px;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.social-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--emerald);
+  font-weight: 600;
+}
+
+.social-links svg {
+  width: 16px;
+  height: 16px;
+}
+
 .nav-links {
   display: flex;
   flex-wrap: wrap;
