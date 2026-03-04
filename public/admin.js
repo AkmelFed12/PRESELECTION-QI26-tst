@@ -45,6 +45,9 @@ const sponsorsSection = document.getElementById('sponsorsSection');
 const sponsorForm = document.getElementById('sponsorForm');
 const sponsorMsg = document.getElementById('sponsorMsg');
 const sponsorsTable = document.querySelector('#sponsorsTable tbody');
+const sponsorLogoUrl = document.getElementById('sponsorLogoUrl');
+const sponsorLogoFile = document.getElementById('sponsorLogoFile');
+const sponsorLogoPreview = document.getElementById('sponsorLogoPreview');
 
 let authHeader = '';
 let scheduleCache = [];
@@ -265,6 +268,19 @@ function formatDate(value) {
 }
 
 async function uploadNewsImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await authedFetch('/api/upload/photo', {
+    method: 'POST',
+    headers: {},
+    body: formData,
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({}));
+  return data.url || null;
+}
+
+async function uploadSponsorLogo(file) {
   const formData = new FormData();
   formData.append('file', file);
   const res = await authedFetch('/api/upload/photo', {
@@ -596,6 +612,22 @@ sponsorForm?.addEventListener('submit', async (e) => {
   await loadSponsors();
 });
 
+sponsorLogoFile?.addEventListener('change', async () => {
+  const file = sponsorLogoFile.files?.[0];
+  if (!file) return;
+  setStatus(sponsorMsg, 'Upload logo...');
+  const url = await uploadSponsorLogo(file);
+  if (url) {
+    if (sponsorLogoUrl) sponsorLogoUrl.value = url;
+    if (sponsorLogoPreview) {
+      sponsorLogoPreview.innerHTML = `<img src="${url}" alt="Logo" style="max-width:160px; border-radius:8px;" />`;
+    }
+    setStatus(sponsorMsg, 'Logo téléversé.');
+  } else {
+    setStatus(sponsorMsg, 'Erreur upload logo.');
+  }
+});
+
 sponsorsTable?.addEventListener('click', async (e) => {
   const editBtn = e.target.closest('button[data-edit-sponsor]');
   const deleteBtn = e.target.closest('button[data-delete-sponsor]');
@@ -616,6 +648,12 @@ sponsorsTable?.addEventListener('click', async (e) => {
         sponsorForm.querySelector('#sponsorWebsite').value = item.website || '';
         sponsorForm.querySelector('#sponsorLogoUrl').value = item.logourl || item.logoUrl || '';
         sponsorForm.querySelector('#sponsorStatus').value = item.status || 'pending';
+        if (sponsorLogoPreview) {
+          const logo = item.logourl || item.logoUrl;
+          sponsorLogoPreview.innerHTML = logo
+            ? `<img src="${logo}" alt="Logo" style="max-width:160px; border-radius:8px;" />`
+            : 'Aucun aperçu';
+        }
       }
     }
   }
