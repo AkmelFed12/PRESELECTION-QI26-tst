@@ -48,6 +48,8 @@ const sponsorsTable = document.querySelector('#sponsorsTable tbody');
 const sponsorLogoUrl = document.getElementById('sponsorLogoUrl');
 const sponsorLogoFile = document.getElementById('sponsorLogoFile');
 const sponsorLogoPreview = document.getElementById('sponsorLogoPreview');
+const sponsorLogoReplace = document.getElementById('sponsorLogoReplace');
+const sponsorLogoRemove = document.getElementById('sponsorLogoRemove');
 
 let authHeader = '';
 let scheduleCache = [];
@@ -626,6 +628,17 @@ sponsorLogoFile?.addEventListener('change', async () => {
   } else {
     setStatus(sponsorMsg, 'Erreur upload logo.');
   }
+});
+
+sponsorLogoReplace?.addEventListener('click', () => {
+  sponsorLogoFile?.click();
+});
+
+sponsorLogoRemove?.addEventListener('click', () => {
+  if (sponsorLogoUrl) sponsorLogoUrl.value = '';
+  if (sponsorLogoFile) sponsorLogoFile.value = '';
+  if (sponsorLogoPreview) sponsorLogoPreview.textContent = 'Aucun aperçu';
+  setStatus(sponsorMsg, 'Logo supprimé (pensez à enregistrer).');
 });
 
 sponsorsTable?.addEventListener('click', async (e) => {
