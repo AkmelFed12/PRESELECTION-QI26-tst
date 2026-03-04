@@ -692,7 +692,7 @@ async function initDatabase() {
 
     await pool.query(`
       INSERT INTO poll (question, optionsJson, active)
-      SELECT 'Sondage du jour : Quel contenu préférez-vous ?', '["Quiz","Stories","Actualités","Galerie"]', 1
+      SELECT 'Sondage rapide : Souhaitez-vous recevoir les résultats en direct ?', '["Oui","Non"]', 1
       WHERE NOT EXISTS (SELECT 1 FROM poll);
     `);
 

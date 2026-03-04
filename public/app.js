@@ -15,6 +15,9 @@ const announcementBannerText = document.getElementById('announcementBannerText')
 const donationForm = document.getElementById('donationForm');
 const donationMsg = document.getElementById('donationMsg');
 const sponsorTrack = document.getElementById('sponsorTrack');
+const pollQuestion = document.getElementById('pollQuestion');
+const pollOptions = document.getElementById('pollOptions');
+const pollResults = document.getElementById('pollResults');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -183,6 +186,42 @@ donationForm?.addEventListener('submit', (e) => {
   window.open('https://pay.djamo.com/yga5x', '_blank');
 });
 
+async function loadPoll() {
+  if (!pollQuestion || !pollOptions || !pollResults) return;
+  try {
+    const res = await fetch('/api/poll');
+    const data = await res.json();
+    if (!data.poll) {
+      pollQuestion.textContent = 'Aucun sondage pour le moment.';
+      return;
+    }
+    pollQuestion.textContent = data.poll.question;
+    pollOptions.innerHTML = data.poll.options
+      .map((opt) => `<button class="btn outline" data-poll-option="${opt.key}">${opt.label}</button>`)
+      .join('');
+    const results = data.poll.results || [];
+    pollResults.innerHTML = results.length
+      ? results.map((r) => `<div>${r.label}: <strong>${r.count}</strong></div>`).join('')
+      : 'Aucun vote pour le moment.';
+  } catch {
+    pollQuestion.textContent = 'Impossible de charger le sondage.';
+  }
+}
+
+pollOptions?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-poll-option]');
+  if (!btn) return;
+  const optionKey = btn.dataset.pollOption;
+  const res = await fetch('/api/poll/vote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pollId: 1, optionKey }),
+  });
+  if (res.ok) {
+    loadPoll();
+  }
+});
+
 async function loadSponsorCarousel() {
   if (!sponsorTrack) return;
   try {
@@ -212,6 +251,7 @@ async function loadSponsorCarousel() {
 }
 
 loadSponsorCarousel();
+loadPoll();
 
 async function loadPublicSettings() {
   try {
@@ -229,12 +269,18 @@ async function loadPublicSettings() {
         calendarList.textContent = 'Calendrier en cours de préparation.';
       } else {
         calendarList.innerHTML = `
-          <table class="table">
-            <thead><tr><th>Date</th><th>Heure</th><th>Événement</th></tr></thead>
-            <tbody>
-              ${schedule.map((s) => `<tr><td>${s.date || ''}</td><td>${s.time || ''}</td><td>${s.title || ''}</td></tr>`).join('')}
-            </tbody>
-          </table>
+          <div class="timeline">
+            ${schedule
+              .map(
+                (s) => `
+                <div style="margin-bottom:12px;">
+                  <strong>${s.date || ''} ${s.time || ''}</strong>
+                  <div class="muted">${s.title || ''}</div>
+                </div>
+              `,
+              )
+              .join('')}
+          </div>
         `;
       }
     }
