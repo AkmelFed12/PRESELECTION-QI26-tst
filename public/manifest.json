@@ -1,0 +1,20 @@
+{
+  "name": "Quiz Islamique 2026",
+  "short_name": "Quiz 2026",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f7f2e8",
+  "theme_color": "#0b6f4f",
+  "icons": [
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
