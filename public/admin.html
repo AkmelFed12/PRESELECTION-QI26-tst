@@ -310,6 +310,31 @@
           <tbody></tbody>
         </table>
       </section>
+
+      <section class="card admin-hidden" id="pollSection">
+        <h2>Sondage (admin)</h2>
+        <form id="pollForm" class="form-grid">
+          <div class="full">
+            <label>Question</label>
+            <input id="pollQuestionInput" name="question" placeholder="Sondage du jour..." required />
+          </div>
+          <div class="full">
+            <label>Options (une par ligne)</label>
+            <textarea id="pollOptionsInput" name="options"></textarea>
+          </div>
+          <div>
+            <label>Statut</label>
+            <select id="pollActive" name="active">
+              <option value="1">Actif</option>
+              <option value="0">Désactivé</option>
+            </select>
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Enregistrer le sondage</button>
+          </div>
+        </form>
+        <p id="pollMsg" class="status"></p>
+      </section>
     </main>
 
     <footer>

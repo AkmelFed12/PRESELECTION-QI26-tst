@@ -2537,9 +2537,10 @@ app.get('/api/poll', async (req, res) => {
       poll: {
         id: poll.id,
         question: poll.question,
-        options
+        options: options.map((opt) => ({ key: opt, label: opt })),
+        active: true
       },
-      counts
+      results: options.map((opt) => ({ label: opt, count: counts[opt] || 0 }))
     });
   } catch (error) {
     console.error(error);
@@ -2551,7 +2552,7 @@ app.get('/api/poll', async (req, res) => {
 app.post('/api/poll/vote', async (req, res) => {
   try {
     const pollId = parseInt(req.body?.pollId);
-    const optionKey = String(req.body?.option || '').trim();
+    const optionKey = String(req.body?.optionKey || req.body?.option || '').trim();
     if (!pollId || !optionKey) {
       return res.status(400).json({ error: 'Invalid vote' });
     }
@@ -2587,6 +2588,48 @@ app.post('/api/poll/vote', async (req, res) => {
     });
 
     res.json({ ok: true, counts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin poll
+app.get('/api/admin/poll', verifyAdmin, async (req, res) => {
+  try {
+    const pollRes = await pool.query(
+      `SELECT id, question, optionsJson, active FROM poll ORDER BY id DESC LIMIT 1`
+    );
+    const poll = pollRes.rows[0];
+    if (!poll) return res.json({ poll: null });
+    const options = JSON.parse(poll.optionsjson || poll.optionsJson || '[]');
+    res.json({
+      poll: {
+        id: poll.id,
+        question: poll.question,
+        options: options.map((opt) => ({ key: opt, label: opt })),
+        active: poll.active === 1 || poll.active === true
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/poll', verifyAdmin, async (req, res) => {
+  try {
+    const { question, options, active } = req.body || {};
+    if (!question || !Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({ message: 'Question et options requises (min 2).' });
+    }
+    const safeOptions = options.map((o) => sanitizeString(o, 100)).filter(Boolean);
+    await pool.query(`UPDATE poll SET active = 0`);
+    await pool.query(
+      `INSERT INTO poll (question, optionsJson, active) VALUES ($1, $2, $3)`,
+      [sanitizeString(question, 200), JSON.stringify(safeOptions), active ? 1 : 0]
+    );
+    res.json({ message: 'Sondage enregistré.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

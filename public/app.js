@@ -15,9 +15,6 @@ const announcementBannerText = document.getElementById('announcementBannerText')
 const donationForm = document.getElementById('donationForm');
 const donationMsg = document.getElementById('donationMsg');
 const sponsorTrack = document.getElementById('sponsorTrack');
-const pollQuestion = document.getElementById('pollQuestion');
-const pollOptions = document.getElementById('pollOptions');
-const pollResults = document.getElementById('pollResults');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -186,49 +183,6 @@ donationForm?.addEventListener('submit', (e) => {
   window.open('https://pay.djamo.com/yga5x', '_blank');
 });
 
-async function loadPoll() {
-  if (!pollQuestion || !pollOptions || !pollResults) return;
-  try {
-    const res = await fetch('/api/poll');
-    const data = await res.json();
-    if (!data.poll) {
-      pollQuestion.textContent = 'Aucun sondage pour le moment.';
-      return;
-    }
-    pollQuestion.textContent = data.poll.question;
-    const options = (data.poll.options || []).map((opt, idx) => {
-      if (typeof opt === 'string') {
-        return { key: opt.toLowerCase().replace(/\s+/g, '_') || `opt_${idx + 1}`, label: opt };
-      }
-      return opt;
-    });
-    pollOptions.innerHTML = options
-      .map((opt) => `<button class="btn outline" data-poll-option="${opt.key}">${opt.label}</button>`)
-      .join('');
-    const results = data.poll.results || [];
-    pollResults.innerHTML = results.length
-      ? results.map((r) => `<div>${r.label}: <strong>${r.count}</strong></div>`).join('')
-      : 'Aucun vote pour le moment.';
-    pollOptions.dataset.pollId = data.poll.id;
-  } catch {
-    pollQuestion.textContent = 'Impossible de charger le sondage.';
-  }
-}
-
-pollOptions?.addEventListener('click', async (e) => {
-  const btn = e.target.closest('button[data-poll-option]');
-  if (!btn) return;
-  const optionKey = btn.dataset.pollOption;
-  const pollId = Number(pollOptions.dataset.pollId || 0);
-  const res = await fetch('/api/poll/vote', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pollId, optionKey }),
-  });
-  if (res.ok) {
-    loadPoll();
-  }
-});
 
 async function loadSponsorCarousel() {
   if (!sponsorTrack) return;
@@ -259,7 +213,6 @@ async function loadSponsorCarousel() {
 }
 
 loadSponsorCarousel();
-loadPoll();
 
 async function loadPublicSettings() {
   try {

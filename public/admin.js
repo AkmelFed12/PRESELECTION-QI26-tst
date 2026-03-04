@@ -65,6 +65,13 @@ const sponsorPendingCount = document.getElementById('sponsorPendingCount');
 const donationChart = document.getElementById('donationChart');
 const registrationChart = document.getElementById('registrationChart');
 
+const pollSection = document.getElementById('pollSection');
+const pollForm = document.getElementById('pollForm');
+const pollMsg = document.getElementById('pollMsg');
+const pollQuestionInput = document.getElementById('pollQuestionInput');
+const pollOptionsInput = document.getElementById('pollOptionsInput');
+const pollActive = document.getElementById('pollActive');
+
 let authHeader = '';
 let scheduleCache = [];
 let candidatesCache = [];
@@ -138,6 +145,7 @@ function showAdmin() {
   sponsorsSection?.classList.remove('admin-hidden');
   globalSearchSection?.classList.remove('admin-hidden');
   financeSection?.classList.remove('admin-hidden');
+  pollSection?.classList.remove('admin-hidden');
 }
 
 function hideAdmin() {
@@ -149,6 +157,7 @@ function hideAdmin() {
   sponsorsSection?.classList.add('admin-hidden');
   globalSearchSection?.classList.add('admin-hidden');
   financeSection?.classList.add('admin-hidden');
+  pollSection?.classList.add('admin-hidden');
   loginCard.classList.remove('admin-hidden');
 }
 
@@ -225,6 +234,7 @@ async function loadDashboard() {
 
   renderGlobalSearch();
   await loadFinances();
+  await loadPollAdmin();
 }
 
 function renderFromCache(data) {
@@ -559,6 +569,18 @@ async function loadFinances() {
   if (sponsorPendingCount) sponsorPendingCount.textContent = pending;
   const registrationSeries = buildMonthlySeries(candidatesCache, 'createdAt', 6);
   renderMonthlyBarChart(registrationChart, registrationSeries);
+}
+
+async function loadPollAdmin() {
+  const res = await authedFetch('/api/admin/poll');
+  if (!res.ok) return;
+  const data = await res.json();
+  if (!data.poll) return;
+  if (pollQuestionInput) pollQuestionInput.value = data.poll.question || '';
+  if (pollOptionsInput) {
+    pollOptionsInput.value = (data.poll.options || []).map((o) => o.label || o).join('\n');
+  }
+  if (pollActive) pollActive.value = data.poll.active ? '1' : '0';
 }
 
 function downloadFile(filename, content) {
@@ -941,6 +963,25 @@ donationsTable?.addEventListener('click', async (e) => {
     body: JSON.stringify({ status: 'confirmed' })
   });
   await loadFinances();
+});
+
+pollForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!pollQuestionInput || !pollOptionsInput || !pollActive) return;
+  setStatus(pollMsg, 'Enregistrement...');
+  const question = pollQuestionInput.value.trim();
+  const options = pollOptionsInput.value
+    .split('\n')
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const active = pollActive.value === '1';
+  const res = await authedFetch('/api/admin/poll', {
+    method: 'POST',
+    body: JSON.stringify({ question, options, active })
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(pollMsg, data.message || (res.ok ? 'Sondage mis à jour.' : 'Erreur.'));
+  await loadPollAdmin();
 });
 
 // Force login each time for security
