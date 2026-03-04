@@ -1,4 +1,8 @@
 const rankingWrap = document.getElementById('rankingWrap');
+const refreshSelect = document.getElementById('refreshSelect');
+const refreshNow = document.getElementById('refreshNow');
+const lastUpdate = document.getElementById('lastUpdate');
+let refreshTimer = null;
 
 async function loadRanking() {
   if (!rankingWrap) return;
@@ -32,9 +36,25 @@ async function loadRanking() {
         </tbody>
       </table>
     `;
+    if (lastUpdate) lastUpdate.textContent = new Date().toLocaleTimeString('fr-FR');
   } catch (e) {
     rankingWrap.textContent = 'Impossible de charger les résultats.';
   }
 }
 
+function startAutoRefresh() {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+  const delay = Number(refreshSelect?.value || 0);
+  if (delay > 0) {
+    refreshTimer = setInterval(loadRanking, delay);
+  }
+}
+
 loadRanking();
+startAutoRefresh();
+
+refreshSelect?.addEventListener('change', startAutoRefresh);
+refreshNow?.addEventListener('click', loadRanking);

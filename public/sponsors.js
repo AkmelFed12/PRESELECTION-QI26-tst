@@ -4,6 +4,10 @@ const sponsorPublicMsg = document.getElementById('sponsorPublicMsg');
 const sponsorLogoUrl = document.getElementById('sponsorLogoUrl');
 const sponsorLogoFile = document.getElementById('sponsorLogoFile');
 const sponsorLogoPreview = document.getElementById('sponsorLogoPreview');
+const sponsorPdfFile = document.getElementById('sponsorPdfFile');
+const sponsorPdfPreview = document.getElementById('sponsorPdfPreview');
+
+let sponsorFiles = [];
 
 async function loadSponsors() {
   try {
@@ -48,6 +52,18 @@ async function uploadLogo(file) {
   return data.url || null;
 }
 
+async function uploadPdf(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/upload/sponsor-file', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({}));
+  return data.url || null;
+}
+
 sponsorLogoFile?.addEventListener('change', async () => {
   const file = sponsorLogoFile.files?.[0];
   if (!file) return;
@@ -64,10 +80,28 @@ sponsorLogoFile?.addEventListener('change', async () => {
   }
 });
 
+sponsorPdfFile?.addEventListener('change', async () => {
+  const files = Array.from(sponsorPdfFile.files || []);
+  if (!files.length) return;
+  sponsorPublicMsg.textContent = 'Upload des PDF...';
+  for (const file of files) {
+    const url = await uploadPdf(file);
+    if (url) sponsorFiles.push(url);
+  }
+  sponsorFiles = Array.from(new Set(sponsorFiles));
+  if (sponsorPdfPreview) {
+    sponsorPdfPreview.innerHTML = sponsorFiles
+      .map((url) => `<div><a href="${url}" target="_blank" rel="noopener">${url}</a></div>`)
+      .join('');
+  }
+  sponsorPublicMsg.textContent = 'PDF téléversé.';
+});
+
 sponsorPublicForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   sponsorPublicMsg.textContent = 'Envoi en cours...';
   const payload = Object.fromEntries(new FormData(sponsorPublicForm).entries());
+  payload.files = sponsorFiles;
   const res = await fetch('/api/public-sponsors', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -77,5 +111,8 @@ sponsorPublicForm?.addEventListener('submit', async (e) => {
   sponsorPublicMsg.textContent = data.message || (res.ok ? 'Demande envoyée.' : 'Erreur.');
   if (res.ok) {
     sponsorPublicForm.reset();
+    sponsorFiles = [];
+    if (sponsorPdfPreview) sponsorPdfPreview.textContent = 'Aucune pièce jointe';
+    if (sponsorLogoPreview) sponsorLogoPreview.textContent = 'Aucun aperçu';
   }
 });

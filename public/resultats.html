@@ -24,6 +24,24 @@
       <section class="card">
         <h2>Classement actuel</h2>
         <p class="muted">Les résultats sont publiés par l’administration.</p>
+        <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; margin-bottom:12px;">
+          <div>
+            <label>Auto-refresh</label>
+            <select id="refreshSelect">
+              <option value="0">Désactivé</option>
+              <option value="10000">10s</option>
+              <option value="20000" selected>20s</option>
+              <option value="60000">60s</option>
+            </select>
+          </div>
+          <div>
+            <label>Dernière mise à jour</label>
+            <div id="lastUpdate" class="status">-</div>
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button class="btn-primary" id="refreshNow" type="button">Actualiser</button>
+          </div>
+        </div>
         <div id="rankingWrap" class="status">Chargement...</div>
       </section>
     </main>

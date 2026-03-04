@@ -6,6 +6,10 @@ const settingsSection = document.getElementById('settingsSection');
 const candidatesSection = document.getElementById('candidatesSection');
 const scoresSection = document.getElementById('scoresSection');
 const communeStats = document.getElementById('communeStats');
+const offlineBanner = document.getElementById('offlineBanner');
+const globalSearchSection = document.getElementById('globalSearchSection');
+const globalSearchInput = document.getElementById('globalSearchInput');
+const globalSearchResults = document.getElementById('globalSearchResults');
 
 const settingsForm = document.getElementById('settingsForm');
 const settingsMsg = document.getElementById('settingsMsg');
@@ -46,6 +50,7 @@ const sponsorForm = document.getElementById('sponsorForm');
 const sponsorMsg = document.getElementById('sponsorMsg');
 const sponsorsTable = document.querySelector('#sponsorsTable tbody');
 const sponsorLogoUrl = document.getElementById('sponsorLogoUrl');
+const sponsorFilesList = document.getElementById('sponsorFilesList');
 const sponsorLogoFile = document.getElementById('sponsorLogoFile');
 const sponsorLogoPreview = document.getElementById('sponsorLogoPreview');
 const sponsorLogoReplace = document.getElementById('sponsorLogoReplace');
@@ -54,6 +59,8 @@ const sponsorLogoRemove = document.getElementById('sponsorLogoRemove');
 let authHeader = '';
 let scheduleCache = [];
 let candidatesCache = [];
+let newsCache = [];
+let sponsorsCache = [];
 let newsImages = [];
 
 const manualNameMap = {
@@ -120,6 +127,7 @@ function showAdmin() {
   scoresSection.classList.remove('admin-hidden');
   newsSection?.classList.remove('admin-hidden');
   sponsorsSection?.classList.remove('admin-hidden');
+  globalSearchSection?.classList.remove('admin-hidden');
 }
 
 function hideAdmin() {
@@ -129,6 +137,7 @@ function hideAdmin() {
   scoresSection.classList.add('admin-hidden');
   newsSection?.classList.add('admin-hidden');
   sponsorsSection?.classList.add('admin-hidden');
+  globalSearchSection?.classList.add('admin-hidden');
   loginCard.classList.remove('admin-hidden');
 }
 
@@ -156,9 +165,19 @@ async function loadDashboard() {
   const res = await authedFetch('/api/admin/dashboard');
   if (!res.ok) {
     setStatus(loginMsg, 'Erreur chargement admin.');
+    const cached = localStorage.getItem('adminCache');
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        renderFromCache(data);
+        if (offlineBanner) offlineBanner.style.display = 'block';
+      } catch {}
+    }
     return;
   }
   const data = await res.json();
+  localStorage.setItem('adminCache', JSON.stringify(data));
+  if (offlineBanner) offlineBanner.style.display = 'none';
   document.getElementById('statCandidates').textContent = data.stats?.candidates ?? 0;
   document.getElementById('statVotes').textContent = Array.isArray(data.votes)
     ? data.votes.reduce((sum, v) => sum + Number(v.totalVotes || 0), 0)
@@ -192,6 +211,33 @@ async function loadDashboard() {
 
   // sponsors
   await loadSponsors();
+
+  renderGlobalSearch();
+}
+
+function renderFromCache(data) {
+  document.getElementById('statCandidates').textContent = data.stats?.candidates ?? 0;
+  document.getElementById('statVotes').textContent = Array.isArray(data.votes)
+    ? data.votes.reduce((sum, v) => sum + Number(v.totalVotes || 0), 0)
+    : 0;
+  document.getElementById('statScores').textContent = Array.isArray(data.ranking)
+    ? data.ranking.reduce((sum, r) => sum + Number(r.passages || 0), 0)
+    : 0;
+  const settings = data.settings || {};
+  Array.from(settingsForm.elements).forEach((el) => {
+    if (!el.name) return;
+    el.value = settings[el.name] ?? '';
+  });
+  scheduleCache = [];
+  try {
+    scheduleCache = JSON.parse(settings.scheduleJson || '[]') || [];
+  } catch {}
+  renderSchedule();
+  candidatesCache = data.candidates || [];
+  renderCandidates(candidatesCache);
+  renderCommuneStats(candidatesCache);
+  renderRanking(data.ranking || []);
+  renderGlobalSearch();
 }
 
 function renderCandidates(list) {
@@ -260,6 +306,41 @@ function renderCommuneStats(list) {
     `,
     )
     .join('');
+}
+
+function renderGlobalSearch() {
+  if (!globalSearchResults) return;
+  const query = (globalSearchInput?.value || '').trim().toLowerCase();
+  if (!query) {
+    globalSearchResults.textContent = 'Aucun résultat.';
+    return;
+  }
+  const results = [];
+  candidatesCache.forEach((c) => {
+    const name = resolveName(c).toLowerCase();
+    const city = (c.city || '').toLowerCase();
+    const phone = (c.whatsapp || '').toLowerCase();
+    if (name.includes(query) || city.includes(query) || phone.includes(query)) {
+      results.push(`Candidat: ${resolveName(c)} — ${c.city || ''} — ${c.whatsapp || ''}`);
+    }
+  });
+  newsCache.forEach((n) => {
+    const title = (n.title || '').toLowerCase();
+    const body = (n.body || '').toLowerCase();
+    if (title.includes(query) || body.includes(query)) {
+      results.push(`Actualité: ${n.title || ''}`);
+    }
+  });
+  sponsorsCache.forEach((s) => {
+    const name = (s.name || '').toLowerCase();
+    const contact = (s.contactname || s.contactName || '').toLowerCase();
+    if (name.includes(query) || contact.includes(query)) {
+      results.push(`Sponsor: ${s.name || ''}`);
+    }
+  });
+  globalSearchResults.innerHTML = results.length
+    ? results.map((r) => `<div>${r}</div>`).join('')
+    : 'Aucun résultat.';
 }
 
 function formatDate(value) {
@@ -348,6 +429,7 @@ async function loadNewsAdmin() {
   if (!res.ok) return;
   const data = await res.json();
   const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+  newsCache = items;
   renderNews(items);
 }
 
@@ -376,6 +458,7 @@ async function loadSponsors() {
   if (!res.ok) return;
   const data = await res.json();
   const items = Array.isArray(data) ? data : [];
+  sponsorsCache = items;
   renderSponsors(items);
 }
 
@@ -447,6 +530,10 @@ candidateForm?.addEventListener('submit', async (e) => {
 
 candidateSearch?.addEventListener('input', () => {
   filterCandidates();
+});
+
+globalSearchInput?.addEventListener('input', () => {
+  renderGlobalSearch();
 });
 
 candidatesTable?.addEventListener('click', (e) => {
@@ -602,6 +689,12 @@ sponsorForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(sponsorMsg, 'Sauvegarde...');
   const payload = Object.fromEntries(new FormData(sponsorForm).entries());
+  if (sponsorFilesList) {
+    payload.files = (sponsorFilesList.value || '')
+      .split(/[\n,]+/)
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
   const id = payload.id;
   delete payload.id;
   const res = await authedFetch(id ? `/api/admin/sponsors/${id}` : '/api/admin/sponsors', {
@@ -661,6 +754,14 @@ sponsorsTable?.addEventListener('click', async (e) => {
         sponsorForm.querySelector('#sponsorWebsite').value = item.website || '';
         sponsorForm.querySelector('#sponsorLogoUrl').value = item.logourl || item.logoUrl || '';
         sponsorForm.querySelector('#sponsorStatus').value = item.status || 'pending';
+        if (sponsorFilesList) {
+          const raw = item.filesjson || item.filesJson;
+          let files = [];
+          try {
+            files = raw ? JSON.parse(raw) : [];
+          } catch {}
+          sponsorFilesList.value = files.join(', ');
+        }
         if (sponsorLogoPreview) {
           const logo = item.logourl || item.logoUrl;
           sponsorLogoPreview.innerHTML = logo

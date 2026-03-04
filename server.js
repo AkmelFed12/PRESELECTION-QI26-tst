@@ -594,6 +594,7 @@ async function initDatabase() {
         phone TEXT,
         amount DECIMAL(10, 2),
         logoUrl TEXT,
+        filesJson TEXT,
         website TEXT,
         status TEXT DEFAULT 'pending',
         createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -687,6 +688,7 @@ async function initDatabase() {
     await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS imageUrl TEXT;`);
     await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS imagesJson TEXT;`);
     await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS publishAt TIMESTAMP WITH TIME ZONE;`);
+    await pool.query(`ALTER TABLE sponsors ADD COLUMN IF NOT EXISTS filesJson TEXT;`);
 
     await pool.query(`
       INSERT INTO poll (question, optionsJson, active)
@@ -1256,11 +1258,14 @@ app.get('/api/public-sponsors', async (req, res) => {
 
 app.post('/api/public-sponsors', async (req, res) => {
   try {
-    const { name, contactName, email, phone, amount, logoUrl, website } = req.body || {};
+    const { name, contactName, email, phone, amount, logoUrl, website, files } = req.body || {};
     if (!name) return res.status(400).json({ message: 'Nom requis.' });
+    const safeFiles = Array.isArray(files)
+      ? files.map((u) => sanitizeString(u, 500)).filter(Boolean)
+      : [];
     await pool.query(
-      `INSERT INTO sponsors (name, contactName, email, phone, amount, logoUrl, website, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')`,
+      `INSERT INTO sponsors (name, contactName, email, phone, amount, logoUrl, website, filesJson, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')`,
       [
         sanitizeString(name, 200),
         contactName ? sanitizeString(contactName, 200) : null,
@@ -1268,7 +1273,8 @@ app.post('/api/public-sponsors', async (req, res) => {
         phone ? sanitizeString(phone, 50) : null,
         amount ? Number(amount) : null,
         logoUrl ? sanitizeString(logoUrl, 500) : null,
-        website ? sanitizeString(website, 300) : null
+        website ? sanitizeString(website, 300) : null,
+        JSON.stringify(safeFiles)
       ]
     );
     res.status(201).json({ message: 'Demande sponsor envoyée.' });
@@ -1291,12 +1297,15 @@ app.get('/api/admin/sponsors', verifyAdmin, async (req, res) => {
 
 app.post('/api/admin/sponsors', verifyAdmin, async (req, res) => {
   try {
-    const { name, contactName, email, phone, amount, logoUrl, website, status } = req.body || {};
+    const { name, contactName, email, phone, amount, logoUrl, website, status, files } = req.body || {};
     if (!name) return res.status(400).json({ message: 'Nom requis.' });
     const safeStatus = status === 'approved' ? 'approved' : 'pending';
+    const safeFiles = Array.isArray(files)
+      ? files.map((u) => sanitizeString(u, 500)).filter(Boolean)
+      : [];
     await pool.query(
-      `INSERT INTO sponsors (name, contactName, email, phone, amount, logoUrl, website, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      `INSERT INTO sponsors (name, contactName, email, phone, amount, logoUrl, website, filesJson, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         sanitizeString(name, 200),
         contactName ? sanitizeString(contactName, 200) : null,
@@ -1305,6 +1314,7 @@ app.post('/api/admin/sponsors', verifyAdmin, async (req, res) => {
         amount ? Number(amount) : null,
         logoUrl ? sanitizeString(logoUrl, 500) : null,
         website ? sanitizeString(website, 300) : null,
+        JSON.stringify(safeFiles),
         safeStatus
       ]
     );
@@ -1317,12 +1327,15 @@ app.post('/api/admin/sponsors', verifyAdmin, async (req, res) => {
 
 app.put('/api/admin/sponsors/:id', verifyAdmin, async (req, res) => {
   try {
-    const { name, contactName, email, phone, amount, logoUrl, website, status } = req.body || {};
+    const { name, contactName, email, phone, amount, logoUrl, website, status, files } = req.body || {};
     const safeStatus = status === 'approved' ? 'approved' : 'pending';
+    const safeFiles = Array.isArray(files)
+      ? files.map((u) => sanitizeString(u, 500)).filter(Boolean)
+      : [];
     await pool.query(
       `UPDATE sponsors
-       SET name = $1, contactName = $2, email = $3, phone = $4, amount = $5, logoUrl = $6, website = $7, status = $8
-       WHERE id = $9`,
+       SET name = $1, contactName = $2, email = $3, phone = $4, amount = $5, logoUrl = $6, website = $7, filesJson = $8, status = $9
+       WHERE id = $10`,
       [
         sanitizeString(name || '', 200),
         contactName ? sanitizeString(contactName, 200) : null,
@@ -1331,6 +1344,7 @@ app.put('/api/admin/sponsors/:id', verifyAdmin, async (req, res) => {
         amount ? Number(amount) : null,
         logoUrl ? sanitizeString(logoUrl, 500) : null,
         website ? sanitizeString(website, 300) : null,
+        JSON.stringify(safeFiles),
         safeStatus,
         req.params.id
       ]
@@ -2141,6 +2155,30 @@ const upload = multer({
   }
 });
 
+const docStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, join(__dirname, 'public/uploads/docs'));
+  },
+  filename: (req, file, cb) => {
+    const ext = file.originalname.split('.').pop();
+    const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    cb(null, filename);
+  }
+});
+
+const uploadDocs = multer({
+  storage: docStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['application/pdf'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files allowed'));
+    }
+  }
+});
+
 // ==================== HELPER FUNCTIONS ====================
 async function sendEmail(to, subject, html) {
   if (!transporter.verify) return; // Skip if email not configured
@@ -2209,6 +2247,25 @@ app.post('/api/upload/photo', upload.single('file'), (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: error.message || 'Upload failed' });
+  }
+});
+
+// POST - Upload sponsor PDF document
+app.post('/api/upload/sponsor-file', uploadDocs.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const fileUrl = `/uploads/docs/${req.file.filename}`;
+    res.json({
+      success: true,
+      filename: req.file.filename,
+      url: fileUrl,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error('Sponsor file upload error:', error);
     res.status(500).json({ error: error.message || 'Upload failed' });
   }
 });
