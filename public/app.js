@@ -16,6 +16,8 @@ const donationForm = document.getElementById('donationForm');
 const donationMsg = document.getElementById('donationMsg');
 const sponsorTrack = document.getElementById('sponsorTrack');
 const programDay = document.getElementById('programDay');
+const liveCountBadge = document.getElementById('liveCountBadge');
+const quickModeToggle = document.getElementById('quickModeToggle');
 const homeContent = document.getElementById('homeContent');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
@@ -117,6 +119,7 @@ async function loadCandidates() {
     const cities = new Set(data.map((c) => (c.city || '').toUpperCase()).filter(Boolean));
     const totalVotes = data.reduce((sum, c) => sum + Number(c.totalVotes || 0), 0);
     if (statPublicCandidates) statPublicCandidates.textContent = data.length;
+    if (liveCountBadge) liveCountBadge.textContent = data.length;
     if (statPublicCities) statPublicCities.textContent = cities.size;
     if (statPublicVotes) statPublicVotes.textContent = totalVotes;
 
@@ -216,6 +219,25 @@ async function loadSponsorCarousel() {
 }
 
 loadSponsorCarousel();
+
+function applyQuickMode(enabled) {
+  document.body.classList.toggle('quick-mode', enabled);
+  if (quickModeToggle) {
+    quickModeToggle.textContent = enabled ? 'Mode normal' : 'Mode rapide';
+  }
+  try {
+    localStorage.setItem('quickMode', enabled ? '1' : '0');
+  } catch {}
+}
+
+if (quickModeToggle) {
+  const saved = localStorage.getItem('quickMode') === '1';
+  applyQuickMode(saved);
+  quickModeToggle.addEventListener('click', () => {
+    const enabled = !document.body.classList.contains('quick-mode');
+    applyQuickMode(enabled);
+  });
+}
 
 if (homeContent) homeContent.style.display = 'block';
 

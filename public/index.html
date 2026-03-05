@@ -23,6 +23,7 @@
         <div class="hero-status">
           <span class="pill" id="registrationBadge">Inscriptions: ...</span>
           <span class="pill" id="votingBadge">Votes: ...</span>
+          <span class="pill">Candidats inscrits: <strong id="liveCountBadge">0</strong></span>
         </div>
       </div>
       <div class="hero-actions">
@@ -36,12 +37,13 @@
         <a class="btn outline" href="actualites.html">Actualités</a>
         <a class="btn outline" href="sponsors.html">Sponsors</a>
         <a class="btn outline" href="don.html">Don</a>
+        <button class="btn outline" id="quickModeToggle" type="button">Mode rapide</button>
       </div>
     </header>
 
     <main class="layout">
       <div id="homeContent">
-      <section class="card highlight">
+      <section class="card highlight quick-hide">
         <h2>Organisation des phases</h2>
         <div class="grid-two">
           <div>
@@ -61,18 +63,19 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Calendrier officiel</h2>
         <div id="calendarList" class="status">Chargement...</div>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Programme du jour</h2>
         <div id="programDay" class="status">Chargement...</div>
       </section>
 
       <section class="card highlight" id="announcementCard" style="display:none;">
         <h2>Annonce</h2>
+        <div class="badge-important">Annonce importante</div>
         <div id="announcementText" class="status"></div>
       </section>
 
@@ -158,7 +161,7 @@
         <p id="donationMsg" class="status">Après paiement, envoyez votre reçu via WhatsApp pour validation.</p>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Sponsors officiels</h2>
         <div id="sponsorCarousel" class="sponsor-carousel">
           <div class="sponsor-track" id="sponsorTrack">Chargement...</div>
@@ -171,13 +174,13 @@
         <a class="btn-primary" href="https://wa.me/2250150070083?text=Je%20veux%20recevoir%20les%20infos%20du%20Quiz%20Islamique%202026" target="_blank" rel="noopener">S'abonner WhatsApp</a>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Candidats déjà inscrits</h2>
         <p class="muted">Cette liste est synchronisée automatiquement.</p>
         <div id="publicCandidates" class="status">Chargement...</div>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Statistiques publiques</h2>
         <div class="grid-three">
           <div class="status">Candidats: <strong id="statPublicCandidates">0</strong></div>
@@ -186,12 +189,12 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Répartition par commune</h2>
         <div id="communeStats" class="status">Chargement...</div>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Communes en carte</h2>
         <div class="nav-links" id="communeMapLinks">
           <a href="https://www.google.com/maps/search/?api=1&query=TREICHVILLE+Abidjan" target="_blank" rel="noopener">TREICHVILLE</a>
@@ -231,6 +234,10 @@
       </section>
       </div>
     </main>
+
+    <a class="whatsapp-float" href="https://wa.me/2250150070083?text=Bonjour%20ASAA%2C%20j%27ai%20besoin%20d%27aide%20pour%20le%20Quiz%20Islamique%202026." target="_blank" rel="noopener">
+      WhatsApp
+    </a>
 
     <a class="whatsapp-fab" href="https://wa.me/2250150070083" target="_blank" rel="noopener">
       WhatsApp

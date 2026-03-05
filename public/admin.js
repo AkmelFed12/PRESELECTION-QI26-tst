@@ -23,6 +23,7 @@ const candidateForm = document.getElementById('candidateForm');
 const candidateMsg = document.getElementById('candidateMsg');
 const candidatesTable = document.querySelector('#candidatesTable tbody');
 const candidateSearch = document.getElementById('candidateSearch');
+const printAttendanceBtn = document.getElementById('printAttendanceBtn');
 
 const scoreForm = document.getElementById('scoreForm');
 const scoreMsg = document.getElementById('scoreMsg');
@@ -278,6 +279,67 @@ function renderCandidates(list) {
     `,
     )
     .join('');
+}
+
+function printAttendanceList() {
+  const list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
+  if (!list.length) {
+    alert('Aucun candidat à imprimer.');
+    return;
+  }
+  const sorted = list.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  const rows = sorted
+    .map(
+      (c, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${c.id || ''}</td>
+          <td>${resolveName(c)}</td>
+          <td>${c.whatsapp || ''}</td>
+          <td>${c.city || ''}</td>
+          <td style="height:26px;"></td>
+          <td style="height:26px;"></td>
+        </tr>
+      `,
+    )
+    .join('');
+  const html = `
+    <html>
+      <head>
+        <title>Liste d'appel — Quiz Islamique 2026</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Liste d'appel — Quiz Islamique 2026</h1>
+        <p>Date : _____________</p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>WhatsApp</th>
+              <th>Commune</th>
+              <th>Présent</th>
+              <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 function filterCandidates() {
@@ -652,6 +714,8 @@ candidateForm?.addEventListener('submit', async (e) => {
 candidateSearch?.addEventListener('input', () => {
   filterCandidates();
 });
+
+printAttendanceBtn?.addEventListener('click', printAttendanceList);
 
 globalSearchInput?.addEventListener('input', () => {
   renderGlobalSearch();
