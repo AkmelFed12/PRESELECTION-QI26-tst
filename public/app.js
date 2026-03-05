@@ -23,6 +23,8 @@ const publicSearch = document.getElementById('publicSearch');
 const shareWhatsapp = document.getElementById('shareWhatsapp');
 const shareFacebook = document.getElementById('shareFacebook');
 const shareCopy = document.getElementById('shareCopy');
+const registerToast = document.getElementById('registerToast');
+const scrollTopBtn = document.getElementById('scrollTopBtn');
 
 let publicCandidatesCache = [];
 const homeContent = document.getElementById('homeContent');
@@ -230,6 +232,7 @@ form?.addEventListener('submit', async (e) => {
       return;
     }
     msg.textContent = data.message || 'Inscription réussie.';
+    showToast('Inscription réussie ✅');
     form.reset();
     await loadCandidates();
     if (data.whatsappRedirect) {
@@ -320,6 +323,22 @@ shareCopy?.addEventListener('click', async () => {
   } catch {
     alert('Copie impossible. Voici le lien : ' + shareUrl);
   }
+});
+
+function showToast(text) {
+  if (!registerToast) return;
+  registerToast.textContent = text;
+  registerToast.classList.add('show');
+  setTimeout(() => registerToast.classList.remove('show'), 2000);
+}
+
+window.addEventListener('scroll', () => {
+  if (!scrollTopBtn) return;
+  scrollTopBtn.classList.toggle('show', window.scrollY > 400);
+});
+
+scrollTopBtn?.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
 if (homeContent) homeContent.style.display = 'block';
