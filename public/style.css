@@ -116,6 +116,9 @@ header.hero {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .btn {
@@ -479,9 +482,9 @@ footer {
     text-align: center;
   }
   .hero-actions {
-    flex-direction: row;
-    justify-content: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    max-height: 60vh;
   }
   .grid-two,
   .grid-three,
