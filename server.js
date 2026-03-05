@@ -39,6 +39,8 @@ pool.on('error', (error) => {
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(join(__dirname, 'public')));
+app.use('/galerie-2024', express.static(join(__dirname, 'public', 'galerie-2024')));
+app.use('/galerie-2025', express.static(join(__dirname, 'public', 'galerie-2025')));
 // CORS config: credentials only with explicit origin
 if (process.env.CORS_ORIGIN) {
   app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));

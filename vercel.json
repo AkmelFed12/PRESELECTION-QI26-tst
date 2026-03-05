@@ -4,6 +4,14 @@
     {
       "source": "/api/(.*)",
       "destination": "/server.js"
+    },
+    {
+      "source": "/galerie-2024/(.*)",
+      "destination": "/server.js"
+    },
+    {
+      "source": "/galerie-2025/(.*)",
+      "destination": "/server.js"
     }
   ],
   "functions": {
