@@ -7,6 +7,7 @@ const quranStatus = document.getElementById('quranStatus');
 const showTranslit = document.getElementById('showTranslit');
 const showFrench = document.getElementById('showFrench');
 const showTafsir = document.getElementById('showTafsir');
+const quranDarkToggle = document.getElementById('quranDarkToggle');
 
 let editions = {
   arabic: 'quran-uthmani',
@@ -57,10 +58,12 @@ function renderVerseRow(index, arabic, translit, french, tafsir) {
   const tafsirButton = editions.tafsir && showTafsir.checked
     ? `<button class="btn outline" data-tafsir="${index}">Afficher tafsir</button><div class="status" data-tafsir-target="${index}">${tafsir || ''}</div>`
     : '';
+  const shareData = `data-arabic="${(arabic || '').replace(/"/g, '&quot;')}" data-translit="${(translit || '').replace(/"/g, '&quot;')}" data-french="${(french || '').replace(/"/g, '&quot;')}"`;
   return `
     <div class="card" style="margin-bottom:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <strong>Verset ${index}</strong>
+        <button class="btn outline" data-share="${index}" ${shareData}>Partager</button>
       </div>
       <div style="font-size:22px; text-align:right;">${arabic || ''}</div>
       ${translitHtml}
@@ -122,10 +125,35 @@ versesWrap?.addEventListener('click', (e) => {
   loadTafsir(surah, ayah, target);
 });
 
+versesWrap?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-share]');
+  if (!btn) return;
+  const ayah = btn.dataset.share;
+  const surah = surahSelect.value || 1;
+  const arabic = btn.dataset.arabic || '';
+  const translit = btn.dataset.translit || '';
+  const french = btn.dataset.french || '';
+  const text = `Sourate ${surah}, Verset ${ayah}\n${arabic}\n${translit}\n${french}\nhttps://preselectionqi26.vercel.app/quran.html`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Verset du Coran', text });
+    } catch {}
+  } else if (navigator.clipboard) {
+    await navigator.clipboard.writeText(text);
+    alert('Verset copié.');
+  } else {
+    prompt('Copiez le verset:', text);
+  }
+});
+
 loadSurahBtn?.addEventListener('click', loadSurah);
 showTranslit?.addEventListener('change', loadSurah);
 showFrench?.addEventListener('change', loadSurah);
 showTafsir?.addEventListener('change', loadSurah);
+
+quranDarkToggle?.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+});
 
 (async function init() {
   try {
