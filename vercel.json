@@ -6,11 +6,11 @@
     },
     {
       "src": "/galerie-2024/(.*)",
-      "dest": "/public/galerie-2024/$1"
+      "dest": "/galerie-2024/$1"
     },
     {
       "src": "/galerie-2025/(.*)",
-      "dest": "/public/galerie-2025/$1"
+      "dest": "/galerie-2025/$1"
     },
     {
       "src": "/api/(.*)",
