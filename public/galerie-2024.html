@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Galerie Quiz Islamique 2024</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0b6f4f" />
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo" class="logo" />
+      <div>
+        <h1>Galerie Quiz Islamique 2024</h1>
+        <p class="subtitle">Finale — photos officielles</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="index.html">Accueil</a>
+        <a class="btn outline" href="index.html#don">Faire un don</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Diaporama</h2>
+        <div class="status" id="galleryStatus">Chargement...</div>
+        <div id="sliderWrap" class="card highlight" style="display:none;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <button class="btn-primary" id="prevBtn" type="button">Précédent</button>
+            <div class="status" id="slideCounter">1 / 1</div>
+            <button class="btn-primary" id="nextBtn" type="button">Suivant</button>
+          </div>
+          <div style="margin-top:12px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+            <button class="btn-primary" id="togglePlay" type="button">Pause</button>
+            <label class="status" style="display:flex; align-items:center; gap:8px;">
+              Vitesse
+              <select id="speedSelect">
+                <option value="3000">3s</option>
+                <option value="5000" selected>5s</option>
+                <option value="8000">8s</option>
+                <option value="10000">10s</option>
+              </select>
+            </label>
+          </div>
+          <div style="margin-top:16px; text-align:center;">
+            <img id="slideImage" alt="Photo finale 2024" style="max-width:100%; max-height:70vh; border-radius:12px;" />
+          </div>
+          <div style="margin-top:16px; display:flex; justify-content:center;">
+            <a id="downloadBtn" class="btn" href="#" download>Télécharger</a>
+          </div>
+          <div id="thumbs" style="margin-top:16px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Galerie (grille)</h2>
+        <div id="gridGallery" class="grid-gallery"></div>
+      </section>
+    </main>
+
+    <footer>
+      <div>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</div>
+      <div class="footer-donate">
+        <span>Soutenir l’association :</span>
+        <a class="btn outline" href="https://pay.djamo.com/yga5x" target="_blank" rel="noopener">Faire un don</a>
+      </div>
+      <div class="social-links">
+        <a href="https://www.facebook.com/share/1HWB9Zh6pY/?mibextid=wwXIfr" target="_blank" rel="noopener" aria-label="Facebook">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 10h3V7h-3V6c0-1 .4-2 2-2h1V1h-2c-3 0-4 2-4 4v2H8v3h2v8h3v-8z"/></svg>
+          Facebook
+        </a>
+        <a href="https://www.tiktok.com/@asaa.islam01?_r=1&_t=ZS-94PUgTDVgFF" target="_blank" rel="noopener" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 3c.7 1.6 2 2.9 3.6 3.6V9c-1.4-.1-2.8-.6-4-1.4V15a6 6 0 1 1-6-6c.4 0 .8 0 1.2.1v3a2.8 2.8 0 1 0 2.8 2.8V3h2.4z"/></svg>
+          TikTok
+        </a>
+      </div>
+      <div class="footer-signature">Design & Created by LMO Web Services</div>
+    </footer>
+    <script src="galerie-2024.js"></script>
+    <script src="pwa.js"></script>
+  </body>
+</html>
