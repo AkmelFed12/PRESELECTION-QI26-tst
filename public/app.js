@@ -15,6 +15,7 @@ const announcementBannerText = document.getElementById('announcementBannerText')
 const donationForm = document.getElementById('donationForm');
 const donationMsg = document.getElementById('donationMsg');
 const sponsorTrack = document.getElementById('sponsorTrack');
+const programDay = document.getElementById('programDay');
 const installBtn = document.getElementById('installBtn');
 let deferredPrompt = null;
 
@@ -259,6 +260,29 @@ async function loadPublicSettings() {
               .join('')}
           </div>
         `;
+      }
+      if (programDay) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const normalized = schedule.map((s) => ({
+          ...s,
+          date: s.date || '',
+          time: s.time || '00:00'
+        }));
+        const todays = normalized.filter((s) => s.date === todayStr);
+        const upcoming = normalized
+          .filter((s) => s.date >= todayStr)
+          .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
+          .slice(0, 3);
+        const list = todays.length ? todays : upcoming;
+        programDay.innerHTML = list.length
+          ? `<ul class="list-steps">${list
+              .map((s) => `<li><strong>${s.time || ''}</strong> — ${s.title || ''}</li>`)
+              .join('')}</ul>`
+          : 'Aucun programme disponible.';
       }
     }
 
