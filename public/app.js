@@ -16,8 +16,6 @@ const donationForm = document.getElementById('donationForm');
 const donationMsg = document.getElementById('donationMsg');
 const sponsorTrack = document.getElementById('sponsorTrack');
 const programDay = document.getElementById('programDay');
-const installBtn = document.getElementById('installBtn');
-let deferredPrompt = null;
 const homeContent = document.getElementById('homeContent');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
@@ -187,19 +185,6 @@ donationForm?.addEventListener('submit', (e) => {
   window.open('https://pay.djamo.com/yga5x', '_blank');
 });
 
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  if (installBtn) installBtn.style.display = 'inline-flex';
-});
-
-installBtn?.addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt = null;
-  installBtn.style.display = 'none';
-});
 
 
 async function loadSponsorCarousel() {

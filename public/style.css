@@ -455,15 +455,6 @@ footer {
   gap: 10px;
 }
 
-#quranReadingCard:fullscreen {
-  background: var(--white);
-  padding: 24px;
-  overflow: auto;
-}
-
-body.dark #quranReadingCard:fullscreen {
-  background: #1e1e1e;
-}
 
 .nav-links a {
   text-decoration: none;
