@@ -41,6 +41,19 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(join(__dirname, 'public')));
 app.use('/galerie-2024', express.static(join(__dirname, 'public', 'galerie-2024')));
 app.use('/galerie-2025', express.static(join(__dirname, 'public', 'galerie-2025')));
+
+app.get('/api/gallery/:year/:file', (req, res) => {
+  const { year, file } = req.params;
+  if (!['2024', '2025'].includes(year)) {
+    return res.status(404).json({ message: 'Not found' });
+  }
+  const filePath = join(__dirname, 'public', `galerie-${year}`, file);
+  return res.sendFile(filePath, (err) => {
+    if (err) {
+      res.status(404).json({ message: 'Not found' });
+    }
+  });
+});
 // CORS config: credentials only with explicit origin
 if (process.env.CORS_ORIGIN) {
   app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));

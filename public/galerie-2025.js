@@ -363,6 +363,8 @@ const thumbs = document.getElementById('thumbs');
 const speedSelect = document.getElementById('speedSelect');
 const gridGallery = document.getElementById('gridGallery');
 
+const basePath = '/api/gallery/2025';
+
 let index = 0;
 let timer = null;
 let isPlaying = true;
@@ -371,7 +373,7 @@ let intervalMs = 5000;
 function showSlide(i) {
   if (!images.length) return;
   index = (i + images.length) % images.length;
-  const src = `galerie-2025/${encodeURIComponent(images[index])}`;
+  const src = `${basePath}/${encodeURIComponent(images[index])}`;
   slideImage.src = src;
   downloadBtn.href = src;
   downloadBtn.setAttribute('download', images[index]);
@@ -421,7 +423,7 @@ if (thumbs) {
   thumbs.innerHTML = images
     .map(
       (name, idx) =>
-        `<img class="thumb${idx === 0 ? ' active' : ''}" data-idx="${idx}" src="galerie-2025/${encodeURIComponent(name)}" alt="thumb" style="width:70px;height:50px;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;" />`,
+        `<img class="thumb${idx === 0 ? ' active' : ''}" data-idx="${idx}" src="${basePath}/${encodeURIComponent(name)}" alt="thumb" style="width:70px;height:50px;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;" />`,
     )
     .join('');
   thumbs.addEventListener('click', (e) => {
@@ -442,7 +444,7 @@ if (gridGallery) {
   gridGallery.innerHTML = images
     .map(
       (name, idx) =>
-        `<img class="grid-thumb" data-idx="${idx}" src="galerie-2025/${encodeURIComponent(name)}" alt="photo" />`,
+        `<img class="grid-thumb" data-idx="${idx}" src="${basePath}/${encodeURIComponent(name)}" alt="photo" />`,
     )
     .join('');
   gridGallery.addEventListener('click', (e) => {
