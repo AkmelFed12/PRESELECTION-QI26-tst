@@ -3,6 +3,8 @@ const API_BASE = 'https://api.alquran.cloud/v1';
 const pageInput = document.getElementById('pageNumber');
 const prevPageBtn = document.getElementById('prevPage');
 const nextPageBtn = document.getElementById('nextPage');
+const prevPageBottomBtn = document.getElementById('prevPageBottom');
+const nextPageBottomBtn = document.getElementById('nextPageBottom');
 const loadPageBtn = document.getElementById('loadPage');
 const pageIndicator = document.getElementById('pageIndicator');
 const versesWrap = document.getElementById('versesWrap');
@@ -11,6 +13,8 @@ const showTranslit = document.getElementById('showTranslit');
 const showFrench = document.getElementById('showFrench');
 const showTafsir = document.getElementById('showTafsir');
 const quranDarkToggle = document.getElementById('quranDarkToggle');
+const fullscreenToggle = document.getElementById('fullscreenToggle');
+const readingCard = document.getElementById('quranReadingCard');
 
 const totalPages = 604;
 let currentPage = 1;
@@ -22,6 +26,32 @@ let editions = {
   tafsir: null,
   tafsirLang: null
 };
+
+const STORAGE_KEY = 'quranReaderPrefs';
+
+function savePrefs() {
+  const prefs = {
+    page: currentPage,
+    showTranslit: !!showTranslit?.checked,
+    showFrench: !!showFrench?.checked,
+    showTafsir: !!showTafsir?.checked
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  } catch {}
+}
+
+function loadPrefs() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const prefs = JSON.parse(raw);
+    if (prefs.showTranslit !== undefined && showTranslit) showTranslit.checked = !!prefs.showTranslit;
+    if (prefs.showFrench !== undefined && showFrench) showFrench.checked = !!prefs.showFrench;
+    if (prefs.showTafsir !== undefined && showTafsir) showTafsir.checked = !!prefs.showTafsir;
+    if (prefs.page) currentPage = clampPage(prefs.page);
+  } catch {}
+}
 
 async function fetchJson(url) {
   const res = await fetch(url);
@@ -118,6 +148,7 @@ async function loadPage(pageValue) {
     const translit = packs.find((p) => p.edition.identifier === editions.translit)?.ayahs || [];
     const french = packs.find((p) => p.edition.identifier === editions.french)?.ayahs || [];
     versesWrap.innerHTML = renderPage(arabic, translit, french);
+    savePrefs();
   } catch (e) {
     versesWrap.textContent = 'Impossible de charger la page.';
   }
@@ -176,22 +207,41 @@ versesWrap?.addEventListener('click', async (e) => {
 loadPageBtn?.addEventListener('click', () => loadPage(pageInput?.value || 1));
 prevPageBtn?.addEventListener('click', () => loadPage(currentPage - 1));
 nextPageBtn?.addEventListener('click', () => loadPage(currentPage + 1));
+prevPageBottomBtn?.addEventListener('click', () => loadPage(currentPage - 1));
+nextPageBottomBtn?.addEventListener('click', () => loadPage(currentPage + 1));
 pageInput?.addEventListener('change', () => loadPage(pageInput.value || 1));
 showTranslit?.addEventListener('change', () => loadPage(currentPage));
 showFrench?.addEventListener('change', () => loadPage(currentPage));
 showTafsir?.addEventListener('change', () => loadPage(currentPage));
+showTranslit?.addEventListener('change', savePrefs);
+showFrench?.addEventListener('change', savePrefs);
+showTafsir?.addEventListener('change', savePrefs);
 
 quranDarkToggle?.addEventListener('click', () => {
   document.body.classList.toggle('dark');
 });
 
+fullscreenToggle?.addEventListener('click', async () => {
+  if (!readingCard) return;
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      fullscreenToggle.textContent = 'Plein écran';
+    } else {
+      await readingCard.requestFullscreen();
+      fullscreenToggle.textContent = 'Quitter plein écran';
+    }
+  } catch {}
+});
+
 (async function init() {
   try {
     await initEditions();
+    loadPrefs();
     quranStatus.textContent = editions.tafsirLang === 'fr'
       ? 'Ressources chargées (tafsir FR).'
       : 'Ressources chargées (tafsir AR).';
-    loadPage(1);
+    loadPage(currentPage || 1);
   } catch {
     quranStatus.textContent = 'Ressources indisponibles.';
   }

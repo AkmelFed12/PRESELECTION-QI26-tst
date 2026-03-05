@@ -39,6 +39,12 @@
             </div>
           </div>
           <div>
+            <label>Lecture</label>
+            <div class="nav-links">
+              <button class="btn outline" id="fullscreenToggle" type="button">Plein écran</button>
+            </div>
+          </div>
+          <div>
             <label>Affichage</label>
             <div class="nav-links">
               <label><input type="checkbox" id="showTranslit" checked /> Phonétique</label>
@@ -51,9 +57,13 @@
         <div class="status" id="pageIndicator">Page 1 / 604</div>
       </section>
 
-      <section class="card">
+      <section class="card" id="quranReadingCard">
         <h2>Lecture</h2>
         <div id="versesWrap" class="status">Sélectionnez une page.</div>
+        <div class="nav-links" style="justify-content:center; margin-top:12px;">
+          <button class="btn outline" id="prevPageBottom" type="button">Précédent</button>
+          <button class="btn outline" id="nextPageBottom" type="button">Suivant</button>
+        </div>
       </section>
     </main>
 
