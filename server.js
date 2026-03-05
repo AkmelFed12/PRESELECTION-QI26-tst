@@ -39,15 +39,11 @@ pool.on('error', (error) => {
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(join(__dirname, 'public')));
-app.use('/galerie-2024', express.static(join(__dirname, 'public', 'galerie-2024')));
 app.use('/galerie-2025', express.static(join(__dirname, 'public', 'galerie-2025')));
 
-app.get('/api/gallery/:year/:file', (req, res) => {
-  const { year, file } = req.params;
-  if (!['2024', '2025'].includes(year)) {
-    return res.status(404).json({ message: 'Not found' });
-  }
-  const filePath = join(__dirname, 'public', `galerie-${year}`, file);
+app.get('/api/gallery/2025/:file', (req, res) => {
+  const { file } = req.params;
+  const filePath = join(__dirname, 'public', 'galerie-2025', file);
   return res.sendFile(filePath, (err) => {
     if (err) {
       res.status(404).json({ message: 'Not found' });
