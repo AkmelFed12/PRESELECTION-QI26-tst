@@ -18,9 +18,7 @@ const sponsorTrack = document.getElementById('sponsorTrack');
 const programDay = document.getElementById('programDay');
 const installBtn = document.getElementById('installBtn');
 let deferredPrompt = null;
-const homeTabs = document.getElementById('homeTabs');
 const homeContent = document.getElementById('homeContent');
-const quranTab = document.getElementById('quranTab');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
 
@@ -234,18 +232,7 @@ async function loadSponsorCarousel() {
 
 loadSponsorCarousel();
 
-homeTabs?.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-tab]');
-  if (!btn) return;
-  const tab = btn.dataset.tab;
-  if (tab === 'quran') {
-    if (homeContent) homeContent.style.display = 'none';
-    if (quranTab) quranTab.style.display = 'block';
-  } else {
-    if (quranTab) quranTab.style.display = 'none';
-    if (homeContent) homeContent.style.display = 'block';
-  }
-});
+if (homeContent) homeContent.style.display = 'block';
 
 async function loadPublicSettings() {
   try {

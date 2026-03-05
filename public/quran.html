@@ -24,11 +24,19 @@
 
     <main class="layout">
       <section class="card">
-        <h2>Sélectionner une sourate</h2>
+        <h2>Lecture par page (style Mushaf)</h2>
         <div class="form-grid">
           <div>
-            <label>Sourate</label>
-            <select id="surahSelect"></select>
+            <label for="pageNumber">Page (1 - 604)</label>
+            <input id="pageNumber" type="number" min="1" max="604" value="1" />
+          </div>
+          <div>
+            <label>Navigation</label>
+            <div class="nav-links">
+              <button class="btn outline" id="prevPage" type="button">Précédent</button>
+              <button class="btn outline" id="nextPage" type="button">Suivant</button>
+              <button class="btn-primary" id="loadPage" type="button">Charger</button>
+            </div>
           </div>
           <div>
             <label>Affichage</label>
@@ -38,16 +46,14 @@
               <label><input type="checkbox" id="showTafsir" /> Tafsir</label>
             </div>
           </div>
-          <div>
-            <button class="btn-primary" id="loadSurah" type="button">Charger</button>
-          </div>
         </div>
         <p class="status" id="quranStatus">Chargement des ressources…</p>
+        <div class="status" id="pageIndicator">Page 1 / 604</div>
       </section>
 
       <section class="card">
         <h2>Lecture</h2>
-        <div id="versesWrap" class="status">Sélectionnez une sourate.</div>
+        <div id="versesWrap" class="status">Sélectionnez une page.</div>
       </section>
     </main>
 
