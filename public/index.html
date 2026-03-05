@@ -43,6 +43,20 @@
     </header>
 
     <main class="layout">
+      <section class="card">
+        <h2>Onglets</h2>
+        <div class="nav-links" id="homeTabs">
+          <button class="btn outline" data-tab="home">Accueil</button>
+          <button class="btn outline" data-tab="quran">Coran</button>
+        </div>
+      </section>
+
+      <section id="quranTab" class="card" style="display:none;">
+        <h2>Coran (Arabe + Phonétique + Traduction + Tafsir)</h2>
+        <iframe src="quran.html" title="Lecture du Coran" style="width:100%; min-height:70vh; border:1px solid var(--border); border-radius:12px;"></iframe>
+      </section>
+
+      <div id="homeContent">
       <section class="card highlight">
         <h2>Organisation des phases</h2>
         <div class="grid-two">
@@ -231,6 +245,7 @@
           <a href="contact.html">Contact & support</a>
         </div>
       </section>
+      </div>
     </main>
 
     <a class="whatsapp-fab" href="https://wa.me/2250150070083" target="_blank" rel="noopener">
