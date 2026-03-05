@@ -16,10 +16,7 @@
   ],
   "functions": {
     "server.js": {
-      "excludeFiles": [
-        "public/galerie-2024/**",
-        "public/galerie-2025/**"
-      ]
+      "excludeFiles": "public/galerie-2024/**"
     }
   },
   "env": {
