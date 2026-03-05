@@ -18,6 +18,13 @@ const sponsorTrack = document.getElementById('sponsorTrack');
 const programDay = document.getElementById('programDay');
 const liveCountBadge = document.getElementById('liveCountBadge');
 const quickModeToggle = document.getElementById('quickModeToggle');
+const publicCommuneFilter = document.getElementById('publicCommuneFilter');
+const publicSearch = document.getElementById('publicSearch');
+const shareWhatsapp = document.getElementById('shareWhatsapp');
+const shareFacebook = document.getElementById('shareFacebook');
+const shareCopy = document.getElementById('shareCopy');
+
+let publicCandidatesCache = [];
 const homeContent = document.getElementById('homeContent');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
@@ -88,40 +95,30 @@ async function loadCandidates() {
       publicCandidates.textContent = 'Aucun candidat inscrit pour le moment.';
       return;
     }
-    publicCandidates.innerHTML = `
-      <table class="table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nom</th>
-            <th>Nouveau</th>
-            <th>WhatsApp</th>
-            <th>Commune</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data
-            .map(
-              (c) => `
-              <tr>
-                <td>${c.id}</td>
-                <td>${resolveName(c)}</td>
-                <td>${isNewCandidate(c.createdAt) ? '<span class="badge-new">Nouveau</span>' : ''}</td>
-                <td>${c.whatsapp || ''}</td>
-                <td>${c.city || ''}</td>
-              </tr>
-          `,
-            )
-            .join('')}
-        </tbody>
-      </table>
-    `;
+    publicCandidatesCache = data;
+    renderPublicCandidates();
     const cities = new Set(data.map((c) => (c.city || '').toUpperCase()).filter(Boolean));
     const totalVotes = data.reduce((sum, c) => sum + Number(c.totalVotes || 0), 0);
-    if (statPublicCandidates) statPublicCandidates.textContent = data.length;
+    if (statPublicCandidates) {
+      statPublicCandidates.dataset.count = String(data.length);
+      animateCount(statPublicCandidates, data.length);
+    }
     if (liveCountBadge) liveCountBadge.textContent = data.length;
-    if (statPublicCities) statPublicCities.textContent = cities.size;
-    if (statPublicVotes) statPublicVotes.textContent = totalVotes;
+    if (statPublicCities) {
+      statPublicCities.dataset.count = String(cities.size);
+      animateCount(statPublicCities, cities.size);
+    }
+    if (statPublicVotes) {
+      statPublicVotes.dataset.count = String(totalVotes);
+      animateCount(statPublicVotes, totalVotes);
+    }
+
+    if (publicCommuneFilter) {
+      const options = Array.from(cities).sort();
+      publicCommuneFilter.innerHTML = `<option value="">Toutes les communes</option>${options
+        .map((c) => `<option value="${c}">${c}</option>`)
+        .join('')}`;
+    }
 
     if (communeStats) {
       const counts = {};
@@ -140,6 +137,71 @@ async function loadCandidates() {
   } catch (e) {
     publicCandidates.textContent = 'Impossible de charger la liste.';
   }
+}
+
+function renderPublicCandidates() {
+  if (!publicCandidates) return;
+  let list = publicCandidatesCache.slice();
+  const commune = (publicCommuneFilter?.value || '').toUpperCase().trim();
+  const query = (publicSearch?.value || '').trim().toLowerCase();
+  if (commune) {
+    list = list.filter((c) => (c.city || '').toUpperCase().trim() === commune);
+  }
+  if (query) {
+    list = list.filter((c) => {
+      const name = resolveName(c).toLowerCase();
+      const phone = (c.whatsapp || '').toLowerCase();
+      return name.includes(query) || phone.includes(query);
+    });
+  }
+  if (!list.length) {
+    publicCandidates.textContent = 'Aucun candidat trouvé.';
+    return;
+  }
+  publicCandidates.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Nouveau</th>
+          <th>WhatsApp</th>
+          <th>Commune</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list
+          .map(
+            (c) => `
+            <tr>
+              <td>${c.id}</td>
+              <td>${resolveName(c)}</td>
+              <td>${isNewCandidate(c.createdAt) ? '<span class="badge-new">Nouveau</span>' : ''}</td>
+              <td>${c.whatsapp || ''}</td>
+              <td>${c.city || ''}</td>
+            </tr>
+        `,
+          )
+          .join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function animateCount(el, target) {
+  if (!el) return;
+  const start = Number(el.textContent || 0);
+  const end = Number(target || 0);
+  if (start === end) return;
+  const duration = 700;
+  const startTime = performance.now();
+  function tick(now) {
+    const progress = Math.min(1, (now - startTime) / duration);
+    const value = Math.floor(start + (end - start) * progress);
+    el.textContent = value;
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 function isNewCandidate(createdAt) {
@@ -179,6 +241,9 @@ form?.addEventListener('submit', async (e) => {
 });
 
 loadCandidates();
+
+publicCommuneFilter?.addEventListener('change', renderPublicCandidates);
+publicSearch?.addEventListener('input', renderPublicCandidates);
 
 donationForm?.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -238,6 +303,24 @@ if (quickModeToggle) {
     applyQuickMode(enabled);
   });
 }
+
+const shareUrl = 'https://preselectionqi26.vercel.app';
+const shareText = 'Quiz Islamique 2026 — Inscrivez-vous et suivez les présélections.';
+if (shareWhatsapp) {
+  shareWhatsapp.href = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+}
+if (shareFacebook) {
+  shareFacebook.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+}
+shareCopy?.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    shareCopy.textContent = 'Lien copié';
+    setTimeout(() => (shareCopy.textContent = 'Copier le lien'), 1500);
+  } catch {
+    alert('Copie impossible. Voici le lien : ' + shareUrl);
+  }
+});
 
 if (homeContent) homeContent.style.display = 'block';
 

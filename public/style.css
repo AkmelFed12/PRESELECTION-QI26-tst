@@ -455,6 +455,17 @@ footer {
   gap: 10px;
 }
 
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stat-count {
+  display: inline-block;
+  min-width: 24px;
+}
+
 .badge-important {
   display: inline-block;
   background: #c6532f;

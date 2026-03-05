@@ -177,15 +177,27 @@
       <section class="card quick-hide">
         <h2>Candidats déjà inscrits</h2>
         <p class="muted">Cette liste est synchronisée automatiquement.</p>
+        <div class="form-grid" style="margin-bottom:12px;">
+          <div>
+            <label for="publicCommuneFilter">Filtrer par commune</label>
+            <select id="publicCommuneFilter">
+              <option value="">Toutes les communes</option>
+            </select>
+          </div>
+          <div>
+            <label for="publicSearch">Recherche rapide</label>
+            <input id="publicSearch" placeholder="Nom ou WhatsApp" />
+          </div>
+        </div>
         <div id="publicCandidates" class="status">Chargement...</div>
       </section>
 
       <section class="card quick-hide">
         <h2>Statistiques publiques</h2>
         <div class="grid-three">
-          <div class="status">Candidats: <strong id="statPublicCandidates">0</strong></div>
-          <div class="status">Communes: <strong id="statPublicCities">0</strong></div>
-          <div class="status">Votes: <strong id="statPublicVotes">0</strong></div>
+          <div class="status">Candidats: <strong id="statPublicCandidates" class="stat-count" data-count="0">0</strong></div>
+          <div class="status">Communes: <strong id="statPublicCities" class="stat-count" data-count="0">0</strong></div>
+          <div class="status">Votes: <strong id="statPublicVotes" class="stat-count" data-count="0">0</strong></div>
         </div>
       </section>
 
@@ -224,6 +236,15 @@
           <a href="benevole.html">Devenir bénévole</a>
           <a href="faq.html">FAQ</a>
           <a href="contact.html">Contact & support</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Partager le quiz</h2>
+        <div class="share-actions">
+          <a class="btn outline" id="shareWhatsapp" href="#" target="_blank" rel="noopener">Partager WhatsApp</a>
+          <a class="btn outline" id="shareFacebook" href="#" target="_blank" rel="noopener">Partager Facebook</a>
+          <button class="btn outline" id="shareCopy" type="button">Copier le lien</button>
         </div>
       </section>
       </div>
