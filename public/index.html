@@ -38,6 +38,7 @@
         <a class="btn outline" href="sponsors.html">Sponsors</a>
         <a class="btn outline" href="don.html">Don</a>
         <button class="btn outline" id="quickModeToggle" type="button">Mode rapide</button>
+        <button class="btn outline" id="focusModeToggle" type="button">Mode focus inscription</button>
       </div>
     </header>
 
@@ -81,6 +82,9 @@
 
       <section class="card" id="inscription">
         <h2>Inscription des candidats</h2>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+          <button class="btn outline" id="focusExitBtn" type="button" style="display:none;">Quitter le mode focus</button>
+        </div>
         <p class="muted">Remplissez le formulaire. Un message WhatsApp vers l'administrateur sera proposé après validation.</p>
         <form id="registrationForm" class="form-grid">
           <div>
@@ -141,6 +145,14 @@
         </form>
         <p id="registerMsg" class="status"></p>
         <div id="registerToast" class="toast" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="card highlight quick-hide" id="qrSignupCard">
+        <h2>Inscription rapide (QR Code)</h2>
+        <p class="muted">Scannez pour ouvrir directement le formulaire d'inscription.</p>
+        <div style="display:flex; justify-content:center; align-items:center;">
+          <img id="qrSignup" alt="QR inscription" width="220" height="220" />
+        </div>
       </section>
 
       <section class="card highlight" id="don">

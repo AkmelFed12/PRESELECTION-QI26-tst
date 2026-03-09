@@ -22,6 +22,9 @@ const sponsorTrack = document.getElementById('sponsorTrack');
 const programDay = document.getElementById('programDay');
 const liveCountBadge = document.getElementById('liveCountBadge');
 const quickModeToggle = document.getElementById('quickModeToggle');
+const focusModeToggle = document.getElementById('focusModeToggle');
+const focusExitBtn = document.getElementById('focusExitBtn');
+const qrSignup = document.getElementById('qrSignup');
 const publicCommuneFilter = document.getElementById('publicCommuneFilter');
 const publicSearch = document.getElementById('publicSearch');
 const shareWhatsapp = document.getElementById('shareWhatsapp');
@@ -392,6 +395,30 @@ if (quickModeToggle) {
     const enabled = !document.body.classList.contains('quick-mode');
     applyQuickMode(enabled);
   });
+}
+
+function applyFocusMode(enabled) {
+  document.body.classList.toggle('focus-mode', enabled);
+  if (focusModeToggle) {
+    focusModeToggle.textContent = enabled ? 'Quitter focus' : 'Mode focus inscription';
+  }
+  if (focusExitBtn) {
+    focusExitBtn.style.display = enabled ? 'inline-flex' : 'none';
+  }
+  if (enabled) {
+    document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+focusModeToggle?.addEventListener('click', () => {
+  const enabled = !document.body.classList.contains('focus-mode');
+  applyFocusMode(enabled);
+});
+focusExitBtn?.addEventListener('click', () => applyFocusMode(false));
+
+if (qrSignup) {
+  const url = `${window.location.origin}/#inscription`;
+  qrSignup.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
 }
 
 const shareUrl = 'https://preselectionqi26.vercel.app';

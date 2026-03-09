@@ -552,6 +552,27 @@ footer {
   display: none;
 }
 
+.focus-mode .quick-hide,
+.focus-mode #don,
+.focus-mode #announcementCard,
+.focus-mode header.hero .hero-actions {
+  display: none;
+}
+
+.focus-mode main.layout > section.card {
+  display: none;
+}
+
+.focus-mode #inscription,
+.focus-mode #qrSignupCard {
+  display: block;
+}
+
+.focus-mode #inscription {
+  border: 2px solid var(--gold);
+  box-shadow: 0 24px 50px rgba(22, 12, 2, 0.18);
+}
+
 .whatsapp-float {
   position: fixed;
   right: 18px;
