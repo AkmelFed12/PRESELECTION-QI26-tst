@@ -804,7 +804,7 @@ app.get('/api/public-candidates', async (req, res) => {
   try {
     await maybeSyncManualCandidates();
     const result = await pool.query(`
-      SELECT c.id, c.candidateCode, c.fullName, c.city, c.country, c.photoUrl,
+      SELECT c.id, c.candidateCode, c.fullName, c.city, c.country, c.whatsapp, c.photoUrl,
              c.quranLevel, c.motivation, c.createdAt,
              COALESCE(COUNT(v.id), 0) as totalVotes
       FROM candidates c
