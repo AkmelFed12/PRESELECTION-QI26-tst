@@ -7,6 +7,10 @@ const votingBadge = document.getElementById('votingBadge');
 const statPublicCandidates = document.getElementById('statPublicCandidates');
 const statPublicCities = document.getElementById('statPublicCities');
 const statPublicVotes = document.getElementById('statPublicVotes');
+const progressCurrent = document.getElementById('progressCurrent');
+const progressMax = document.getElementById('progressMax');
+const progressBar = document.getElementById('progressBar');
+const publicRanking = document.getElementById('publicRanking');
 const communeStats = document.getElementById('communeStats');
 const announcementCard = document.getElementById('announcementCard');
 const announcementText = document.getElementById('announcementText');
@@ -27,6 +31,8 @@ const registerToast = document.getElementById('registerToast');
 const scrollTopBtn = document.getElementById('scrollTopBtn');
 
 let publicCandidatesCache = [];
+let publicCount = 0;
+let maxCandidatesValue = null;
 const homeContent = document.getElementById('homeContent');
 
 const toUpper = (value) => (value || '').trim().toUpperCase();
@@ -115,6 +121,7 @@ async function loadCandidates() {
     }
     publicCandidatesCache = data;
     renderPublicCandidates();
+    publicCount = data.length;
     const cities = new Set(data.map((c) => (c.city || '').toUpperCase()).filter(Boolean));
     const totalVotes = data.reduce((sum, c) => sum + Number(c.totalVotes || 0), 0);
     if (statPublicCandidates) {
@@ -130,6 +137,7 @@ async function loadCandidates() {
       statPublicVotes.dataset.count = String(totalVotes);
       animateCount(statPublicVotes, totalVotes);
     }
+    updateProgressBar();
 
     if (publicCommuneFilter) {
       const options = Array.from(cities).sort();
@@ -222,6 +230,19 @@ function animateCount(el, target) {
   requestAnimationFrame(tick);
 }
 
+function updateProgressBar() {
+  if (!progressCurrent || !progressMax || !progressBar) return;
+  progressCurrent.textContent = String(publicCount || 0);
+  if (!maxCandidatesValue || Number(maxCandidatesValue) <= 0) {
+    progressMax.textContent = 'Illimité';
+    progressBar.style.width = '100%';
+    return;
+  }
+  progressMax.textContent = String(maxCandidatesValue);
+  const ratio = Math.min(1, (publicCount || 0) / Number(maxCandidatesValue));
+  progressBar.style.width = `${Math.round(ratio * 100)}%`;
+}
+
 function isNewCandidate(createdAt) {
   if (!createdAt) return false;
   const created = new Date(createdAt).getTime();
@@ -304,6 +325,56 @@ async function loadSponsorCarousel() {
 
 loadSponsorCarousel();
 
+async function loadPublicResults() {
+  if (!publicRanking) return;
+  try {
+    const res = await fetch(`/api/public-results?ts=${Date.now()}`, { cache: 'no-store' });
+    const data = await res.json();
+    const list = Array.isArray(data.candidates) ? data.candidates : [];
+    if (!list.length) {
+      publicRanking.textContent = 'Aucun classement disponible.';
+      return;
+    }
+    const sorted = list
+      .slice()
+      .sort((a, b) => {
+        const aScore = Number(a.averageScore || 0);
+        const bScore = Number(b.averageScore || 0);
+        if (bScore !== aScore) return bScore - aScore;
+        return Number(b.totalVotes || 0) - Number(a.totalVotes || 0);
+      })
+      .slice(0, 10);
+    publicRanking.innerHTML = `
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nom</th>
+            <th>Moyenne</th>
+            <th>Votes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted
+            .map(
+              (c, idx) => `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${c.fullName || c.name || 'Inconnu'}</td>
+                <td>${Number(c.averageScore || 0).toFixed(2)}</td>
+                <td>${c.totalVotes || 0}</td>
+              </tr>
+            `,
+            )
+            .join('')}
+        </tbody>
+      </table>
+    `;
+  } catch {
+    publicRanking.textContent = 'Impossible de charger le classement.';
+  }
+}
+
 function applyQuickMode(enabled) {
   document.body.classList.toggle('quick-mode', enabled);
   if (quickModeToggle) {
@@ -363,6 +434,8 @@ async function loadPublicSettings() {
   try {
     const res = await fetch(`/api/public-settings?ts=${Date.now()}`, { cache: 'no-store' });
     const data = await res.json();
+    maxCandidatesValue = Number(data.maxCandidates || data.maxcandidates || 0) || null;
+    updateProgressBar();
     if (registrationBadge) {
       registrationBadge.textContent = data.registrationLocked ? 'Inscriptions: fermées' : 'Inscriptions: ouvertes';
     }
@@ -434,9 +507,11 @@ async function loadPublicSettings() {
 }
 
 loadPublicSettings();
+loadPublicResults();
 setInterval(() => {
   loadCandidates();
   loadPublicSettings();
+  loadPublicResults();
 }, 60000);
 
 const darkToggle = document.getElementById('darkToggle');

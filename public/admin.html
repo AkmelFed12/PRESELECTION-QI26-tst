@@ -105,7 +105,16 @@
             <input id="candidateSearch" placeholder="Ex: ABOBO ou +22505..." />
           </div>
           <div class="full">
+            <label>Filtrer par commune</label>
+            <select id="candidateCommuneFilter">
+              <option value="">Toutes les communes</option>
+            </select>
+          </div>
+          <div class="full">
             <button class="btn-primary" type="button" id="printAttendanceBtn">Imprimer la liste d'appel</button>
+          </div>
+          <div class="full">
+            <button class="btn outline" type="button" id="downloadAttendanceDoc">Télécharger la liste d'appel (Word)</button>
           </div>
         </div>
         <form id="candidateForm" class="form-grid">

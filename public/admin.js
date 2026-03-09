@@ -24,6 +24,8 @@ const candidateMsg = document.getElementById('candidateMsg');
 const candidatesTable = document.querySelector('#candidatesTable tbody');
 const candidateSearch = document.getElementById('candidateSearch');
 const printAttendanceBtn = document.getElementById('printAttendanceBtn');
+const candidateCommuneFilter = document.getElementById('candidateCommuneFilter');
+const downloadAttendanceDoc = document.getElementById('downloadAttendanceDoc');
 
 const scoreForm = document.getElementById('scoreForm');
 const scoreMsg = document.getElementById('scoreMsg');
@@ -244,6 +246,7 @@ async function loadDashboard() {
   candidatesCache = data.candidates || [];
   renderCandidates(candidatesCache);
   renderCommuneStats(candidatesCache);
+  renderCommuneFilter(candidatesCache);
 
   // ranking
   renderRanking(data.ranking || []);
@@ -280,6 +283,7 @@ function renderFromCache(data) {
   candidatesCache = data.candidates || [];
   renderCandidates(candidatesCache);
   renderCommuneStats(candidatesCache);
+  renderCommuneFilter(candidatesCache);
   renderRanking(data.ranking || []);
   renderGlobalSearch();
 }
@@ -308,6 +312,7 @@ function printAttendanceList() {
     alert('Aucun candidat à imprimer.');
     return;
   }
+  const today = new Date().toLocaleDateString('fr-FR');
   const sorted = list.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
   const rows = sorted
     .map(
@@ -338,7 +343,7 @@ function printAttendanceList() {
       </head>
       <body>
         <h1>Liste d'appel — Quiz Islamique 2026</h1>
-        <p>Date : _____________</p>
+        <p>Date : ${today}</p>
         <table>
           <thead>
             <tr>
@@ -365,7 +370,8 @@ function printAttendanceList() {
 
 function filterCandidates() {
   const query = (candidateSearch?.value || '').trim().toLowerCase();
-  if (!query) {
+  const commune = (candidateCommuneFilter?.value || '').toLowerCase().trim();
+  if (!query && !commune) {
     renderCandidates(candidatesCache);
     return;
   }
@@ -373,7 +379,9 @@ function filterCandidates() {
     const name = resolveName(c).toLowerCase();
     const city = (c.city || '').toLowerCase();
     const phone = (c.whatsapp || '').toLowerCase();
-    return name.includes(query) || city.includes(query) || phone.includes(query);
+    const matchQuery = !query || name.includes(query) || city.includes(query) || phone.includes(query);
+    const matchCommune = !commune || city === commune;
+    return matchQuery && matchCommune;
   });
   renderCandidates(filtered);
 }
@@ -411,6 +419,16 @@ function renderCommuneStats(list) {
     `,
     )
     .join('');
+}
+
+function renderCommuneFilter(list) {
+  if (!candidateCommuneFilter) return;
+  const communes = Array.from(
+    new Set(list.map((c) => (c.city || '').toUpperCase()).filter(Boolean)),
+  ).sort();
+  candidateCommuneFilter.innerHTML = `<option value="">Toutes les communes</option>${communes
+    .map((c) => `<option value="${c}">${c}</option>`)
+    .join('')}`;
 }
 
 function renderMonthlyBarChart(target, data) {
@@ -736,7 +754,76 @@ candidateSearch?.addEventListener('input', () => {
   filterCandidates();
 });
 
+candidateCommuneFilter?.addEventListener('change', () => {
+  filterCandidates();
+});
+
 printAttendanceBtn?.addEventListener('click', printAttendanceList);
+downloadAttendanceDoc?.addEventListener('click', () => {
+  const list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
+  if (!list.length) {
+    alert('Aucun candidat à exporter.');
+    return;
+  }
+  const today = new Date().toLocaleDateString('fr-FR');
+  const sorted = list.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  const rows = sorted
+    .map(
+      (c, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${c.id || ''}</td>
+          <td>${resolveName(c)}</td>
+          <td>${c.whatsapp || ''}</td>
+          <td>${c.city || ''}</td>
+          <td style="height:24px;"></td>
+          <td style="height:24px;"></td>
+        </tr>
+      `,
+    )
+    .join('');
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Liste d'appel — Quiz Islamique 2026</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Liste d'appel — Quiz Islamique 2026</h1>
+        <p>Date : ${today}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>WhatsApp</th>
+              <th>Commune</th>
+              <th>Présent</th>
+              <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>`;
+
+  const blob = new Blob([html], { type: 'application/msword' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Liste-presence-Quiz-Islamique-2026-${today.replace(/\//g, '-')}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
 
 globalSearchInput?.addEventListener('input', () => {
   renderGlobalSearch();
