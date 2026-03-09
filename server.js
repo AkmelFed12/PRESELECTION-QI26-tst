@@ -169,6 +169,22 @@ function hashManualCandidates(list) {
   }
 }
 
+let lastManualSync = 0;
+const MANUAL_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+
+async function maybeSyncManualCandidates() {
+  const now = Date.now();
+  if (now - lastManualSync < MANUAL_SYNC_INTERVAL_MS) return;
+  const manualCandidates = loadManualCandidates();
+  if (!manualCandidates.length) return;
+  try {
+    await upsertManualCandidates(manualCandidates);
+    lastManualSync = now;
+  } catch (error) {
+    console.warn('⚠️ Sync manuel candidats échoué:', error.message);
+  }
+}
+
 async function replaceCandidatesFromManualList(manualCandidates) {
   if (!Array.isArray(manualCandidates) || manualCandidates.length === 0) return 0;
   await pool.query('BEGIN');
@@ -786,6 +802,7 @@ app.get('/api/health', async (req, res) => {
 // Public candidates
 app.get('/api/public-candidates', async (req, res) => {
   try {
+    await maybeSyncManualCandidates();
     const result = await pool.query(`
       SELECT c.id, c.candidateCode, c.fullName, c.city, c.country, c.photoUrl,
              c.quranLevel, c.motivation, c.createdAt,
@@ -1059,6 +1076,7 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
 // Admin dashboard
 app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
   try {
+    await maybeSyncManualCandidates();
     const [candidates, votes, ranking, settings, contacts, donationsPending] = await Promise.all([
       pool.query('SELECT * FROM candidates ORDER BY id DESC'),
       pool.query(`
