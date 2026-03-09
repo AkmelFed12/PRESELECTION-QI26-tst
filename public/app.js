@@ -67,7 +67,23 @@ const manualNameMap = {
   "2250595194172": "BAH MARIAM",
   "2250747964642": "TRAORE ADJARA",
   "2250748745910": "KOUASSI SAHRA LESLIE",
-  "2250584233531": "OUATTARA FAOUZIYA"
+  "2250584233531": "OUATTARA FAOUZIYA",
+  "2250596267323": "KONE FATIM",
+  "2250575661660": "BADIEL MOHAMED",
+  "2250566584580": "DIABATE OUMAR",
+  "2250151723646": "OUATTARA DIGATA KHADIJA",
+  "2250150612819": "ZEBA SAMIRA",
+  "2250585963082": "YEO SALIMATA",
+  "2250718906238": "KOUYATE FATOUMATA RAMADAN",
+  "2250160827840": "MARANE CHEICK SAÏB",
+  "2250544511910": "DEMBELE MAIMOUNA",
+  "2250748369772": "DOSSO MOHAMED LAMINE",
+  "2250172323549": "MEITE IBRAHIM SORY",
+  "2250574958887": "SERE ABOUBACAR SIDIK",
+  "2250585085947": "DABRE SALIFATOU",
+  "2250503173898": "SANGARE MOHAMED",
+  "2250767281192": "BOSSE YAHAYA SAMUEL",
+  "2250757275876": "CISSE ABOUBACAR SIDIK"
 };
 
 function digitsOnly(value) {
@@ -91,7 +107,7 @@ async function loadCandidates() {
   if (!publicCandidates) return;
   publicCandidates.textContent = 'Chargement...';
   try {
-    const res = await fetch('/api/public-candidates');
+    const res = await fetch(`/api/public-candidates?ts=${Date.now()}`, { cache: 'no-store' });
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
       publicCandidates.textContent = 'Aucun candidat inscrit pour le moment.';
@@ -261,7 +277,7 @@ donationForm?.addEventListener('submit', (e) => {
 async function loadSponsorCarousel() {
   if (!sponsorTrack) return;
   try {
-    const res = await fetch('/api/public-sponsors');
+    const res = await fetch(`/api/public-sponsors?ts=${Date.now()}`, { cache: 'no-store' });
     const data = await res.json();
     const items = Array.isArray(data) ? data : [];
     if (!items.length) {
@@ -345,7 +361,7 @@ if (homeContent) homeContent.style.display = 'block';
 
 async function loadPublicSettings() {
   try {
-    const res = await fetch('/api/public-settings');
+    const res = await fetch(`/api/public-settings?ts=${Date.now()}`, { cache: 'no-store' });
     const data = await res.json();
     if (registrationBadge) {
       registrationBadge.textContent = data.registrationLocked ? 'Inscriptions: fermées' : 'Inscriptions: ouvertes';
@@ -418,6 +434,10 @@ async function loadPublicSettings() {
 }
 
 loadPublicSettings();
+setInterval(() => {
+  loadCandidates();
+  loadPublicSettings();
+}, 60000);
 
 const darkToggle = document.getElementById('darkToggle');
 const isDark = localStorage.getItem('theme') === 'dark';

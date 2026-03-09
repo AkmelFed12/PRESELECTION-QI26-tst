@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quiz-2026-v1';
+const CACHE_NAME = 'quiz-2026-v2';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -27,6 +27,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(request, { cache: 'no-store' }).catch(() => caches.match('/index.html')));
+    return;
+  }
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
