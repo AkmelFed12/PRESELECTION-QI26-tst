@@ -151,6 +151,34 @@
         </table>
       </section>
 
+      <div class="modal-backdrop" id="candidateModal" style="display:none;">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Modifier un candidat</h3>
+            <button class="btn outline" type="button" id="candidateModalClose">Fermer</button>
+          </div>
+          <form id="candidateModalForm" class="form-grid">
+            <div><label>ID</label><input name="id" id="modalCandidateId" type="number" readonly /></div>
+            <div><label>Nom & prénoms</label><input name="fullName" id="modalCandidateName" required /></div>
+            <div><label>Commune</label><input name="city" id="modalCandidateCity" /></div>
+            <div><label>WhatsApp</label><input name="whatsapp" id="modalCandidateWhatsapp" required /></div>
+            <div><label>Téléphone</label><input name="phone" id="modalCandidatePhone" /></div>
+            <div><label>Email</label><input name="email" id="modalCandidateEmail" type="email" /></div>
+            <div><label>Statut</label>
+              <select name="status" id="modalCandidateStatus">
+                <option value="approved">Validé</option>
+                <option value="pending">En attente</option>
+                <option value="eliminated">Éliminé</option>
+              </select>
+            </div>
+            <div class="full">
+              <button class="btn-primary" type="submit">Enregistrer les modifications</button>
+            </div>
+          </form>
+          <p id="candidateModalMsg" class="status"></p>
+        </div>
+      </div>
+
       <section class="card admin-hidden" id="scoresSection">
         <h2>Notation des candidats</h2>
         <form id="scoreForm" class="form-grid">

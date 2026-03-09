@@ -26,6 +26,17 @@ const candidateSearch = document.getElementById('candidateSearch');
 const printAttendanceBtn = document.getElementById('printAttendanceBtn');
 const candidateCommuneFilter = document.getElementById('candidateCommuneFilter');
 const downloadAttendanceDoc = document.getElementById('downloadAttendanceDoc');
+const candidateModal = document.getElementById('candidateModal');
+const candidateModalClose = document.getElementById('candidateModalClose');
+const candidateModalForm = document.getElementById('candidateModalForm');
+const candidateModalMsg = document.getElementById('candidateModalMsg');
+const modalCandidateId = document.getElementById('modalCandidateId');
+const modalCandidateName = document.getElementById('modalCandidateName');
+const modalCandidateCity = document.getElementById('modalCandidateCity');
+const modalCandidateWhatsapp = document.getElementById('modalCandidateWhatsapp');
+const modalCandidatePhone = document.getElementById('modalCandidatePhone');
+const modalCandidateEmail = document.getElementById('modalCandidateEmail');
+const modalCandidateStatus = document.getElementById('modalCandidateStatus');
 
 const scoreForm = document.getElementById('scoreForm');
 const scoreMsg = document.getElementById('scoreMsg');
@@ -306,6 +317,24 @@ function renderCandidates(list) {
     `,
     )
     .join('');
+}
+
+function openCandidateModal(candidate) {
+  if (!candidateModal) return;
+  modalCandidateId.value = candidate.id || '';
+  modalCandidateName.value = resolveName(candidate) || '';
+  modalCandidateCity.value = candidate.city || '';
+  modalCandidateWhatsapp.value = candidate.whatsapp || '';
+  modalCandidatePhone.value = candidate.phone || '';
+  modalCandidateEmail.value = candidate.email || '';
+  modalCandidateStatus.value = candidate.status || 'approved';
+  if (candidateModalMsg) candidateModalMsg.textContent = '';
+  candidateModal.style.display = 'flex';
+}
+
+function closeCandidateModal() {
+  if (!candidateModal) return;
+  candidateModal.style.display = 'none';
 }
 
 function printAttendanceList() {
@@ -827,6 +856,29 @@ downloadAttendanceDoc?.addEventListener('click', () => {
   document.body.removeChild(link);
 });
 
+candidateModalClose?.addEventListener('click', closeCandidateModal);
+candidateModal?.addEventListener('click', (e) => {
+  if (e.target === candidateModal) closeCandidateModal();
+});
+
+candidateModalForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!modalCandidateId.value) return;
+  setStatus(candidateModalMsg, 'Sauvegarde...');
+  const payload = Object.fromEntries(new FormData(candidateModalForm).entries());
+  payload.city = (payload.city || '').toUpperCase();
+  const res = await authedFetch(`/api/admin/candidates/${payload.id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(candidateModalMsg, data.message || (res.ok ? 'Mis à jour.' : 'Erreur.'));
+  if (res.ok) {
+    await loadDashboard();
+    setTimeout(closeCandidateModal, 600);
+  }
+});
+
 globalSearchInput?.addEventListener('input', () => {
   renderGlobalSearch();
 });
@@ -834,13 +886,11 @@ globalSearchInput?.addEventListener('input', () => {
 candidatesTable?.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-edit]');
   if (!btn) return;
-  const row = btn.closest('tr');
-  const cells = row.querySelectorAll('td');
-  candidateForm.querySelector('#candidateId').value = cells[0].textContent;
-  candidateForm.querySelector('#candidateName').value = cells[1].textContent;
-  candidateForm.querySelector('#candidateWhatsapp').value = cells[2].textContent;
-  candidateForm.querySelector('#candidateCity').value = cells[3].textContent;
-  candidateForm.querySelector('#candidateStatus').value = cells[4].textContent === 'Validé' ? 'approved' : cells[4].textContent === 'Éliminé' ? 'eliminated' : 'pending';
+  const id = btn.getAttribute('data-edit');
+  const candidate = candidatesCache.find((c) => String(c.id) === String(id));
+  if (candidate) {
+    openCandidateModal(candidate);
+  }
 });
 
 scoreForm?.addEventListener('submit', async (e) => {
