@@ -102,7 +102,7 @@ function digitsOnly(value) {
 }
 
 function resolveName(candidate) {
-  const current = candidate.fullName || candidate.name || '';
+  const current = candidate.fullName || candidate.fullname || candidate.name || '';
   if (current && current !== 'Inconnu') return current;
   const digits = digitsOnly(candidate.whatsapp);
   if (manualNameMap[digits]) return manualNameMap[digits];
