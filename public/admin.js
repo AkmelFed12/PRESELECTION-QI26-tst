@@ -317,6 +317,7 @@ function renderCandidates(list) {
         <td>${c.status || 'pending'}</td>
         <td>
           <button data-edit="${c.id}">Modifier</button>
+          <button data-cert="${c.id}">Certificat</button>
           <button data-delete="${c.id}">Supprimer</button>
         </td>
       </tr>
@@ -796,6 +797,26 @@ function downloadFile(filename, content) {
   document.body.removeChild(link);
 }
 
+function downloadBlob(filename, blob) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+async function downloadCertificate(candidateId) {
+  const res = await authedFetch(`/api/admin/certificates/${candidateId}`);
+  if (!res.ok) {
+    alert("Impossible de générer le certificat.");
+    return;
+  }
+  const blob = await res.blob();
+  downloadBlob(`certificat-${candidateId}.pdf`, blob);
+}
+
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(loginMsg, 'Connexion...');
@@ -998,6 +1019,13 @@ candidatesTable?.addEventListener('click', (e) => {
     if (candidate) {
       openCandidateModal(candidate);
     }
+    return;
+  }
+  const certBtn = e.target.closest('button[data-cert]');
+  if (certBtn) {
+    const id = certBtn.getAttribute('data-cert');
+    if (!id) return;
+    downloadCertificate(id);
     return;
   }
   const delBtn = e.target.closest('button[data-delete]');

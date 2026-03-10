@@ -12,6 +12,7 @@ import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
+import PDFDocument from 'pdfkit';
 
 dotenv.config();
 
@@ -372,6 +373,14 @@ function normalizeSettingsRow(row) {
     announcementText: row.announcementtext ?? row.announcementText ?? '',
     scheduleJson: row.schedulejson ?? row.scheduleJson ?? '[]'
   };
+}
+
+function formatDateFr(date = new Date()) {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 // ==================== SECURITY HEADERS ====================
@@ -1916,6 +1925,68 @@ app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
       );
     }
     res.json({ message: 'Candidat mis à jour.', candidateId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET - Certificate PDF for candidate
+app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
+  try {
+    const candidateId = Number(req.params.id);
+    if (!candidateId) return res.status(400).json({ message: 'ID candidat invalide.' });
+    const result = await pool.query(
+      'SELECT id, fullName, city, whatsapp, createdAt FROM candidates WHERE id = $1',
+      [candidateId]
+    );
+    const candidate = result.rows[0];
+    if (!candidate) return res.status(404).json({ message: 'Candidat introuvable.' });
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const filename = `certificat-${candidate.id}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+
+    const logoPath = join(__dirname, 'public', 'assets', 'logo.jpg');
+    try {
+      doc.image(logoPath, 50, 40, { width: 80 });
+    } catch {}
+
+    doc
+      .fontSize(22)
+      .text('Certificat de participation', { align: 'center' })
+      .moveDown(0.5);
+    doc
+      .fontSize(12)
+      .text('Quiz Islamique 2026 — Présélections', { align: 'center' })
+      .moveDown(1.5);
+
+    doc
+      .fontSize(14)
+      .text(`Nous certifions que :`, { align: 'center' })
+      .moveDown(0.8);
+    doc
+      .fontSize(18)
+      .text(candidate.fullname || candidate.fullName || 'Candidat', { align: 'center' })
+      .moveDown(0.8);
+    doc
+      .fontSize(12)
+      .text(`Commune: ${candidate.city || ''}`, { align: 'center' })
+      .text(`WhatsApp: ${candidate.whatsapp || ''}`, { align: 'center' })
+      .moveDown(1.5);
+
+    doc
+      .fontSize(12)
+      .text(`Date: ${formatDateFr(new Date())}`, { align: 'center' })
+      .moveDown(2);
+
+    doc
+      .fontSize(10)
+      .text("Association des Serviteurs d'Allah Azawajal", { align: 'center' });
+
+    doc.end();
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
