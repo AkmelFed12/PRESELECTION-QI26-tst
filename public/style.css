@@ -139,6 +139,12 @@ header.hero {
   border-color: rgba(255, 255, 255, 0.6);
 }
 
+.card .btn.outline {
+  color: var(--emerald);
+  border-color: var(--emerald);
+  background: transparent;
+}
+
 .btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(10, 5, 0, 0.15);
