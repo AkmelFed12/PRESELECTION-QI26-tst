@@ -65,7 +65,7 @@
         </div>
       </section>
 
-      <section class="card quick-hide">
+      <section class="card highlight faq-card quick-hide">
         <h2>Calendrier officiel</h2>
         <div id="calendarList" class="status">Chargement...</div>
       </section>
@@ -75,6 +75,38 @@
         <div id="programmeSummary" class="status">Chargement...</div>
         <div class="nav-links" style="margin-top:10px;">
           <a href="programme.html">Voir le programme complet</a>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Règlement — résumé rapide</h2>
+        <ul class="list-steps">
+          <li>Respect, tolérance et fair‑play obligatoires.</li>
+          <li>Présence requise aux dates annoncées.</li>
+          <li>Notation sur 30 points (2 thèmes).</li>
+          <li>Décisions du jury et de l’organisation sont souveraines.</li>
+        </ul>
+        <div class="nav-links" style="margin-top:10px;">
+          <a href="reglement.html">Voir le règlement complet</a>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>FAQ (questions fréquentes)</h2>
+        <div class="status">
+          <strong>Comment se passent les présélections ?</strong>
+          <div class="muted">En plusieurs phases en ligne et en présentiel (voir programme).</div>
+        </div>
+        <div class="status" style="margin-top:10px;">
+          <strong>Où se déroulent les passages ?</strong>
+          <div class="muted">Adjamé (Abidjan‑Nord) et Treichville (Abidjan‑Sud).</div>
+        </div>
+        <div class="status" style="margin-top:10px;">
+          <strong>Comment contacter l’organisation ?</strong>
+          <div class="muted">Via WhatsApp ou la page Contact.</div>
+        </div>
+        <div class="nav-links" style="margin-top:10px;">
+          <a href="faq.html">Voir toutes les FAQ</a>
         </div>
       </section>
 
@@ -159,6 +191,44 @@
         <div id="registerToast" class="toast" role="status" aria-live="polite"></div>
       </section>
 
+      <section class="card highlight" id="waitlistSection" style="display:none;">
+        <h2>Liste d’attente</h2>
+        <p class="muted">Les inscriptions sont fermées. Laissez vos informations pour être contacté.</p>
+        <form id="waitlistForm" class="form-grid">
+          <div>
+            <label for="waitlistName">Nom et prénoms *</label>
+            <input id="waitlistName" name="fullName" required />
+          </div>
+          <div>
+            <label for="waitlistCity">Commune *</label>
+            <select id="waitlistCity" name="city" required>
+              <option value="">Choisir une commune</option>
+              <option>TREICHVILLE</option>
+              <option>ADJAMÉ</option>
+              <option>YOPOUGON</option>
+              <option>ABOBO</option>
+              <option>PLATEAU</option>
+              <option>KOUMASSI</option>
+              <option>COCODY</option>
+              <option>PORT-BOUET</option>
+              <option>MARCORY</option>
+              <option>ANYAMA</option>
+              <option>BINGERVILLE</option>
+              <option>SONGON</option>
+              <option>ATTECOUBE</option>
+            </select>
+          </div>
+          <div>
+            <label for="waitlistWhatsapp">WhatsApp *</label>
+            <input id="waitlistWhatsapp" name="whatsapp" placeholder="+225..." required />
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Rejoindre la liste d’attente</button>
+          </div>
+        </form>
+        <p id="waitlistMsg" class="status"></p>
+      </section>
+
       <section class="card highlight quick-hide" id="qrSignupCard">
         <h2>Inscription rapide (QR Code)</h2>
         <p class="muted">Scannez pour ouvrir directement le formulaire d'inscription.</p>
@@ -238,6 +308,7 @@
       <section class="card quick-hide">
         <h2>Répartition par commune</h2>
         <div id="communeStats" class="status">Chargement...</div>
+        <div id="communeChart" style="margin-top:12px;"></div>
       </section>
 
       <section class="card quick-hide">

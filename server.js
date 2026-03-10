@@ -76,6 +76,12 @@ const contactLimiter = rateLimit({
   message: 'Trop de tentatives de contact, réessayez plus tard.'
 });
 
+const waitlistLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  message: 'Trop de tentatives, réessayez plus tard.'
+});
+
 // Constants
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'asaa';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ASAA';
@@ -684,6 +690,24 @@ async function initDatabase() {
         UNIQUE(storyId, likerEmail)
       );
 
+      CREATE TABLE IF NOT EXISTS waitlist (
+        id BIGSERIAL PRIMARY KEY,
+        fullName TEXT NOT NULL,
+        whatsapp TEXT NOT NULL,
+        city TEXT,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS eliminated_candidates (
+        id BIGSERIAL PRIMARY KEY,
+        candidateId BIGINT UNIQUE,
+        fullName TEXT,
+        whatsapp TEXT,
+        city TEXT,
+        status TEXT,
+        archivedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
       INSERT INTO tournament_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 
       CREATE INDEX IF NOT EXISTS idx_votes_candidate ON votes(candidateId);
@@ -1115,6 +1139,31 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Waitlist when registrations are closed
+app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
+  try {
+    const { fullName, whatsapp, city } = req.body || {};
+    const sanitizedName = sanitizeString(fullName, 255);
+    const sanitizedCity = normalizeCommune(city);
+    if (!sanitizedName || sanitizedName.length < 2) {
+      return res.status(400).json({ message: 'Nom complet invalide.' });
+    }
+    const normalized = normalizeWhatsapp(whatsapp);
+    if (!normalized) {
+      return res.status(400).json({ message: 'Numéro WhatsApp invalide.' });
+    }
+    await pool.query(
+      `INSERT INTO waitlist (fullName, whatsapp, city)
+       VALUES ($1, $2, $3)`,
+      [sanitizedName, normalized, sanitizedCity]
+    );
+    res.json({ message: 'Inscription en liste d’attente enregistrée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -1853,6 +1902,19 @@ app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
         candidateId
       ]
     );
+    if (safeStatus === 'eliminated') {
+      await pool.query(
+        `INSERT INTO eliminated_candidates (candidateId, fullName, whatsapp, city, status)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (candidateId)
+         DO UPDATE SET fullName = EXCLUDED.fullName,
+                       whatsapp = EXCLUDED.whatsapp,
+                       city = EXCLUDED.city,
+                       status = EXCLUDED.status,
+                       archivedAt = NOW()`,
+        [candidateId, sanitizedName, normalized, sanitizedCity, safeStatus]
+      );
+    }
     res.json({ message: 'Candidat mis à jour.', candidateId });
   } catch (error) {
     console.error(error);

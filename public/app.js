@@ -12,6 +12,7 @@ const progressMax = document.getElementById('progressMax');
 const progressBar = document.getElementById('progressBar');
 const publicRanking = document.getElementById('publicRanking');
 const communeStats = document.getElementById('communeStats');
+const communeChart = document.getElementById('communeChart');
 const announcementCard = document.getElementById('announcementCard');
 const announcementText = document.getElementById('announcementText');
 const announcementBanner = document.getElementById('announcementBanner');
@@ -26,6 +27,9 @@ const focusModeToggle = document.getElementById('focusModeToggle');
 const focusExitBtn = document.getElementById('focusExitBtn');
 const qrSignup = document.getElementById('qrSignup');
 const registrationClosedNote = document.getElementById('registrationClosedNote');
+const waitlistSection = document.getElementById('waitlistSection');
+const waitlistForm = document.getElementById('waitlistForm');
+const waitlistMsg = document.getElementById('waitlistMsg');
 const programmeSummary = document.getElementById('programmeSummary');
 const publicCommuneFilter = document.getElementById('publicCommuneFilter');
 const publicSearch = document.getElementById('publicSearch');
@@ -166,6 +170,7 @@ async function loadCandidates() {
             rows.map(([name, count]) => `<tr><td>${name}</td><td>${count}</td></tr>`).join('')
           }</tbody></table>`
         : 'Aucune donnée.';
+      renderCommuneChart(counts);
     }
   } catch (e) {
     publicCandidates.textContent = 'Impossible de charger la liste.';
@@ -258,6 +263,28 @@ function isNewCandidate(createdAt) {
   return diff <= 48 * 60 * 60 * 1000;
 }
 
+function renderCommuneChart(counts) {
+  if (!communeChart) return;
+  const entries = Object.entries(counts || {}).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    communeChart.textContent = 'Aucune donnée.';
+    return;
+  }
+  const max = Math.max(...entries.map(([, count]) => count));
+  communeChart.innerHTML = entries
+    .map(([name, count]) => {
+      const pct = max ? Math.round((count / max) * 100) : 0;
+      return `
+        <div class="chart-row">
+          <span class="chart-label">${name}</span>
+          <div class="chart-bar"><div class="chart-fill" style="width:${pct}%"></div></div>
+          <strong class="chart-count">${count}</strong>
+        </div>
+      `;
+    })
+    .join('');
+}
+
 form?.addEventListener('submit', async (e) => {
   e.preventDefault();
   msg.textContent = 'Enregistrement en cours...';
@@ -284,6 +311,29 @@ form?.addEventListener('submit', async (e) => {
     }
   } catch (e) {
     msg.textContent = 'Erreur réseau, réessayez.';
+  }
+});
+
+waitlistForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (waitlistMsg) waitlistMsg.textContent = 'Enregistrement en cours...';
+  const payload = Object.fromEntries(new FormData(waitlistForm).entries());
+  payload.city = toUpper(payload.city);
+  try {
+    const res = await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (waitlistMsg) waitlistMsg.textContent = data.message || 'Erreur lors de l’enregistrement.';
+      return;
+    }
+    if (waitlistMsg) waitlistMsg.textContent = data.message || 'Ajouté en liste d’attente.';
+    waitlistForm.reset();
+  } catch {
+    if (waitlistMsg) waitlistMsg.textContent = 'Erreur réseau, réessayez.';
   }
 });
 
@@ -473,6 +523,7 @@ async function loadPublicSettings() {
     if (data.registrationLocked) {
       document.body.classList.add('registration-closed');
       if (registrationClosedNote) registrationClosedNote.style.display = 'block';
+      if (waitlistSection) waitlistSection.style.display = 'block';
       if (form) {
         Array.from(form.elements).forEach((el) => {
           if (el.tagName === 'BUTTON') return;
@@ -483,6 +534,8 @@ async function loadPublicSettings() {
     } else {
       document.body.classList.remove('registration-closed');
       if (registrationClosedNote) registrationClosedNote.style.display = 'none';
+      if (waitlistSection) waitlistSection.style.display = 'none';
+      if (waitlistMsg) waitlistMsg.textContent = '';
       if (form) {
         Array.from(form.elements).forEach((el) => {
           el.disabled = false;
