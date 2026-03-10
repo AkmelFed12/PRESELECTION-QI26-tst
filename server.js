@@ -1974,6 +1974,17 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       doc.image(logoPath, 50, 40, { width: 80 });
     } catch {}
 
+    // Watermark logo (center, low opacity)
+    try {
+      const wmWidth = 260;
+      const wmX = (pageW - wmWidth) / 2;
+      const wmY = (pageH - wmWidth) / 2 - 20;
+      doc.save();
+      doc.opacity(0.08);
+      doc.image(logoPath, wmX, wmY, { width: wmWidth });
+      doc.restore();
+    } catch {}
+
     doc
       .fontSize(22)
       .fillColor('#1c1c1c')
