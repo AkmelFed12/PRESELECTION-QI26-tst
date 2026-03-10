@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quiz-2026-v2';
+const CACHE_NAME = 'quiz-2026-v3';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -28,7 +28,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
-  if (url.pathname.startsWith('/api/')) {
+  const acceptsHtml = (request.headers.get('accept') || '').includes('text/html');
+  if (url.pathname.startsWith('/api/') || acceptsHtml) {
     event.respondWith(fetch(request, { cache: 'no-store' }).catch(() => caches.match('/index.html')));
     return;
   }
