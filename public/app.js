@@ -26,6 +26,7 @@ const focusModeToggle = document.getElementById('focusModeToggle');
 const focusExitBtn = document.getElementById('focusExitBtn');
 const qrSignup = document.getElementById('qrSignup');
 const registrationClosedNote = document.getElementById('registrationClosedNote');
+const programmeSummary = document.getElementById('programmeSummary');
 const publicCommuneFilter = document.getElementById('publicCommuneFilter');
 const publicSearch = document.getElementById('publicSearch');
 const shareWhatsapp = document.getElementById('shareWhatsapp');
@@ -510,6 +511,14 @@ async function loadPublicSettings() {
               .join('')}
           </div>
         `;
+      }
+      if (programmeSummary) {
+        const preview = schedule.slice(0, 5);
+        programmeSummary.innerHTML = preview.length
+          ? `<ul class="list-steps">${preview
+              .map((s) => `<li><strong>${s.date || ''}</strong> ${s.time ? `(${s.time})` : ''} — ${s.title || ''}</li>`)
+              .join('')}</ul>`
+          : 'Aucun programme disponible.';
       }
       if (programDay) {
         const today = new Date();
