@@ -1860,6 +1860,18 @@ app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+app.delete('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
+  try {
+    const candidateId = Number(req.params.id);
+    if (!candidateId) return res.status(400).json({ message: 'ID candidat invalide.' });
+    await pool.query('DELETE FROM candidates WHERE id = $1', [candidateId]);
+    res.json({ message: 'Candidat supprimé.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 function toCsv(rows, headers) {
   const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
   const lines = [headers.join(',')];

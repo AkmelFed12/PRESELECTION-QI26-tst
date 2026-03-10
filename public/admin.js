@@ -30,6 +30,7 @@ const candidateModal = document.getElementById('candidateModal');
 const candidateModalClose = document.getElementById('candidateModalClose');
 const candidateModalForm = document.getElementById('candidateModalForm');
 const candidateModalMsg = document.getElementById('candidateModalMsg');
+const candidateModalDelete = document.getElementById('candidateModalDelete');
 const modalCandidateId = document.getElementById('modalCandidateId');
 const modalCandidateName = document.getElementById('modalCandidateName');
 const modalCandidateCity = document.getElementById('modalCandidateCity');
@@ -312,7 +313,10 @@ function renderCandidates(list) {
         <td>${c.whatsapp || ''}</td>
         <td>${c.city || ''}</td>
         <td>${c.status || 'pending'}</td>
-        <td><button data-edit="${c.id}">Modifier</button></td>
+        <td>
+          <button data-edit="${c.id}">Modifier</button>
+          <button data-delete="${c.id}">Supprimer</button>
+        </td>
       </tr>
     `,
     )
@@ -879,18 +883,47 @@ candidateModalForm?.addEventListener('submit', async (e) => {
   }
 });
 
+candidateModalDelete?.addEventListener('click', async () => {
+  const id = modalCandidateId.value;
+  if (!id) return;
+  const ok = confirm('Supprimer définitivement ce candidat ?');
+  if (!ok) return;
+  const res = await authedFetch(`/api/admin/candidates/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    await loadDashboard();
+    closeCandidateModal();
+  } else {
+    setStatus(candidateModalMsg, 'Suppression impossible.');
+  }
+});
+
 globalSearchInput?.addEventListener('input', () => {
   renderGlobalSearch();
 });
 
 candidatesTable?.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-edit]');
-  if (!btn) return;
-  const id = btn.getAttribute('data-edit');
-  const candidate = candidatesCache.find((c) => String(c.id) === String(id));
-  if (candidate) {
-    openCandidateModal(candidate);
+  if (btn) {
+    const id = btn.getAttribute('data-edit');
+    const candidate = candidatesCache.find((c) => String(c.id) === String(id));
+    if (candidate) {
+      openCandidateModal(candidate);
+    }
+    return;
   }
+  const delBtn = e.target.closest('button[data-delete]');
+  if (!delBtn) return;
+  const id = delBtn.getAttribute('data-delete');
+  if (!id) return;
+  const ok = confirm('Supprimer définitivement ce candidat ?');
+  if (!ok) return;
+  authedFetch(`/api/admin/candidates/${id}`, { method: 'DELETE' }).then(async (res) => {
+    if (res.ok) {
+      await loadDashboard();
+    } else {
+      alert('Suppression impossible.');
+    }
+  });
 });
 
 scoreForm?.addEventListener('submit', async (e) => {
