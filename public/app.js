@@ -25,6 +25,7 @@ const quickModeToggle = document.getElementById('quickModeToggle');
 const focusModeToggle = document.getElementById('focusModeToggle');
 const focusExitBtn = document.getElementById('focusExitBtn');
 const qrSignup = document.getElementById('qrSignup');
+const registrationClosedNote = document.getElementById('registrationClosedNote');
 const publicCommuneFilter = document.getElementById('publicCommuneFilter');
 const publicSearch = document.getElementById('publicSearch');
 const shareWhatsapp = document.getElementById('shareWhatsapp');
@@ -467,6 +468,25 @@ async function loadPublicSettings() {
     updateProgressBar();
     if (registrationBadge) {
       registrationBadge.textContent = data.registrationLocked ? 'Inscriptions: fermées' : 'Inscriptions: ouvertes';
+    }
+    if (data.registrationLocked) {
+      document.body.classList.add('registration-closed');
+      if (registrationClosedNote) registrationClosedNote.style.display = 'block';
+      if (form) {
+        Array.from(form.elements).forEach((el) => {
+          if (el.tagName === 'BUTTON') return;
+          el.disabled = true;
+        });
+      }
+      if (msg) msg.textContent = 'Les inscriptions sont fermées.';
+    } else {
+      document.body.classList.remove('registration-closed');
+      if (registrationClosedNote) registrationClosedNote.style.display = 'none';
+      if (form) {
+        Array.from(form.elements).forEach((el) => {
+          el.disabled = false;
+        });
+      }
     }
     if (votingBadge) {
       votingBadge.textContent = data.votingEnabled ? 'Votes: ouverts' : 'Votes: fermés';
