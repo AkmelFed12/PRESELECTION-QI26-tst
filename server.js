@@ -1982,8 +1982,45 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       .text(`Date: ${formatDateFr(new Date())}`, { align: 'center' })
       .moveDown(2);
 
+    const pageWidth = doc.page.width;
+    const pageBottom = doc.page.height - 120;
+    const leftX = 80;
+    const rightX = pageWidth - 260;
+
+    // Signature lines
+    doc.moveTo(leftX, pageBottom).lineTo(leftX + 200, pageBottom).strokeColor('#6b6b6b').stroke();
+    doc.moveTo(rightX, pageBottom).lineTo(rightX + 200, pageBottom).strokeColor('#6b6b6b').stroke();
+
+    // Labels
+    doc
+      .fontSize(11)
+      .fillColor('#1c1c1c')
+      .text('Le Président: DIARRA SIDI', leftX, pageBottom + 8, { width: 220, align: 'center' });
+    doc
+      .fontSize(11)
+      .fillColor('#1c1c1c')
+      .text('Le Secrétaire Général: LADJI MOUSSA OUATTARA', rightX - 10, pageBottom + 8, { width: 240, align: 'center' });
+
+    // Simple seal stamp
+    const sealX = pageWidth / 2;
+    const sealY = pageBottom - 10;
+    doc
+      .lineWidth(1.5)
+      .strokeColor('#c59b3f')
+      .circle(sealX, sealY, 30)
+      .stroke();
+    doc
+      .fontSize(9)
+      .fillColor('#c59b3f')
+      .text('ASAA', sealX - 10, sealY - 5, { width: 20, align: 'center' });
+    doc
+      .fontSize(9)
+      .fillColor('#c59b3f')
+      .text('CERTIFIÉ', sealX - 25, sealY + 10, { width: 50, align: 'center' });
+
     doc
       .fontSize(10)
+      .fillColor('#1c1c1c')
       .text("Association des Serviteurs d'Allah Azawajal", { align: 'center' });
 
     doc.end();
