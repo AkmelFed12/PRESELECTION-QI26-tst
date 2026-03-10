@@ -1949,6 +1949,26 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     doc.pipe(res);
 
+    // Decorative background
+    const pageW = doc.page.width;
+    const pageH = doc.page.height;
+    doc
+      .rect(30, 30, pageW - 60, pageH - 60)
+      .lineWidth(2)
+      .strokeColor('#e7dcc5')
+      .stroke();
+    doc
+      .rect(40, 40, pageW - 80, pageH - 80)
+      .lineWidth(1)
+      .strokeColor('#f1e2c4')
+      .stroke();
+
+    doc
+      .fontSize(36)
+      .fillColor('#0b6f4f')
+      .text('SESSION 2026', { align: 'center' })
+      .moveDown(0.2);
+
     const logoPath = join(__dirname, 'public', 'assets', 'logo.jpg');
     try {
       doc.image(logoPath, 50, 40, { width: 80 });
@@ -1956,6 +1976,7 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
 
     doc
       .fontSize(22)
+      .fillColor('#1c1c1c')
       .text('Certificat de participation', { align: 'center' })
       .moveDown(0.5);
     doc
@@ -1963,23 +1984,35 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       .text('Quiz Islamique 2026 — Présélections', { align: 'center' })
       .moveDown(1.5);
 
+    const todayStr = formatDateFr(new Date());
+    const certNumber = `QI26-${candidate.id}-${todayStr.replace(/\//g, '')}`;
+    doc
+      .fontSize(11)
+      .fillColor('#6b6b6b')
+      .text(`N° Certificat: ${certNumber}`, { align: 'center' })
+      .moveDown(1.2);
+
     doc
       .fontSize(14)
+      .fillColor('#1c1c1c')
       .text(`Nous certifions que :`, { align: 'center' })
       .moveDown(0.8);
     doc
       .fontSize(18)
+      .fillColor('#1c1c1c')
       .text(candidate.fullname || candidate.fullName || 'Candidat', { align: 'center' })
       .moveDown(0.8);
     doc
       .fontSize(12)
+      .fillColor('#1c1c1c')
       .text(`Commune: ${candidate.city || ''}`, { align: 'center' })
       .text(`WhatsApp: ${candidate.whatsapp || ''}`, { align: 'center' })
       .moveDown(1.5);
 
     doc
       .fontSize(12)
-      .text(`Date: ${formatDateFr(new Date())}`, { align: 'center' })
+      .fillColor('#1c1c1c')
+      .text(`Date: ${todayStr}`, { align: 'center' })
       .moveDown(2);
 
     const pageWidth = doc.page.width;
