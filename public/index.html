@@ -35,90 +35,16 @@
           <div class="mini-list">Chargement...</div>
           <a href="committee.html">Voir le comité complet</a>
         </div>
-        <a class="btn outline" href="reglement.html">Règlement</a>
-        <a class="btn outline" href="programme.html">Programme</a>
-        <a class="btn outline" href="resultats.html">Résultats</a>
+        <a class="btn outline" href="about.html">À propos</a>
+        <a class="btn outline" href="communiques.html">Communiqués</a>
+        <a class="btn outline" href="documents.html">Documents</a>
         <a class="btn outline" href="contact.html">Contact</a>
-        <a class="btn outline" href="galerie-2025.html">Galerie 2025</a>
-        <a class="btn outline" href="actualites.html">Actualités</a>
-        <a class="btn outline" href="sponsors.html">Sponsors</a>
-        <a class="btn outline" href="don.html">Don</a>
-        <button class="btn outline" id="quickModeToggle" type="button">Mode rapide</button>
-        <button class="btn outline" id="focusModeToggle" type="button">Mode focus inscription</button>
       </div>
     </header>
 
     <main class="layout">
       <div id="homeContent">
-      <section class="card highlight quick-hide">
-        <h2>Organisation des phases</h2>
-        <div class="grid-two">
-          <div>
-            <h3>Phases</h3>
-            <ul class="list-steps">
-              <li>Groupe unique : qualifiés directs.</li>
-              <li>Barrages : qualifiés pour la phase de groupes.</li>
-              <li>Phase de groupes : 8 groupes.</li>
-              <li>Finale : 10 finalistes.</li>
-            </ul>
-          </div>
-          <div>
-            <h3>Barème</h3>
-            <p>Chaque passage est noté sur 30 points (2 thèmes).</p>
-            <div class="status">Les notes et classements sont gérés par l'administration.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card highlight faq-card quick-hide">
-        <h2>Calendrier officiel</h2>
-        <div id="calendarList" class="status">Chargement...</div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Résumé du programme</h2>
-        <div id="programmeSummary" class="status">Chargement...</div>
-        <div class="nav-links" style="margin-top:10px;">
-          <a href="programme.html">Voir le programme complet</a>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Règlement — résumé rapide</h2>
-        <ul class="list-steps">
-          <li>Respect, tolérance et fair‑play obligatoires.</li>
-          <li>Présence requise aux dates annoncées.</li>
-          <li>Notation sur 30 points (2 thèmes).</li>
-          <li>Décisions du jury et de l’organisation sont souveraines.</li>
-        </ul>
-        <div class="nav-links" style="margin-top:10px;">
-          <a href="reglement.html">Voir le règlement complet</a>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>FAQ (questions fréquentes)</h2>
-        <div class="status">
-          <strong>Comment se passent les présélections ?</strong>
-          <div class="muted">En plusieurs phases en ligne et en présentiel (voir programme).</div>
-        </div>
-        <div class="status" style="margin-top:10px;">
-          <strong>Où se déroulent les passages ?</strong>
-          <div class="muted">Adjamé (Abidjan‑Nord) et Treichville (Abidjan‑Sud).</div>
-        </div>
-        <div class="status" style="margin-top:10px;">
-          <strong>Comment contacter l’organisation ?</strong>
-          <div class="muted">Via WhatsApp ou la page Contact.</div>
-        </div>
-        <div class="nav-links" style="margin-top:10px;">
-          <a href="faq.html">Voir toutes les FAQ</a>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Programme du jour</h2>
-        <div id="programDay" class="status">Chargement...</div>
-      </section>
+      
 
       <section class="card highlight" id="announcementCard" style="display:none;">
         <h2>Annonce</h2>
@@ -128,9 +54,6 @@
 
       <section class="card" id="inscription">
         <h2>Inscription des candidats</h2>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-          <button class="btn outline" id="focusExitBtn" type="button" style="display:none;">Quitter le mode focus</button>
-        </div>
         <p class="muted">Remplissez le formulaire. Un message WhatsApp vers l'administrateur sera proposé après validation.</p>
         <div id="registrationClosedNote" class="status" style="display:none;">
           Les inscriptions sont actuellement fermées.
@@ -234,14 +157,6 @@
         <p id="waitlistMsg" class="status"></p>
       </section>
 
-      <section class="card highlight quick-hide" id="qrSignupCard">
-        <h2>Inscription rapide (QR Code)</h2>
-        <p class="muted">Scannez pour ouvrir directement le formulaire d'inscription.</p>
-        <div style="display:flex; justify-content:center; align-items:center;">
-          <img id="qrSignup" alt="QR inscription" width="220" height="220" />
-        </div>
-      </section>
-
       <section class="card highlight" id="don">
         <h2>Faire un don</h2>
         <p class="muted">Soutenez l'association via Wave, Orange Money, MTN Money, Moov Money ou Djamo.</p>
@@ -259,115 +174,6 @@
           </div>
         </form>
         <p id="donationMsg" class="status">Après paiement, envoyez votre reçu via WhatsApp pour validation.</p>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Sponsors officiels</h2>
-        <div id="sponsorCarousel" class="sponsor-carousel">
-          <div class="sponsor-track" id="sponsorTrack">Chargement...</div>
-        </div>
-      </section>
-
-      <section class="card highlight">
-        <h2>Recevoir les infos</h2>
-        <p class="muted">Abonnez-vous aux annonces via WhatsApp.</p>
-        <a class="btn-primary" href="https://wa.me/2250150070083?text=Je%20veux%20recevoir%20les%20infos%20du%20Quiz%20Islamique%202026" target="_blank" rel="noopener">S'abonner WhatsApp</a>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Candidats déjà inscrits</h2>
-        <p class="muted">Cette liste est synchronisée automatiquement.</p>
-        <div class="form-grid" style="margin-bottom:12px;">
-          <div>
-            <label for="publicCommuneFilter">Filtrer par commune</label>
-            <select id="publicCommuneFilter">
-              <option value="">Toutes les communes</option>
-            </select>
-          </div>
-          <div>
-            <label for="publicSearch">Recherche rapide</label>
-            <input id="publicSearch" placeholder="Nom ou WhatsApp" />
-          </div>
-        </div>
-        <div id="publicCandidates" class="status">Chargement...</div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Statistiques publiques</h2>
-        <div class="grid-three">
-          <div class="status">Candidats: <strong id="statPublicCandidates" class="stat-count" data-count="0">0</strong></div>
-          <div class="status">Communes: <strong id="statPublicCities" class="stat-count" data-count="0">0</strong></div>
-          <div class="status">Votes: <strong id="statPublicVotes" class="stat-count" data-count="0">0</strong></div>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Progression des inscriptions</h2>
-        <div class="status">Candidats inscrits: <strong id="progressCurrent">0</strong></div>
-        <div class="status">Objectif: <strong id="progressMax">Illimité</strong></div>
-        <div style="margin-top:10px; background:#efe6d6; border-radius:999px; height:12px; overflow:hidden;">
-          <div id="progressBar" style="height:12px; width:0%; background:var(--emerald);"></div>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Répartition par commune</h2>
-        <div id="communeStats" class="status">Chargement...</div>
-        <div id="communeChart" style="margin-top:12px;"></div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Classement rapide</h2>
-        <div id="publicRanking" class="status">Chargement...</div>
-        <div class="nav-links" style="margin-top:10px;">
-          <a href="resultats.html">Voir le classement complet</a>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Archives des éditions</h2>
-        <div class="nav-links">
-          <a href="galerie-2025.html">Galerie 2025</a>
-          <span class="muted">Galerie 2024: en préparation</span>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Moments du quiz</h2>
-        <p class="muted">Aperçu rapide des derniers moments forts.</p>
-        <div class="moment-grid">
-          <div class="moment-card">
-            <img src="galerie-2025/538316900_697643836624820_7120327836575396367_n.jpg" alt="Moment 1" loading="lazy" />
-          </div>
-          <div class="moment-card">
-            <img src="galerie-2025/538632761_697641279958409_7814683027562570105_n.jpg" alt="Moment 2" loading="lazy" />
-          </div>
-          <div class="moment-card">
-            <img src="galerie-2025/538864096_697642583291612_2071482017750279257_n.jpg" alt="Moment 3" loading="lazy" />
-          </div>
-          <div class="moment-card">
-            <img src="galerie-2025/539099643_697638779958659_8974364275030833175_n.jpg" alt="Moment 4" loading="lazy" />
-          </div>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Communes en carte</h2>
-        <div class="nav-links" id="communeMapLinks">
-          <a href="https://www.google.com/maps/search/?api=1&query=TREICHVILLE+Abidjan" target="_blank" rel="noopener">TREICHVILLE</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=ADJAME+Abidjan" target="_blank" rel="noopener">ADJAMÉ</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=YOPOUGON+Abidjan" target="_blank" rel="noopener">YOPOUGON</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=ABOBO+Abidjan" target="_blank" rel="noopener">ABOBO</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=PLATEAU+Abidjan" target="_blank" rel="noopener">PLATEAU</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=KOUMASSI+Abidjan" target="_blank" rel="noopener">KOUMASSI</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=COCODY+Abidjan" target="_blank" rel="noopener">COCODY</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=PORT-BOUET+Abidjan" target="_blank" rel="noopener">PORT-BOUET</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=MARCORY+Abidjan" target="_blank" rel="noopener">MARCORY</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=ANYAMA+Abidjan" target="_blank" rel="noopener">ANYAMA</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=BINGERVILLE+Abidjan" target="_blank" rel="noopener">BINGERVILLE</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=SONGON+Abidjan" target="_blank" rel="noopener">SONGON</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=ATTECOUBE+Abidjan" target="_blank" rel="noopener">ATTECOUBE</a>
-        </div>
       </section>
 
       <section class="card">
@@ -392,15 +198,6 @@
           <a href="benevole.html">Devenir bénévole</a>
           <a href="faq.html">FAQ</a>
           <a href="contact.html">Contact & support</a>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Partager le quiz</h2>
-        <div class="share-actions">
-          <a class="btn outline" id="shareWhatsapp" href="#" target="_blank" rel="noopener">Partager WhatsApp</a>
-          <a class="btn outline" id="shareFacebook" href="#" target="_blank" rel="noopener">Partager Facebook</a>
-          <button class="btn outline" id="shareCopy" type="button">Copier le lien</button>
         </div>
       </section>
       </div>
