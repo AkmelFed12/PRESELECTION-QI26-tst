@@ -391,8 +391,27 @@ const DEFAULT_SITE_CONTENT = {
   },
   committee: {
     members: [
-      { role: 'Président', name: 'DIARRA SIDI' },
-      { role: 'Secrétaire Général', name: 'LADJI MOUSSA OUATTARA' }
+      { role: 'Président', name: 'DIARRA SIDI (0779382233)' },
+      { role: 'Vice Président', name: 'BAH ALI MOHAMED (0151495971)' },
+      { role: 'Secrétaire Général', name: 'OUATTARA LADJI MOUSSA (0574724233)' },
+      { role: 'Secrétaire Adjointe 1', name: 'DIALLO MARIAMA (0556570839)' },
+      { role: 'Secrétaire Adjointe 2', name: 'FONANA NAWA (0151473002)' },
+      { role: 'Délégué Culturel', name: 'ADIANGO OUMAR (0556742119)' },
+      { role: 'Délégué Culturel Adjoint 1', name: 'OUEDRAOGO ABDOUL RAHIM (0574044371)' },
+      { role: 'Délégué Culturel Adjointe 2', name: 'BAH ZAYNAB (0749527280)' },
+      { role: 'Délégué Social', name: 'GBANE KARAMOKO (0789036052)' },
+      { role: 'Délégué Social Adjoint 1', name: 'ADIANGO OUMAR (0143577046)' },
+      { role: 'Délégué Social Adjoint 2', name: 'TRAORE TALBI (0778923992)' },
+      { role: 'Délégué Social Adjointe 3', name: 'MARIAMA BOUBACAR (0768604304)' },
+      { role: 'Délégué Social Adjointe 4', name: 'DIARRASOUBA BINTA (0101039771)' },
+      { role: 'Délégué Social Adjointe 5', name: 'ZEYNABOU SIDIBE (0584031423)' },
+      { role: 'Délégué de Mobilisation', name: 'KONATE NOURA (0574641065)' },
+      { role: 'Délégué de Mobilisation Adjointe 1', name: 'SOW MARIAMA (0787108698)' },
+      { role: 'Délégué de Mobilisation Adjointe 2', name: 'COULIBALY MADOUSSOU (0171389479)' },
+      { role: 'Délégué de Mobilisation Adjoint 3', name: 'SANA ABDOUL JALIL (0596796476)' },
+      { role: 'Délégué de Mobilisation Adjointe 4', name: 'FATIM DIALLO (0103699431)' },
+      { role: 'Trésorière', name: 'BELLO AMINATA (0769834455)' },
+      { role: 'Trésorière Adjoint', name: 'DIARRA FOUNE (0797818327)' }
     ]
   },
   programs: {
@@ -455,7 +474,7 @@ function sanitizeSiteContent(payload = {}) {
     committee: {
       members: sanitizeList(committee.members, (m) => ({
         role: safeText(m?.role, 120),
-        name: safeText(m?.name, 160)
+        name: safeText(m?.name, 200)
       }))
     },
     programs: {
@@ -510,7 +529,52 @@ async function getSiteContent() {
   if (!raw) return DEFAULT_SITE_CONTENT;
   try {
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_SITE_CONTENT, ...parsed };
+    return {
+      about: { ...DEFAULT_SITE_CONTENT.about, ...(parsed.about || {}) },
+      committee: {
+        members:
+          Array.isArray(parsed.committee?.members) && parsed.committee.members.length
+            ? parsed.committee.members
+            : DEFAULT_SITE_CONTENT.committee.members
+      },
+      programs: {
+        items:
+          Array.isArray(parsed.programs?.items) && parsed.programs.items.length
+            ? parsed.programs.items
+            : DEFAULT_SITE_CONTENT.programs.items
+      },
+      communiques: {
+        items:
+          Array.isArray(parsed.communiques?.items) && parsed.communiques.items.length
+            ? parsed.communiques.items
+            : DEFAULT_SITE_CONTENT.communiques.items
+      },
+      documents: {
+        items:
+          Array.isArray(parsed.documents?.items) && parsed.documents.items.length
+            ? parsed.documents.items
+            : DEFAULT_SITE_CONTENT.documents.items
+      },
+      transparency: {
+        body: parsed.transparency?.body || DEFAULT_SITE_CONTENT.transparency.body,
+        stats:
+          Array.isArray(parsed.transparency?.stats) && parsed.transparency.stats.length
+            ? parsed.transparency.stats
+            : DEFAULT_SITE_CONTENT.transparency.stats,
+        reports:
+          Array.isArray(parsed.transparency?.reports) && parsed.transparency.reports.length
+            ? parsed.transparency.reports
+            : DEFAULT_SITE_CONTENT.transparency.reports
+      },
+      membership: {
+        open:
+          typeof parsed.membership?.open === 'boolean'
+            ? parsed.membership.open
+            : DEFAULT_SITE_CONTENT.membership.open,
+        info: parsed.membership?.info || DEFAULT_SITE_CONTENT.membership.info
+      },
+      footer: { ...DEFAULT_SITE_CONTENT.footer, ...(parsed.footer || {}) }
+    };
   } catch {
     return DEFAULT_SITE_CONTENT;
   }
