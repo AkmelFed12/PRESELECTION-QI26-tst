@@ -123,13 +123,16 @@ function resolveName(candidate) {
 }
 
 async function loadCandidates() {
-  if (!publicCandidates) return;
-  publicCandidates.textContent = 'Chargement...';
+  if (publicCandidates) {
+    publicCandidates.textContent = 'Chargement...';
+  }
   try {
     const res = await fetch(`/api/public-candidates?ts=${Date.now()}`, { cache: 'no-store' });
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
-      publicCandidates.textContent = 'Aucun candidat inscrit pour le moment.';
+      if (publicCandidates) {
+        publicCandidates.textContent = 'Aucun candidat inscrit pour le moment.';
+      }
       return;
     }
     publicCandidatesCache = data;
