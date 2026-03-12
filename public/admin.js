@@ -97,12 +97,14 @@ const aboutTitleInput = document.getElementById('aboutTitleInput');
 const aboutSubtitleInput = document.getElementById('aboutSubtitleInput');
 const aboutBodyInput = document.getElementById('aboutBodyInput');
 const committeeInput = document.getElementById('committeeInput');
+const leadersInput = document.getElementById('leadersInput');
 const programsInput = document.getElementById('programsInput');
 const valuesTitleInput = document.getElementById('valuesTitleInput');
 const valuesBodyInput = document.getElementById('valuesBodyInput');
 const valuesBulletsInput = document.getElementById('valuesBulletsInput');
 const communiquesInput = document.getElementById('communiquesInput');
 const documentsInput = document.getElementById('documentsInput');
+const documentsSummaryInput = document.getElementById('documentsSummaryInput');
 const transparencyBodyInput = document.getElementById('transparencyBodyInput');
 const transparencyStatsInput = document.getElementById('transparencyStatsInput');
 const transparencyReportsInput = document.getElementById('transparencyReportsInput');
@@ -861,6 +863,7 @@ async function loadSiteContentAdmin() {
   if (aboutSubtitleInput) aboutSubtitleInput.value = data.about?.subtitle || '';
   if (aboutBodyInput) aboutBodyInput.value = data.about?.body || '';
   if (committeeInput) committeeInput.value = joinPipeLines(data.committee?.members, ['role', 'name']);
+  if (leadersInput) leadersInput.value = joinPipeLines(data.leaders?.items, ['role', 'name', 'message']);
   if (programsInput) programsInput.value = joinPipeLines(data.programs?.items, ['title', 'description']);
   if (valuesTitleInput) valuesTitleInput.value = data.values?.title || '';
   if (valuesBodyInput) valuesBodyInput.value = data.values?.body || '';
@@ -870,6 +873,7 @@ async function loadSiteContentAdmin() {
   );
   if (communiquesInput) communiquesInput.value = joinPipeLines(data.communiques?.items, ['date', 'title', 'body', 'signedBy']);
   if (documentsInput) documentsInput.value = joinPipeLines(data.documents?.items, ['title', 'url']);
+  if (documentsSummaryInput) documentsSummaryInput.value = data.documents?.summary || '';
   if (transparencyBodyInput) transparencyBodyInput.value = data.transparency?.body || '';
   if (transparencyStatsInput) transparencyStatsInput.value = joinPipeLines(data.transparency?.stats, ['label', 'value']);
   if (transparencyReportsInput) transparencyReportsInput.value = joinPipeLines(data.transparency?.reports, ['title', 'url']);
@@ -963,6 +967,9 @@ siteContentForm?.addEventListener('submit', async (e) => {
     committee: {
       members: parsePipeLines(committeeInput?.value || '', ['role', 'name'])
     },
+    leaders: {
+      items: parsePipeLines(leadersInput?.value || '', ['role', 'name', 'message'])
+    },
     programs: {
       items: parsePipeLines(programsInput?.value || '', ['title', 'description'])
     },
@@ -975,6 +982,7 @@ siteContentForm?.addEventListener('submit', async (e) => {
       items: parsePipeLines(communiquesInput?.value || '', ['date', 'title', 'body', 'signedBy'])
     },
     documents: {
+      summary: documentsSummaryInput?.value || '',
       items: parsePipeLines(documentsInput?.value || '', ['title', 'url'])
     },
     transparency: {

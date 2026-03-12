@@ -435,10 +435,25 @@ const DEFAULT_SITE_CONTENT = {
       'Excellence et discipline'
     ]
   },
+  leaders: {
+    items: [
+      {
+        role: 'Président',
+        name: 'DIARRA SIDI',
+        message: "Nous servons la communauté avec foi, discipline et engagement pour une jeunesse exemplaire."
+      },
+      {
+        role: 'Secrétaire Général',
+        name: 'LADJI MOUSSA OUATTARA',
+        message: "L’ASAA reste disponible pour accompagner chaque candidat dans un cadre organisé et bienveillant."
+      }
+    ]
+  },
   communiques: {
     items: []
   },
   documents: {
+    summary: "Retrouvez ici les documents officiels, règlements et informations essentielles de l'ASAA.",
     items: [
       { title: 'Règlement (PDF)', url: 'assets/reglement.pdf' },
       { title: 'Programme officiel', url: 'programme.html' }
@@ -475,6 +490,7 @@ function sanitizeSiteContent(payload = {}) {
   const committee = payload.committee || {};
   const programs = payload.programs || {};
   const values = payload.values || {};
+  const leaders = payload.leaders || {};
   const communiques = payload.communiques || {};
   const documents = payload.documents || {};
   const transparency = payload.transparency || {};
@@ -504,6 +520,13 @@ function sanitizeSiteContent(payload = {}) {
       body: safeText(values.body, 2000),
       bullets: sanitizeList(values.bullets, (b) => safeText(b, 200))
     },
+    leaders: {
+      items: sanitizeList(leaders.items, (l) => ({
+        role: safeText(l?.role, 120),
+        name: safeText(l?.name, 200),
+        message: safeText(l?.message, 2000)
+      }))
+    },
     communiques: {
       items: sanitizeList(communiques.items, (c) => ({
         date: safeText(c?.date, 40),
@@ -513,6 +536,7 @@ function sanitizeSiteContent(payload = {}) {
       }))
     },
     documents: {
+      summary: safeText(documents.summary, 800),
       items: sanitizeList(documents.items, (d) => ({
         title: safeText(d?.title, 160),
         url: safeText(d?.url, 300)
@@ -573,6 +597,12 @@ async function getSiteContent() {
             ? parsed.values.bullets
             : DEFAULT_SITE_CONTENT.values.bullets
       },
+      leaders: {
+        items:
+          Array.isArray(parsed.leaders?.items) && parsed.leaders.items.length
+            ? parsed.leaders.items
+            : DEFAULT_SITE_CONTENT.leaders.items
+      },
       communiques: {
         items:
           Array.isArray(parsed.communiques?.items) && parsed.communiques.items.length
@@ -580,6 +610,7 @@ async function getSiteContent() {
             : DEFAULT_SITE_CONTENT.communiques.items
       },
       documents: {
+        summary: parsed.documents?.summary || DEFAULT_SITE_CONTENT.documents.summary,
         items:
           Array.isArray(parsed.documents?.items) && parsed.documents.items.length
             ? parsed.documents.items

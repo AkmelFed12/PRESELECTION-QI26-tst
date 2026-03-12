@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASAA Officiel — Mode Présentation</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="presentation">
+    <header class="presentation-header">
+      <div class="presentation-brand">
+        <img src="assets/logo.jpg" alt="Logo ASAA" />
+        <div>
+          <h1>Quiz Islamique 2026</h1>
+          <p>Classement — Mode Présentation</p>
+        </div>
+      </div>
+      <div class="presentation-actions">
+        <button class="btn outline" id="presentationFullscreen" type="button">Plein écran</button>
+        <a class="btn outline" href="resultats.html">Quitter</a>
+      </div>
+    </header>
+
+    <main class="presentation-main">
+      <div class="presentation-meta">
+        <div>Auto-refresh: <strong id="presentationRefreshLabel">10s</strong></div>
+        <div>Dernière mise à jour: <strong id="presentationLastUpdate">-</strong></div>
+      </div>
+      <div id="presentationRanking" class="presentation-table">Chargement...</div>
+    </main>
+
+    <script src="presentation.js"></script>
+  </body>
+</html>

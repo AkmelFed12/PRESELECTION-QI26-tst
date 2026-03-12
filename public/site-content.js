@@ -216,6 +216,23 @@ async function loadSiteContent() {
     setText(aboutSubtitle, data.about?.subtitle);
     if (aboutBody) aboutBody.innerHTML = textToHtml(data.about?.body || '');
 
+    const leadersList = document.getElementById('leadersList');
+    if (leadersList) {
+      const leaders = data.leaders?.items || [];
+      renderList(
+        leadersList,
+        leaders,
+        (l) => `
+          <div class="leader-card">
+            <div class="leader-role">${escapeHtml(l.role || '')}</div>
+            <div class="leader-name">${escapeHtml(stripContacts(l.name || ''))}</div>
+            <div class="leader-message">${textToHtml(l.message || '')}</div>
+          </div>
+        `,
+        'Aucun message publié.'
+      );
+    }
+
     // Committee
     const committeeItems = sortCommitteeMembers(data.committee?.members || []);
     const committeeList = document.getElementById('committeeList');
@@ -304,6 +321,11 @@ async function loadSiteContent() {
       `,
       'Aucun document disponible.'
     );
+    const documentsSummary = document.getElementById('documentsSummary');
+    if (documentsSummary) {
+      const summaryText = data.documents?.summary || '';
+      documentsSummary.innerHTML = summaryText ? textToHtml(summaryText) : 'Documents officiels et règlements disponibles.';
+    }
 
     // Reports page (activity reports)
     renderList(

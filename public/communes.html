@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ASAA Officiel — Documents officiels</title>
+    <title>ASAA Officiel — Carte des communes</title>
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -11,30 +11,40 @@
     <header class="hero">
       <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
       <div>
-        <h1>Bibliothèque de documents</h1>
-        <p class="slogan">Association des Serviteurs d'Allah Azawajal</p>
-        <p class="subtitle">Statuts, règlements, rapports</p>
+        <h1>Carte des communes</h1>
+        <p class="subtitle">Répartition des candidats par commune</p>
       </div>
       <div class="hero-actions">
         <a class="btn outline" href="index.html">Accueil</a>
-        <a class="btn outline" href="about.html">À propos</a>
+        <a class="btn outline" href="resultats.html">Résultats</a>
         <a class="btn outline" href="communiques.html">Communiqués</a>
       </div>
     </header>
 
     <main class="layout">
-      <section class="card highlight">
-        <h2>Résumé rapide</h2>
-        <div id="documentsSummary" class="status">Chargement...</div>
-        <div class="nav-links" style="margin-top:12px;">
-          <a href="verify-certificate.html">Vérifier un certificat</a>
-          <a href="assets/reglement.pdf" download>Règlement (PDF)</a>
-          <a href="programme.html">Programme officiel</a>
+      <section class="card">
+        <h2>Vue d’ensemble</h2>
+        <p class="muted">Dernière mise à jour automatique des inscriptions.</p>
+        <div class="stats-inline">
+          <div class="stat-mini">
+            <span>Total candidats</span>
+            <strong id="communeTotal">0</strong>
+          </div>
+          <div class="stat-mini">
+            <span>Communes actives</span>
+            <strong id="communeActive">0</strong>
+          </div>
         </div>
       </section>
+
       <section class="card">
-        <h2>Documents disponibles</h2>
-        <div id="documentsList">Chargement...</div>
+        <h2>Carte stylisée</h2>
+        <div id="communeMap" class="commune-map">Chargement...</div>
+      </section>
+
+      <section class="card">
+        <h2>Liste par commune</h2>
+        <div id="communeList" class="status">Chargement...</div>
       </section>
     </main>
 
@@ -50,6 +60,6 @@
     </footer>
 
     <script src="site-content.js"></script>
+    <script src="communes.js"></script>
   </body>
 </html>
-
