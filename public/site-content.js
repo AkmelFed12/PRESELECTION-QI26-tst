@@ -144,18 +144,21 @@ function renderCommitteeOrg(items) {
     `;
   };
 
+  const secondLevel = [vice, secGen].filter(Boolean);
+  const groupsLevel = [secretaires, culture, social, mobil, treasury].filter((g) => g.length);
+
   orgEl.innerHTML = `
     <div class="org-chart">
       <div class="org-level">
         ${card('Président', president, true)}
       </div>
       <div class="org-connector"><span></span></div>
-      <div class="org-level">
+      <div class="org-level ${secondLevel.length > 1 ? 'wide' : ''}">
         ${card('Vice Président', vice)}
         ${card('Secrétaire Général', secGen)}
       </div>
       <div class="org-connector"><span></span></div>
-      <div class="org-level">
+      <div class="org-level ${groupsLevel.length > 1 ? 'groups' : ''}">
         ${group('Secrétariat', secretaires)}
         ${group('Culturel', culture)}
         ${group('Social', social)}
