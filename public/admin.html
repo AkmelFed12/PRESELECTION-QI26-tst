@@ -97,6 +97,81 @@
         <p id="settingsMsg" class="status"></p>
       </section>
 
+      <section class="card admin-hidden" id="siteContentSection">
+        <h2>Site officiel ASAA — Contenus</h2>
+        <form id="siteContentForm" class="form-grid">
+          <div class="full">
+            <label>À propos — Titre</label>
+            <input id="aboutTitleInput" />
+          </div>
+          <div class="full">
+            <label>À propos — Sous‑titre</label>
+            <input id="aboutSubtitleInput" />
+          </div>
+          <div class="full">
+            <label>À propos — Texte</label>
+            <textarea id="aboutBodyInput" placeholder="Présentation de l'association..."></textarea>
+          </div>
+
+          <div class="full">
+            <label>Comité & organigramme (1 ligne = RÔLE | NOM)</label>
+            <textarea id="committeeInput" placeholder="Président | DIARRA SIDI"></textarea>
+          </div>
+
+          <div class="full">
+            <label>Programmes & projets (1 ligne = TITRE | DESCRIPTION)</label>
+            <textarea id="programsInput" placeholder="Formation | Sessions de formation..."></textarea>
+          </div>
+
+          <div class="full">
+            <label>Communiqués officiels (1 ligne = DATE | TITRE | MESSAGE | SIGNATURE)</label>
+            <textarea id="communiquesInput" placeholder="2026-03-15 | Communiqué | Texte... | ASAA"></textarea>
+          </div>
+
+          <div class="full">
+            <label>Documents officiels (1 ligne = TITRE | URL)</label>
+            <textarea id="documentsInput" placeholder="Règlement (PDF) | assets/reglement.pdf"></textarea>
+          </div>
+
+          <div class="full">
+            <label>Transparence — Texte</label>
+            <textarea id="transparencyBodyInput" placeholder="Engagement transparence..."></textarea>
+          </div>
+          <div class="full">
+            <label>Transparence — Chiffres clés (1 ligne = LABEL | VALEUR)</label>
+            <textarea id="transparencyStatsInput" placeholder="Candidats | 120"></textarea>
+          </div>
+          <div class="full">
+            <label>Transparence — Rapports (1 ligne = TITRE | URL)</label>
+            <textarea id="transparencyReportsInput" placeholder="Rapport 2025 | https://..."></textarea>
+          </div>
+
+          <div class="full">
+            <label>Adhésion</label>
+            <select id="membershipOpenInput">
+              <option value="0">Formulaire fermé</option>
+              <option value="1">Formulaire ouvert</option>
+            </select>
+            <textarea id="membershipInfoInput" placeholder="Message affiché sur la page Adhésion"></textarea>
+          </div>
+
+          <div class="full">
+            <label>Pied de page (coordonnées officielles)</label>
+            <div class="form-grid">
+              <div><input id="footerAddressInput" placeholder="Adresse" /></div>
+              <div><input id="footerPhoneInput" placeholder="Téléphone" /></div>
+              <div><input id="footerEmailInput" placeholder="Email" /></div>
+              <div><input id="footerHoursInput" placeholder="Horaires" /></div>
+            </div>
+          </div>
+
+          <div class="full">
+            <button class="btn-primary" type="submit">Enregistrer les contenus</button>
+          </div>
+        </form>
+        <p id="siteContentMsg" class="status"></p>
+      </section>
+
       <section class="card admin-hidden" id="candidatesSection">
         <h2>Gestion des candidats</h2>
         <div class="form-grid" style="margin-bottom:12px;">

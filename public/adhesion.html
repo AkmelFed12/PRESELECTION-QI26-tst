@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Adhésion — ASAA</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
+      <div>
+        <h1>Adhésion à l’ASAA</h1>
+        <p class="slogan">Association des Serviteurs d'Allah Azawajal</p>
+        <p class="subtitle">Formulaire d’adhésion</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="index.html">Accueil</a>
+        <a class="btn outline" href="about.html">À propos</a>
+        <a class="btn outline" href="contact.html">Contact</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Adhésion</h2>
+        <div id="membershipClosed" class="status">Le formulaire d’adhésion est fermé pour le moment.</div>
+        <form id="membershipForm" class="form-grid" style="display:none;">
+          <div>
+            <label for="memberName">Nom & prénoms</label>
+            <input id="memberName" name="fullName" required />
+          </div>
+          <div>
+            <label for="memberPhone">Téléphone</label>
+            <input id="memberPhone" name="phone" />
+          </div>
+          <div>
+            <label for="memberEmail">Email</label>
+            <input id="memberEmail" name="email" type="email" />
+          </div>
+          <div>
+            <label for="memberCity">Commune</label>
+            <input id="memberCity" name="city" />
+          </div>
+          <div class="full">
+            <label for="memberMessage">Motivation</label>
+            <textarea id="memberMessage" name="message"></textarea>
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="button">Envoyer la demande</button>
+          </div>
+        </form>
+        <p id="membershipStatus" class="muted" style="margin-top:10px;"></p>
+      </section>
+    </main>
+
+    <footer>
+      <div>Association des Serviteurs d'Allah Azawajal — ASAA</div>
+      <div class="footer-meta">
+        <span data-footer-address></span>
+        <span data-footer-phone></span>
+        <span data-footer-email></span>
+        <span data-footer-hours></span>
+      </div>
+      <div class="footer-signature">Design & Created by LMO Web Services</div>
+    </footer>
+
+    <script src="site-content.js"></script>
+  </body>
+</html>

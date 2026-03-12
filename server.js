@@ -383,6 +383,139 @@ function formatDateFr(date = new Date()) {
   return `${day}/${month}/${year}`;
 }
 
+const DEFAULT_SITE_CONTENT = {
+  about: {
+    title: "Association des Serviteurs d'Allah Azawajal",
+    subtitle: "Site officiel — Présentation de l'association",
+    body: "L'ASAA œuvre pour la formation, l'éducation et le renforcement des valeurs islamiques à travers des actions sociales, culturelles et éducatives."
+  },
+  committee: {
+    members: [
+      { role: 'Président', name: 'DIARRA SIDI' },
+      { role: 'Secrétaire Général', name: 'LADJI MOUSSA OUATTARA' }
+    ]
+  },
+  programs: {
+    items: [
+      { title: 'Formations', description: 'Sessions de formation religieuse et éducative.' },
+      { title: 'Événements', description: 'Organisation du Quiz Islamique et autres activités.' }
+    ]
+  },
+  communiques: {
+    items: []
+  },
+  documents: {
+    items: [
+      { title: 'Règlement (PDF)', url: 'assets/reglement.pdf' },
+      { title: 'Programme officiel', url: 'programme.html' }
+    ]
+  },
+  transparency: {
+    body: "Nous publions régulièrement les informations clés pour garantir la transparence de nos actions.",
+    stats: [],
+    reports: []
+  },
+  membership: {
+    open: false,
+    info: "Le formulaire d’adhésion est fermé pour le moment."
+  },
+  footer: {
+    address: '',
+    phone: '',
+    email: '',
+    hours: ''
+  }
+};
+
+function safeText(value, maxLength = 800) {
+  return sanitizeString(value, maxLength);
+}
+
+function sanitizeList(list, mapper, maxItems = 50) {
+  const arr = Array.isArray(list) ? list.slice(0, maxItems) : [];
+  return arr.map(mapper).filter(Boolean);
+}
+
+function sanitizeSiteContent(payload = {}) {
+  const about = payload.about || {};
+  const committee = payload.committee || {};
+  const programs = payload.programs || {};
+  const communiques = payload.communiques || {};
+  const documents = payload.documents || {};
+  const transparency = payload.transparency || {};
+  const membership = payload.membership || {};
+  const footer = payload.footer || {};
+
+  return {
+    about: {
+      title: safeText(about.title, 120),
+      subtitle: safeText(about.subtitle, 180),
+      body: safeText(about.body, 2000)
+    },
+    committee: {
+      members: sanitizeList(committee.members, (m) => ({
+        role: safeText(m?.role, 120),
+        name: safeText(m?.name, 160)
+      }))
+    },
+    programs: {
+      items: sanitizeList(programs.items, (p) => ({
+        title: safeText(p?.title, 160),
+        description: safeText(p?.description, 500)
+      }))
+    },
+    communiques: {
+      items: sanitizeList(communiques.items, (c) => ({
+        date: safeText(c?.date, 40),
+        title: safeText(c?.title, 160),
+        body: safeText(c?.body, 2000),
+        signedBy: safeText(c?.signedBy, 160)
+      }))
+    },
+    documents: {
+      items: sanitizeList(documents.items, (d) => ({
+        title: safeText(d?.title, 160),
+        url: safeText(d?.url, 300)
+      }))
+    },
+    transparency: {
+      body: safeText(transparency.body, 2000),
+      stats: sanitizeList(transparency.stats, (s) => ({
+        label: safeText(s?.label, 120),
+        value: safeText(s?.value, 120)
+      })),
+      reports: sanitizeList(transparency.reports, (r) => ({
+        title: safeText(r?.title, 160),
+        url: safeText(r?.url, 300)
+      }))
+    },
+    membership: {
+      open: Boolean(membership.open),
+      info: safeText(membership.info, 500)
+    },
+    footer: {
+      address: safeText(footer.address, 200),
+      phone: safeText(footer.phone, 60),
+      email: safeText(footer.email, 120),
+      hours: safeText(footer.hours, 120)
+    }
+  };
+}
+
+async function getSiteContent() {
+  const result = await pool.query(
+    "SELECT value FROM admin_config WHERE key = 'site_content' LIMIT 1"
+  );
+  const raw = result.rows[0]?.value;
+  if (!raw) return DEFAULT_SITE_CONTENT;
+  try {
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_SITE_CONTENT, ...parsed };
+  } catch {
+    return DEFAULT_SITE_CONTENT;
+  }
+}
+
 // ==================== SECURITY HEADERS ====================
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -782,6 +915,11 @@ async function initDatabase() {
        WHERE id = 1`
     );
 
+    await pool.query(
+      "INSERT INTO admin_config (key, value) VALUES ('site_content', $1) ON CONFLICT (key) DO NOTHING",
+      [JSON.stringify(DEFAULT_SITE_CONTENT)]
+    );
+
     // Replace candidates with manual list if data mismatch detected
     const manualCandidates = loadManualCandidates();
     if (manualCandidates.length > 0) {
@@ -862,6 +1000,40 @@ app.get('/api/public-settings', async (req, res) => {
     res.json(normalized);
   } catch (error) {
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Public site content (official pages)
+app.get('/api/public/site-content', async (req, res) => {
+  try {
+    const data = await getSiteContent();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Admin site content
+app.get('/api/admin/site-content', verifyAdmin, async (req, res) => {
+  try {
+    const data = await getSiteContent();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.put('/api/admin/site-content', verifyAdmin, async (req, res) => {
+  try {
+    const sanitized = sanitizeSiteContent(req.body || {});
+    await pool.query(
+      "INSERT INTO admin_config (key, value) VALUES ('site_content', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
+      [JSON.stringify(sanitized)]
+    );
+    res.json({ message: 'Contenus mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

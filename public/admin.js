@@ -89,6 +89,26 @@ const pollQuestionInput = document.getElementById('pollQuestionInput');
 const pollOptionsInput = document.getElementById('pollOptionsInput');
 const pollActive = document.getElementById('pollActive');
 
+const siteContentSection = document.getElementById('siteContentSection');
+const siteContentForm = document.getElementById('siteContentForm');
+const siteContentMsg = document.getElementById('siteContentMsg');
+const aboutTitleInput = document.getElementById('aboutTitleInput');
+const aboutSubtitleInput = document.getElementById('aboutSubtitleInput');
+const aboutBodyInput = document.getElementById('aboutBodyInput');
+const committeeInput = document.getElementById('committeeInput');
+const programsInput = document.getElementById('programsInput');
+const communiquesInput = document.getElementById('communiquesInput');
+const documentsInput = document.getElementById('documentsInput');
+const transparencyBodyInput = document.getElementById('transparencyBodyInput');
+const transparencyStatsInput = document.getElementById('transparencyStatsInput');
+const transparencyReportsInput = document.getElementById('transparencyReportsInput');
+const membershipOpenInput = document.getElementById('membershipOpenInput');
+const membershipInfoInput = document.getElementById('membershipInfoInput');
+const footerAddressInput = document.getElementById('footerAddressInput');
+const footerPhoneInput = document.getElementById('footerPhoneInput');
+const footerEmailInput = document.getElementById('footerEmailInput');
+const footerHoursInput = document.getElementById('footerHoursInput');
+
 let authHeader = '';
 let scheduleCache = [];
 let candidatesCache = [];
@@ -174,6 +194,7 @@ function showAdmin() {
   loginCard.classList.add('admin-hidden');
   dashboard.classList.remove('admin-hidden');
   settingsSection.classList.remove('admin-hidden');
+  siteContentSection?.classList.remove('admin-hidden');
   candidatesSection.classList.remove('admin-hidden');
   scoresSection.classList.remove('admin-hidden');
   newsSection?.classList.remove('admin-hidden');
@@ -186,6 +207,7 @@ function showAdmin() {
 function hideAdmin() {
   dashboard.classList.add('admin-hidden');
   settingsSection.classList.add('admin-hidden');
+  siteContentSection?.classList.add('admin-hidden');
   candidatesSection.classList.add('admin-hidden');
   scoresSection.classList.add('admin-hidden');
   newsSection?.classList.add('admin-hidden');
@@ -198,6 +220,29 @@ function hideAdmin() {
 
 function setStatus(el, text) {
   if (el) el.textContent = text || '';
+}
+
+function parsePipeLines(text, expectedParts) {
+  return (text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split('|').map((p) => p.trim()))
+    .map((parts) => {
+      const obj = {};
+      expectedParts.forEach((key, idx) => {
+        obj[key] = parts[idx] || '';
+      });
+      return obj;
+    });
+}
+
+function joinPipeLines(items, keys) {
+  if (!Array.isArray(items)) return '';
+  return items
+    .map((item) => keys.map((k) => (item?.[k] || '').toString().trim()).join(' | '))
+    .filter((line) => line.replace(/\|/g, '').trim())
+    .join('\n');
 }
 
 async function authedFetch(url, options = {}) {
@@ -276,6 +321,7 @@ async function loadDashboard() {
   renderGlobalSearch();
   await loadFinances();
   await loadPollAdmin();
+  await loadSiteContentAdmin();
 }
 
 function renderFromCache(data) {
@@ -787,6 +833,29 @@ async function loadPollAdmin() {
   if (pollActive) pollActive.value = data.poll.active ? '1' : '0';
 }
 
+async function loadSiteContentAdmin() {
+  if (!siteContentForm) return;
+  const res = await authedFetch('/api/admin/site-content');
+  if (!res.ok) return;
+  const data = await res.json();
+  if (aboutTitleInput) aboutTitleInput.value = data.about?.title || '';
+  if (aboutSubtitleInput) aboutSubtitleInput.value = data.about?.subtitle || '';
+  if (aboutBodyInput) aboutBodyInput.value = data.about?.body || '';
+  if (committeeInput) committeeInput.value = joinPipeLines(data.committee?.members, ['role', 'name']);
+  if (programsInput) programsInput.value = joinPipeLines(data.programs?.items, ['title', 'description']);
+  if (communiquesInput) communiquesInput.value = joinPipeLines(data.communiques?.items, ['date', 'title', 'body', 'signedBy']);
+  if (documentsInput) documentsInput.value = joinPipeLines(data.documents?.items, ['title', 'url']);
+  if (transparencyBodyInput) transparencyBodyInput.value = data.transparency?.body || '';
+  if (transparencyStatsInput) transparencyStatsInput.value = joinPipeLines(data.transparency?.stats, ['label', 'value']);
+  if (transparencyReportsInput) transparencyReportsInput.value = joinPipeLines(data.transparency?.reports, ['title', 'url']);
+  if (membershipOpenInput) membershipOpenInput.value = data.membership?.open ? '1' : '0';
+  if (membershipInfoInput) membershipInfoInput.value = data.membership?.info || '';
+  if (footerAddressInput) footerAddressInput.value = data.footer?.address || '';
+  if (footerPhoneInput) footerPhoneInput.value = data.footer?.phone || '';
+  if (footerEmailInput) footerEmailInput.value = data.footer?.email || '';
+  if (footerHoursInput) footerHoursInput.value = data.footer?.hours || '';
+}
+
 function downloadFile(filename, content) {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
@@ -855,6 +924,51 @@ settingsForm?.addEventListener('submit', async (e) => {
   });
   const data = await res.json().catch(() => ({}));
   setStatus(settingsMsg, data.message || (res.ok ? 'Mis à jour.' : 'Erreur.'));
+});
+
+siteContentForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setStatus(siteContentMsg, 'Enregistrement...');
+  const payload = {
+    about: {
+      title: aboutTitleInput?.value || '',
+      subtitle: aboutSubtitleInput?.value || '',
+      body: aboutBodyInput?.value || ''
+    },
+    committee: {
+      members: parsePipeLines(committeeInput?.value || '', ['role', 'name'])
+    },
+    programs: {
+      items: parsePipeLines(programsInput?.value || '', ['title', 'description'])
+    },
+    communiques: {
+      items: parsePipeLines(communiquesInput?.value || '', ['date', 'title', 'body', 'signedBy'])
+    },
+    documents: {
+      items: parsePipeLines(documentsInput?.value || '', ['title', 'url'])
+    },
+    transparency: {
+      body: transparencyBodyInput?.value || '',
+      stats: parsePipeLines(transparencyStatsInput?.value || '', ['label', 'value']),
+      reports: parsePipeLines(transparencyReportsInput?.value || '', ['title', 'url'])
+    },
+    membership: {
+      open: membershipOpenInput?.value === '1',
+      info: membershipInfoInput?.value || ''
+    },
+    footer: {
+      address: footerAddressInput?.value || '',
+      phone: footerPhoneInput?.value || '',
+      email: footerEmailInput?.value || '',
+      hours: footerHoursInput?.value || ''
+    }
+  };
+  const res = await authedFetch('/api/admin/site-content', {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(siteContentMsg, data.message || (res.ok ? 'Contenus mis à jour.' : 'Erreur.'));
 });
 
 candidateForm?.addEventListener('submit', async (e) => {

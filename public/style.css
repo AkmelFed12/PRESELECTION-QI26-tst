@@ -391,6 +391,16 @@ footer {
   color: transparent;
 }
 
+.footer-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  font-weight: 600;
+  color: #6b6b6b;
+}
+
 .social-links {
   margin-top: 12px;
   display: inline-flex;
