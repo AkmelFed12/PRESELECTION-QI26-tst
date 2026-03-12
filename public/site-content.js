@@ -7,6 +7,10 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function stripContacts(value) {
+  return String(value || '').replace(/\s*\(?\+?\d[\d\s.-]*\)?/g, '').trim();
+}
+
 function textToHtml(value) {
   return escapeHtml(value).replace(/\n/g, '<br>');
 }
@@ -52,7 +56,7 @@ async function loadSiteContent() {
       (m) => `
         <div class="status">
           <strong>${escapeHtml(m.role || '')}</strong>
-          <div class="muted">${escapeHtml(m.name || '')}</div>
+          <div class="muted">${escapeHtml(stripContacts(m.name || ''))}</div>
         </div>
       `,
       'Aucun membre renseigné.'
