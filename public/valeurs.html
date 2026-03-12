@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ASAA Officiel — Comité & Organigramme</title>
+    <title>ASAA Officiel — Valeurs & Missions</title>
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -11,9 +11,9 @@
     <header class="hero">
       <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
       <div>
-        <h1>Comité & Organigramme</h1>
-        <p class="slogan">Association des Serviteurs d'Allah Azawajal</p>
-        <p class="subtitle">Équipe dirigeante</p>
+        <h1>Valeurs & Missions</h1>
+        <p class="slogan">ASAA Officiel</p>
+        <p class="subtitle">Notre engagement spirituel et social</p>
       </div>
       <div class="hero-actions">
         <a class="btn outline" href="index.html">Accueil</a>
@@ -24,24 +24,17 @@
 
     <main class="layout">
       <section class="card">
-        <div class="card-header">
-          <h2>Organigramme</h2>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn outline" type="button" id="printCommitteeBtn">Imprimer le comité</button>
-            <a class="btn outline" id="downloadCommitteePdf" href="/api/public/committee-pdf" target="_blank" rel="noopener">Télécharger PDF</a>
-          </div>
-        </div>
-        <div id="committeeOrg">Chargement...</div>
+        <h2 id="valuesTitle">Valeurs & Missions</h2>
+        <div id="valuesBody" class="status">Chargement...</div>
       </section>
-
       <section class="card">
-        <h2>Dirigeants & responsables</h2>
-        <div id="committeeList">Chargement...</div>
+        <h2>Nos valeurs</h2>
+        <div id="valuesList">Chargement...</div>
       </section>
     </main>
 
     <footer>
-      <div>Association des Serviteurs d'Allah Azawajal — ASAA</div>
+      <div>ASAA Officiel — Association des Serviteurs d'Allah Azawajal</div>
       <div class="footer-meta">
         <span data-footer-address></span>
         <span data-footer-phone></span>
@@ -54,4 +47,3 @@
     <script src="site-content.js"></script>
   </body>
 </html>
-

@@ -16,6 +16,11 @@
   box-sizing: border-box;
 }
 
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
 body {
   margin: 0;
   font-family: "Source Sans 3", sans-serif;
@@ -23,6 +28,36 @@ body {
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(247, 242, 232, 0.95) 65%),
     linear-gradient(120deg, #f7f2e8, #f1e7d6);
+  padding-top: 28px;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url('assets/logo.jpg') center 120px / 240px no-repeat;
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: 'ASAA OFFICIEL';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, #0b6f4f, #0f7c5a);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  font-size: 11px;
+  z-index: 999;
 }
 
 body.dark {
@@ -529,6 +564,21 @@ footer {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.org-connector {
+  height: 16px;
+  position: relative;
+}
+
+.org-connector span {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 16px;
+  background: var(--border);
+  transform: translateX(-50%);
 }
 
 @media print {

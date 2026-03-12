@@ -13,6 +13,7 @@ import multer from 'multer';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
 import PDFDocument from 'pdfkit';
+import QRCode from 'qrcode';
 
 dotenv.config();
 
@@ -383,6 +384,10 @@ function formatDateFr(date = new Date()) {
   return `${day}/${month}/${year}`;
 }
 
+function stripContacts(value) {
+  return String(value || '').replace(/\s*\(?\+?\d[\d\s.-]*\)?/g, '').trim();
+}
+
 const DEFAULT_SITE_CONTENT = {
   about: {
     title: "Association des Serviteurs d'Allah Azawajal",
@@ -418,6 +423,16 @@ const DEFAULT_SITE_CONTENT = {
     items: [
       { title: 'Formations', description: 'Sessions de formation religieuse et éducative.' },
       { title: 'Événements', description: 'Organisation du Quiz Islamique et autres activités.' }
+    ]
+  },
+  values: {
+    title: 'Valeurs & Missions',
+    body: "Nos actions s'appuient sur la foi, la bienveillance, la solidarité et l'excellence.",
+    bullets: [
+      'Foi et éthique islamique',
+      'Formation et éducation',
+      'Solidarité et entraide',
+      'Excellence et discipline'
     ]
   },
   communiques: {
@@ -459,6 +474,7 @@ function sanitizeSiteContent(payload = {}) {
   const about = payload.about || {};
   const committee = payload.committee || {};
   const programs = payload.programs || {};
+  const values = payload.values || {};
   const communiques = payload.communiques || {};
   const documents = payload.documents || {};
   const transparency = payload.transparency || {};
@@ -482,6 +498,11 @@ function sanitizeSiteContent(payload = {}) {
         title: safeText(p?.title, 160),
         description: safeText(p?.description, 500)
       }))
+    },
+    values: {
+      title: safeText(values.title, 160),
+      body: safeText(values.body, 2000),
+      bullets: sanitizeList(values.bullets, (b) => safeText(b, 200))
     },
     communiques: {
       items: sanitizeList(communiques.items, (c) => ({
@@ -543,6 +564,14 @@ async function getSiteContent() {
           Array.isArray(parsed.programs?.items) && parsed.programs.items.length
             ? parsed.programs.items
             : DEFAULT_SITE_CONTENT.programs.items
+      },
+      values: {
+        title: parsed.values?.title || DEFAULT_SITE_CONTENT.values.title,
+        body: parsed.values?.body || DEFAULT_SITE_CONTENT.values.body,
+        bullets:
+          Array.isArray(parsed.values?.bullets) && parsed.values.bullets.length
+            ? parsed.values.bullets
+            : DEFAULT_SITE_CONTENT.values.bullets
       },
       communiques: {
         items:
@@ -1096,6 +1125,91 @@ app.put('/api/admin/site-content', verifyAdmin, async (req, res) => {
       [JSON.stringify(sanitized)]
     );
     res.json({ message: 'Contenus mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public committee PDF
+app.get('/api/public/committee-pdf', async (req, res) => {
+  try {
+    const content = await getSiteContent();
+    const members = Array.isArray(content.committee?.members) ? content.committee.members : [];
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="comite-asaa.pdf"');
+    doc.pipe(res);
+
+    const logoPath = join(__dirname, 'public', 'assets', 'logo.jpg');
+    try {
+      doc.image(logoPath, 50, 40, { width: 70 });
+    } catch {}
+
+    doc.fontSize(20).text('ASAA Officiel', { align: 'center' });
+    doc.fontSize(12).text("Liste des membres du bureau exécutif", { align: 'center' });
+    doc.moveDown(1);
+
+    const tableTop = 140;
+    const startX = 50;
+    const colRole = 220;
+    const colName = 260;
+
+    doc.fontSize(11).text('Poste', startX, tableTop);
+    doc.text('Nom', startX + colRole, tableTop);
+    doc.moveTo(startX, tableTop + 15).lineTo(560, tableTop + 15).stroke();
+
+    let y = tableTop + 24;
+    members.forEach((m) => {
+      const role = String(m.role || '');
+      const name = stripContacts(m.name || '');
+      doc.fontSize(10).text(role, startX, y, { width: colRole - 10 });
+      doc.fontSize(10).text(name, startX + colRole, y, { width: colName });
+      y += 18;
+      if (y > 760) {
+        doc.addPage();
+        y = 80;
+      }
+    });
+
+    doc.moveDown(1);
+    doc.fontSize(9).text(`Date: ${formatDateFr(new Date())}`, { align: 'right' });
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public certificate verification
+app.get('/api/public/verify-certificate', async (req, res) => {
+  try {
+    const code = String(req.query.code || '').trim();
+    const match = code.match(/^QI26-(\d+)-(\d{8})$/);
+    if (!match) {
+      return res.status(400).json({ valid: false, message: 'Code invalide.' });
+    }
+    const candidateId = Number(match[1]);
+    if (!candidateId) {
+      return res.status(400).json({ valid: false, message: 'Code invalide.' });
+    }
+    const result = await pool.query(
+      'SELECT id, fullName, city, status FROM candidates WHERE id = $1',
+      [candidateId]
+    );
+    const candidate = result.rows[0];
+    if (!candidate) {
+      return res.status(404).json({ valid: false, message: 'Certificat introuvable.' });
+    }
+    res.json({
+      valid: true,
+      candidate: {
+        id: candidate.id,
+        fullName: candidate.fullname || candidate.fullName,
+        city: candidate.city,
+        status: candidate.status
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -2234,6 +2348,7 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
 
     const todayStr = formatDateFr(new Date());
     const certNumber = `QI26-${candidate.id}-${todayStr.replace(/\//g, '')}`;
+    const verifyUrl = `${getFrontendUrl(req)}/verify-certificate.html?code=${encodeURIComponent(certNumber)}`;
     doc
       .fontSize(11)
       .fillColor('#6b6b6b')
@@ -2303,6 +2418,16 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       .fontSize(10)
       .fillColor('#1c1c1c')
       .text("Association des Serviteurs d'Allah Azawajal", { align: 'center' });
+
+    try {
+      const qrDataUrl = await generateQRCode(verifyUrl);
+      const qrBase64 = String(qrDataUrl || '').split(',')[1] || '';
+      if (qrBase64) {
+        const qrBuffer = Buffer.from(qrBase64, 'base64');
+        doc.image(qrBuffer, pageWidth - 140, pageBottom - 40, { width: 80 });
+        doc.fontSize(8).fillColor('#6b6b6b').text('Vérifier', pageWidth - 140, pageBottom + 44, { width: 80, align: 'center' });
+      }
+    } catch {}
 
     doc.end();
   } catch (error) {
@@ -2687,7 +2812,7 @@ async function sendEmail(to, subject, html) {
 }
 
 function generateQRCode(text) {
-  return require('qrcode').toDataURL(text);
+  return QRCode.toDataURL(text);
 }
 
 async function updateEngagementStats(contentType, contentId) {

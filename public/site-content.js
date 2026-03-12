@@ -149,10 +149,12 @@ function renderCommitteeOrg(items) {
       <div class="org-level">
         ${card('Président', president, true)}
       </div>
+      <div class="org-connector"><span></span></div>
       <div class="org-level">
         ${card('Vice Président', vice)}
         ${card('Secrétaire Général', secGen)}
       </div>
+      <div class="org-connector"><span></span></div>
       <div class="org-level">
         ${group('Secrétariat', secretaires)}
         ${group('Culturel', culture)}
@@ -228,6 +230,18 @@ async function loadSiteContent() {
       'Aucun programme renseigné.'
     );
 
+    // Values & Missions
+    setText(document.getElementById('valuesTitle'), data.values?.title);
+    if (document.getElementById('valuesBody')) {
+      document.getElementById('valuesBody').innerHTML = textToHtml(data.values?.body || '');
+    }
+    renderList(
+      document.getElementById('valuesList'),
+      (data.values?.bullets || []).map((b) => ({ label: b })),
+      (b) => `<div class="status">${escapeHtml(b.label || '')}</div>`,
+      'Aucune valeur renseignée.'
+    );
+
     // Communiques
     renderList(
       document.getElementById('communiquesList'),
@@ -253,6 +267,18 @@ async function loadSiteContent() {
         </a>
       `,
       'Aucun document disponible.'
+    );
+
+    // Reports page (activity reports)
+    renderList(
+      document.getElementById('reportsList'),
+      data.transparency?.reports || [],
+      (r) => `
+        <a class="status" href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">
+          ${escapeHtml(r.title || '')}
+        </a>
+      `,
+      'Aucun rapport publié.'
     );
 
     // Transparency

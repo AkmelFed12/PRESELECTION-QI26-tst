@@ -97,6 +97,9 @@ const aboutSubtitleInput = document.getElementById('aboutSubtitleInput');
 const aboutBodyInput = document.getElementById('aboutBodyInput');
 const committeeInput = document.getElementById('committeeInput');
 const programsInput = document.getElementById('programsInput');
+const valuesTitleInput = document.getElementById('valuesTitleInput');
+const valuesBodyInput = document.getElementById('valuesBodyInput');
+const valuesBulletsInput = document.getElementById('valuesBulletsInput');
 const communiquesInput = document.getElementById('communiquesInput');
 const documentsInput = document.getElementById('documentsInput');
 const transparencyBodyInput = document.getElementById('transparencyBodyInput');
@@ -843,6 +846,12 @@ async function loadSiteContentAdmin() {
   if (aboutBodyInput) aboutBodyInput.value = data.about?.body || '';
   if (committeeInput) committeeInput.value = joinPipeLines(data.committee?.members, ['role', 'name']);
   if (programsInput) programsInput.value = joinPipeLines(data.programs?.items, ['title', 'description']);
+  if (valuesTitleInput) valuesTitleInput.value = data.values?.title || '';
+  if (valuesBodyInput) valuesBodyInput.value = data.values?.body || '';
+  if (valuesBulletsInput) valuesBulletsInput.value = joinPipeLines(
+    (data.values?.bullets || []).map((b) => ({ value: b })),
+    ['value']
+  );
   if (communiquesInput) communiquesInput.value = joinPipeLines(data.communiques?.items, ['date', 'title', 'body', 'signedBy']);
   if (documentsInput) documentsInput.value = joinPipeLines(data.documents?.items, ['title', 'url']);
   if (transparencyBodyInput) transparencyBodyInput.value = data.transparency?.body || '';
@@ -940,6 +949,11 @@ siteContentForm?.addEventListener('submit', async (e) => {
     },
     programs: {
       items: parsePipeLines(programsInput?.value || '', ['title', 'description'])
+    },
+    values: {
+      title: valuesTitleInput?.value || '',
+      body: valuesBodyInput?.value || '',
+      bullets: parsePipeLines(valuesBulletsInput?.value || '', ['value']).map((v) => v.value)
     },
     communiques: {
       items: parsePipeLines(communiquesInput?.value || '', ['date', 'title', 'body', 'signedBy'])

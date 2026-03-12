@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASAA Officiel — Vérification certificat</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
+      <div>
+        <h1>Vérification de certificat</h1>
+        <p class="slogan">ASAA Officiel</p>
+        <p class="subtitle">Authenticité des certificats</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="index.html">Accueil</a>
+        <a class="btn outline" href="committee.html">Comité</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Vérifier un certificat</h2>
+        <form id="verifyForm" class="form-grid">
+          <div class="full">
+            <label for="verifyCode">Code certificat</label>
+            <input id="verifyCode" name="code" placeholder="QI26-123-20260312" required />
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Vérifier</button>
+          </div>
+        </form>
+        <div id="verifyResult" class="status" style="margin-top:12px;">Entrez un code pour vérifier.</div>
+      </section>
+    </main>
+
+    <footer>
+      <div>ASAA Officiel — Association des Serviteurs d'Allah Azawajal</div>
+      <div class="footer-meta">
+        <span data-footer-address></span>
+        <span data-footer-phone></span>
+        <span data-footer-email></span>
+        <span data-footer-hours></span>
+      </div>
+      <div class="footer-signature">Design & Created by LMO Web Services</div>
+    </footer>
+
+    <script src="site-content.js"></script>
+    <script src="verify-certificate.js"></script>
+  </body>
+</html>
