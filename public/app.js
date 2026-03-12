@@ -17,6 +17,8 @@ const announcementCard = document.getElementById('announcementCard');
 const announcementText = document.getElementById('announcementText');
 const announcementBanner = document.getElementById('announcementBanner');
 const announcementBannerText = document.getElementById('announcementBannerText');
+const latestCommunique = document.getElementById('latestCommunique');
+const nextEvent = document.getElementById('nextEvent');
 const donationForm = document.getElementById('donationForm');
 const donationMsg = document.getElementById('donationMsg');
 const sponsorTrack = document.getElementById('sponsorTrack');
@@ -515,6 +517,12 @@ async function loadPublicSettings() {
   try {
     const res = await fetch(`/api/public-settings?ts=${Date.now()}`, { cache: 'no-store' });
     const data = await res.json();
+    let schedule = [];
+    try {
+      schedule = Array.isArray(JSON.parse(data.scheduleJson || '[]')) ? JSON.parse(data.scheduleJson || '[]') : [];
+    } catch {
+      schedule = [];
+    }
     maxCandidatesValue = Number(data.maxCandidates || data.maxcandidates || 0) || null;
     updateProgressBar();
     if (registrationBadge) {
@@ -546,7 +554,6 @@ async function loadPublicSettings() {
       votingBadge.textContent = data.votingEnabled ? 'Votes: ouverts' : 'Votes: fermés';
     }
     if (calendarList) {
-      const schedule = Array.isArray(JSON.parse(data.scheduleJson || '[]')) ? JSON.parse(data.scheduleJson || '[]') : [];
       if (!schedule.length) {
         calendarList.textContent = 'Calendrier en cours de préparation.';
       } else {
@@ -612,16 +619,81 @@ async function loadPublicSettings() {
         if (announcementBanner) announcementBanner.style.display = 'none';
       }
     }
+
+    if (nextEvent) {
+      if (!schedule.length) {
+        nextEvent.textContent = 'Aucun événement annoncé pour le moment.';
+      } else {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const normalized = schedule
+          .map((s) => ({
+            ...s,
+            date: s.date || '',
+            time: s.time || '00:00'
+          }))
+          .filter((s) => s.date);
+        const upcoming = normalized
+          .filter((s) => s.date >= todayStr)
+          .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+        const picked = upcoming[0] || normalized.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0];
+        if (!picked) {
+          nextEvent.textContent = 'Aucun événement annoncé pour le moment.';
+        } else {
+          nextEvent.innerHTML = `<strong>${picked.date}</strong> ${picked.time ? `(${picked.time})` : ''} — ${picked.title || 'Événement ASAA'}`;
+        }
+      }
+    }
   } catch {
     if (calendarList) calendarList.textContent = 'Calendrier indisponible.';
   }
 }
 
+async function loadLatestCommunique() {
+  if (!latestCommunique) return;
+  latestCommunique.textContent = 'Chargement...';
+  try {
+    const res = await fetch(`/api/public/site-content?ts=${Date.now()}`, { cache: 'no-store' });
+    const data = await res.json();
+    const items = Array.isArray(data?.communiques?.items) ? data.communiques.items : [];
+    if (!items.length) {
+      latestCommunique.textContent = 'Aucun communiqué publié pour le moment.';
+      return;
+    }
+    const parseDate = (value) => {
+      if (!value) return 0;
+      const direct = Date.parse(value);
+      if (!Number.isNaN(direct)) return direct;
+      const cleaned = value.replace(/[^\d]/g, '');
+      if (cleaned.length === 8) {
+        const guess = Date.parse(`${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`);
+        return Number.isNaN(guess) ? 0 : guess;
+      }
+      return 0;
+    };
+    const latest = items
+      .slice()
+      .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+      .find((item) => item.title || item.body) || items[0];
+    const dateLabel = latest.date ? `<span class="muted">${latest.date}</span>` : '';
+    const signed = latest.signedBy ? `<div class="muted">Signé: ${latest.signedBy}</div>` : '';
+    const body = latest.body ? `<div>${latest.body}</div>` : '';
+    latestCommunique.innerHTML = `<strong>${latest.title || 'Communiqué officiel'}</strong> ${dateLabel}${body}${signed}`;
+  } catch {
+    latestCommunique.textContent = 'Communiqué indisponible.';
+  }
+}
+
 loadPublicSettings();
+loadLatestCommunique();
 loadPublicResults();
 setInterval(() => {
   loadCandidates();
   loadPublicSettings();
+  loadLatestCommunique();
   loadPublicResults();
 }, 60000);
 
