@@ -468,6 +468,89 @@ footer {
   color: var(--ink);
 }
 
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.org-chart {
+  display: grid;
+  gap: 18px;
+}
+
+.org-level {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.org-card {
+  border: 1px solid var(--border);
+  background: #fffaf2;
+  border-radius: 14px;
+  padding: 12px 14px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--emerald);
+}
+
+.org-card span {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.org-card.primary {
+  background: #0b6f4f;
+  color: #fff;
+}
+
+.org-card.primary span {
+  color: #fff;
+}
+
+.org-group {
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.org-group-title {
+  font-weight: 700;
+  color: var(--emerald);
+  margin-bottom: 8px;
+}
+
+.org-group-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+@media print {
+  header.hero,
+  .hero-actions,
+  .whatsapp-fab,
+  .whatsapp-float,
+  .scroll-top,
+  .dark-toggle,
+  footer {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
+
 .social-links {
   margin-top: 12px;
   display: inline-flex;

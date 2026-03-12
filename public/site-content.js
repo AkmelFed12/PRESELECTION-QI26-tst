@@ -90,6 +90,80 @@ function getInitials(name) {
   return parts.map((p) => p[0] || '').join('').toUpperCase();
 }
 
+function renderCommitteeOrg(items) {
+  const orgEl = document.getElementById('committeeOrg');
+  if (!orgEl) return;
+  if (!items.length) {
+    orgEl.innerHTML = `<div class="status">Aucun membre renseigné.</div>`;
+    return;
+  }
+
+  const byRole = (role) => items.find((m) => normalizeRole(m.role) === role);
+  const byStarts = (prefix) =>
+    items.filter((m) => normalizeRole(m.role).startsWith(prefix));
+
+  const president = byRole('PRESIDENT');
+  const vice = byRole('VICE PRESIDENT');
+  const secGen = byRole('SECRETAIRE GENERAL');
+  const secretaires = byStarts('SECRETAIRE ADJOINT');
+  const culture = byStarts('DELEGUE CULTUREL');
+  const social = byStarts('DELEGUE SOCIAL');
+  const mobil = byStarts('DELEGUE DE MOBILISATION');
+  const treasury = items.filter((m) => normalizeRole(m.role).startsWith('TRESORIERE'));
+
+  const card = (label, person, primary = false) => {
+    if (!person) return '';
+    const name = stripContacts(person.name || '');
+    return `
+      <div class="org-card ${primary ? 'primary' : ''}">
+        ${escapeHtml(label)}
+        <span>${escapeHtml(name)}</span>
+      </div>
+    `;
+  };
+
+  const group = (title, members) => {
+    if (!members.length) return '';
+    return `
+      <div class="org-group">
+        <div class="org-group-title">${escapeHtml(title)}</div>
+        <div class="org-group-grid">
+          ${members
+            .map((m) => {
+              const name = stripContacts(m.name || '');
+              return `
+                <div class="org-card">
+                  ${escapeHtml(m.role || '')}
+                  <span>${escapeHtml(name)}</span>
+                </div>
+              `;
+            })
+            .join('')}
+        </div>
+      </div>
+    `;
+  };
+
+  orgEl.innerHTML = `
+    <div class="org-chart">
+      <div class="org-level">
+        ${card('Président', president, true)}
+      </div>
+      <div class="org-level">
+        ${card('Vice Président', vice)}
+        ${card('Secrétaire Général', secGen)}
+      </div>
+      <div class="org-level">
+        ${group('Secrétariat', secretaires)}
+        ${group('Culturel', culture)}
+        ${group('Social', social)}
+        ${group('Mobilisation', mobil)}
+        ${group('Trésorerie', treasury)}
+      </div>
+    </div>
+  `;
+}
+
 async function loadSiteContent() {
   try {
     const res = await fetch(`/api/public/site-content?ts=${Date.now()}`, { cache: 'no-store' });
@@ -138,6 +212,8 @@ async function loadSiteContent() {
       const listEl = committeePreview.querySelector('.mini-list');
       if (listEl) listEl.innerHTML = list || 'Aucun membre.';
     }
+
+    renderCommitteeOrg(committeeItems);
 
     // Programs
     renderList(
@@ -220,6 +296,9 @@ async function loadSiteContent() {
     document.querySelectorAll('[data-footer-phone]').forEach((el) => setText(el, data.footer?.phone));
     document.querySelectorAll('[data-footer-email]').forEach((el) => setText(el, data.footer?.email));
     document.querySelectorAll('[data-footer-hours]').forEach((el) => setText(el, data.footer?.hours));
+
+    const printBtn = document.getElementById('printCommitteeBtn');
+    printBtn?.addEventListener('click', () => window.print());
   } catch {
     // silent
   }
