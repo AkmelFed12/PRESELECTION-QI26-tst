@@ -533,7 +533,8 @@ async function getSiteContent() {
       about: { ...DEFAULT_SITE_CONTENT.about, ...(parsed.about || {}) },
       committee: {
         members:
-          Array.isArray(parsed.committee?.members) && parsed.committee.members.length
+          Array.isArray(parsed.committee?.members) &&
+          parsed.committee.members.length >= DEFAULT_SITE_CONTENT.committee.members.length
             ? parsed.committee.members
             : DEFAULT_SITE_CONTENT.committee.members
       },
