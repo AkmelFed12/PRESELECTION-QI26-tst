@@ -97,6 +97,16 @@
         <p id="settingsMsg" class="status"></p>
       </section>
 
+      <section class="card admin-hidden" id="maintenanceSection">
+        <h2>Maintenance & sauvegardes</h2>
+        <div class="status">
+          Sauvegarde automatique activée (GitHub Actions). Planification: chaque nuit à 02:30 UTC.
+        </div>
+        <div class="muted" style="margin-top:8px;">
+          Pré‑requis secrets: DATABASE_URL, RCLONE_CONFIG, GDRIVE_FOLDER.
+        </div>
+      </section>
+
       <section class="card admin-hidden" id="siteContentSection">
         <h2>Site officiel ASAA — Contenus</h2>
         <form id="siteContentForm" class="form-grid">
@@ -268,6 +278,7 @@
             <div class="full">
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="btn-primary" type="submit">Enregistrer les modifications</button>
+                <button class="btn outline" type="button" id="candidateModalWhatsapp">WhatsApp</button>
                 <button class="btn outline" type="button" id="candidateModalDelete">Supprimer ce candidat</button>
               </div>
             </div>

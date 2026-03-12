@@ -33,6 +33,7 @@ const candidateModalClose = document.getElementById('candidateModalClose');
 const candidateModalForm = document.getElementById('candidateModalForm');
 const candidateModalMsg = document.getElementById('candidateModalMsg');
 const candidateModalDelete = document.getElementById('candidateModalDelete');
+const candidateModalWhatsapp = document.getElementById('candidateModalWhatsapp');
 const modalCandidateId = document.getElementById('modalCandidateId');
 const modalCandidateName = document.getElementById('modalCandidateName');
 const modalCandidateCity = document.getElementById('modalCandidateCity');
@@ -178,6 +179,20 @@ const manualNameMap = {
 
 function digitsOnly(value) {
   return String(value || '').replace(/\D/g, '');
+}
+
+function openWhatsappChat(number, name) {
+  const digits = digitsOnly(number);
+  if (!digits) {
+    alert('Numéro WhatsApp indisponible.');
+    return;
+  }
+  const safeName = (name || '').trim();
+  const message = safeName
+    ? `Bonjour ${safeName}, votre inscription au Quiz Islamique 2026 est bien enregistrée.`
+    : "Bonjour, votre inscription au Quiz Islamique 2026 est bien enregistrée.";
+  const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank', 'noopener');
 }
 
 function resolveName(candidate) {
@@ -366,6 +381,7 @@ function renderCandidates(list) {
         <td>${c.status || 'pending'}</td>
         <td>
           <button data-edit="${c.id}">Modifier</button>
+          <button data-whatsapp="${c.id}">WhatsApp</button>
           <button data-cert="${c.id}">Certificat</button>
           <button data-delete="${c.id}">Supprimer</button>
         </td>
@@ -1121,6 +1137,12 @@ candidateModalForm?.addEventListener('submit', async (e) => {
   }
 });
 
+candidateModalWhatsapp?.addEventListener('click', () => {
+  const name = modalCandidateName?.value || '';
+  const phone = modalCandidateWhatsapp?.value || '';
+  openWhatsappChat(phone, name);
+});
+
 candidateModalDelete?.addEventListener('click', async () => {
   const id = modalCandidateId.value;
   if (!id) return;
@@ -1146,6 +1168,17 @@ candidatesTable?.addEventListener('click', (e) => {
     const candidate = candidatesCache.find((c) => String(c.id) === String(id));
     if (candidate) {
       openCandidateModal(candidate);
+    }
+    return;
+  }
+  const whatsappBtn = e.target.closest('button[data-whatsapp]');
+  if (whatsappBtn) {
+    const id = whatsappBtn.getAttribute('data-whatsapp');
+    const candidate = candidatesCache.find((c) => String(c.id) === String(id));
+    if (candidate) {
+      openWhatsappChat(candidate.whatsapp, resolveName(candidate));
+    } else {
+      openWhatsappChat('', '');
     }
     return;
   }

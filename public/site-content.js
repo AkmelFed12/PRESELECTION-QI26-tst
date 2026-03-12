@@ -26,6 +26,39 @@ function setText(el, value) {
   el.textContent = text;
 }
 
+function ensureAnnouncementBanner() {
+  let banner = document.getElementById('announcementBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'announcementBanner';
+    banner.className = 'announcement-banner';
+    const span = document.createElement('span');
+    span.id = 'announcementBannerText';
+    banner.appendChild(span);
+    document.body.prepend(banner);
+  }
+  return banner;
+}
+
+async function loadAnnouncementBanner() {
+  try {
+    const res = await fetch(`/api/public-settings?ts=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const text = String(data.announcementText || '').trim();
+    const banner = ensureAnnouncementBanner();
+    const span = banner.querySelector('#announcementBannerText') || banner.querySelector('span');
+    if (text) {
+      if (span) span.textContent = text;
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch {
+    // silent
+  }
+}
+
 function renderList(container, items, renderer, emptyText) {
   if (!container) return;
   if (!items || !items.length) {
@@ -334,3 +367,4 @@ async function loadSiteContent() {
 }
 
 loadSiteContent();
+loadAnnouncementBanner();
