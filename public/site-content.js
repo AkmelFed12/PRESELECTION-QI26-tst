@@ -35,6 +35,61 @@ function renderList(container, items, renderer, emptyText) {
   container.innerHTML = items.map(renderer).join('');
 }
 
+function normalizeRole(role) {
+  return String(role || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+const COMMITTEE_ORDER = [
+  'PRESIDENT',
+  'VICE PRESIDENT',
+  'SECRETAIRE GENERAL',
+  'SECRETAIRE ADJOINTE 1',
+  'SECRETAIRE ADJOINTE 2',
+  'DELEGUE CULTUREL',
+  'DELEGUE CULTUREL ADJOINT 1',
+  'DELEGUE CULTUREL ADJOINTE 2',
+  'DELEGUE SOCIAL',
+  'DELEGUE SOCIAL ADJOINT 1',
+  'DELEGUE SOCIAL ADJOINT 2',
+  'DELEGUE SOCIAL ADJOINTE 3',
+  'DELEGUE SOCIAL ADJOINTE 4',
+  'DELEGUE SOCIAL ADJOINTE 5',
+  'DELEGUE DE MOBILISATION',
+  'DELEGUE DE MOBILISATION ADJOINTE 1',
+  'DELEGUE DE MOBILISATION ADJOINTE 2',
+  'DELEGUE DE MOBILISATION ADJOINT 3',
+  'DELEGUE DE MOBILISATION ADJOINTE 4',
+  'TRESORIERE',
+  'TRESORIERE ADJOINT'
+];
+
+const COMMITTEE_ORDER_MAP = COMMITTEE_ORDER.reduce((acc, role, idx) => {
+  acc[role] = idx;
+  return acc;
+}, {});
+
+function sortCommitteeMembers(items) {
+  return (items || [])
+    .slice()
+    .sort((a, b) => {
+      const ra = normalizeRole(a.role);
+      const rb = normalizeRole(b.role);
+      const ia = COMMITTEE_ORDER_MAP[ra] ?? 999;
+      const ib = COMMITTEE_ORDER_MAP[rb] ?? 999;
+      if (ia !== ib) return ia - ib;
+      return ra.localeCompare(rb);
+    });
+}
+
+function getInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0] || '').join('').toUpperCase();
+}
+
 async function loadSiteContent() {
   try {
     const res = await fetch(`/api/public/site-content?ts=${Date.now()}`, { cache: 'no-store' });
@@ -50,17 +105,39 @@ async function loadSiteContent() {
     if (aboutBody) aboutBody.innerHTML = textToHtml(data.about?.body || '');
 
     // Committee
-    renderList(
-      document.getElementById('committeeList'),
-      data.committee?.members || [],
-      (m) => `
-        <div class="status">
-          <strong>${escapeHtml(m.role || '')}</strong>
-          <div class="muted">${escapeHtml(stripContacts(m.name || ''))}</div>
-        </div>
-      `,
-      'Aucun membre renseigné.'
-    );
+    const committeeItems = sortCommitteeMembers(data.committee?.members || []);
+    const committeeList = document.getElementById('committeeList');
+    if (committeeList) {
+      if (!committeeItems.length) {
+        committeeList.innerHTML = `<div class="status">Aucun membre renseigné.</div>`;
+      } else {
+        committeeList.classList.add('committee-grid');
+        committeeList.innerHTML = committeeItems
+          .map((m) => {
+            const name = stripContacts(m.name || '');
+            return `
+              <div class="committee-card">
+                <div class="committee-avatar">${escapeHtml(getInitials(name))}</div>
+                <div>
+                  <div class="committee-role">${escapeHtml(m.role || '')}</div>
+                  <div class="committee-name">${escapeHtml(name)}</div>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+    }
+
+    const committeePreview = document.getElementById('committeePreview');
+    if (committeePreview) {
+      const preview = committeeItems.slice(0, 3);
+      const list = preview
+        .map((m) => `<div>• ${escapeHtml(m.role || '')}</div>`)
+        .join('');
+      const listEl = committeePreview.querySelector('.mini-list');
+      if (listEl) listEl.innerHTML = list || 'Aucun membre.';
+    }
 
     // Programs
     renderList(

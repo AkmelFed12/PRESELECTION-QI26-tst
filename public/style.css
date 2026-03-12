@@ -401,6 +401,73 @@ footer {
   color: #6b6b6b;
 }
 
+.mini-card {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #fff;
+  text-align: left;
+}
+
+.mini-card h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mini-card .mini-list {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mini-card a {
+  display: inline-block;
+  margin-top: 6px;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.committee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.committee-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fffdf9;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.committee-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e9dcc5;
+  color: #0b6f4f;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.committee-role {
+  font-weight: 700;
+  color: var(--emerald);
+}
+
+.committee-name {
+  font-size: 13px;
+  color: var(--ink);
+}
+
 .social-links {
   margin-top: 12px;
   display: inline-flex;
