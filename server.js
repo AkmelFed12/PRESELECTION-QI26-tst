@@ -2366,7 +2366,7 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
     const candidateId = Number(req.params.id);
     if (!candidateId) return res.status(400).json({ message: 'ID candidat invalide.' });
     const result = await pool.query(
-      'SELECT id, fullName, city, whatsapp, createdAt FROM candidates WHERE id = $1',
+      'SELECT id, candidateCode, fullName, city, whatsapp, createdAt FROM candidates WHERE id = $1',
       [candidateId]
     );
     const candidate = result.rows[0];
@@ -2396,6 +2396,7 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
     const emerald = '#0b6f4f';
     const gold = '#c59b3f';
     const ink = '#1c1c1c';
+    const muted = '#6b6b6b';
 
     // Header band
     doc.save();
@@ -2429,23 +2430,33 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       doc.restore();
     } catch {}
 
-    let cursorY = 120;
+    let cursorY = 118;
     doc
       .font('Times-Bold')
-      .fontSize(26)
+      .fontSize(28)
       .fillColor(ink)
-      .text('CERTIFICAT DE PARTICIPATION', 0, cursorY, { align: 'center' });
-    cursorY += 38;
-    doc.font('Helvetica').fontSize(12).text('Ce certificat est décerné à', 0, cursorY, { align: 'center' });
+      .text('CERTIFICAT OFFICIEL', 0, cursorY, { align: 'center' });
+    cursorY += 30;
+    doc
+      .font('Times-Roman')
+      .fontSize(14)
+      .fillColor(muted)
+      .text('de participation', 0, cursorY, { align: 'center' });
     cursorY += 22;
+    doc
+      .font('Helvetica')
+      .fontSize(12)
+      .fillColor(ink)
+      .text('Décerné à :', 0, cursorY, { align: 'center' });
+    cursorY += 20;
 
     const candidateName = candidate.fullname || candidate.fullName || 'Candidat';
     doc
       .font('Times-Bold')
-      .fontSize(22)
+      .fontSize(24)
       .text(candidateName.toUpperCase(), 0, cursorY, { align: 'center' });
     const nameWidth = doc.widthOfString(candidateName.toUpperCase());
-    const nameLineY = cursorY + 26;
+    const nameLineY = cursorY + 28;
     doc
       .moveTo((pageW - nameWidth) / 2, nameLineY)
       .lineTo((pageW + nameWidth) / 2, nameLineY)
@@ -2461,8 +2472,12 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       .text("Pour sa participation active aux présélections du Quiz Islamique 2026.", 80, cursorY, {
         align: 'center',
         width: pageW - 160
+      })
+      .text("Organisé par l'Association des Serviteurs d'Allah Azawajal.", 80, cursorY + 18, {
+        align: 'center',
+        width: pageW - 160
       });
-    cursorY += 28;
+    cursorY += 42;
 
     const todayStr = formatDateFr(new Date());
     const certNumber = `QI26-${candidate.id}-${todayStr.replace(/\//g, '')}`;
@@ -2471,7 +2486,7 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
     const boxX = 90;
     const boxW = pageW - 180;
     const boxY = cursorY;
-    const boxH = 92;
+    const boxH = 108;
     doc.roundedRect(boxX, boxY, boxW, boxH, 8).lineWidth(1).strokeColor('#e7dcc5').stroke();
     doc
       .font('Helvetica')
@@ -2480,7 +2495,10 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       .text(`Commune: ${candidate.city || '-'}`, boxX + 20, boxY + 16, { width: boxW - 40 })
       .text(`WhatsApp: ${candidate.whatsapp || '-'}`, boxX + 20, boxY + 36, { width: boxW - 40 })
       .text(`Date: ${todayStr}`, boxX + 20, boxY + 56, { width: boxW - 40 })
-      .text(`N° Certificat: ${certNumber}`, boxX + 20, boxY + 76, { width: boxW - 40 });
+      .text(`Code candidat: ${candidate.candidatecode || candidate.candidateCode || '-'}`, boxX + 20, boxY + 76, {
+        width: boxW - 40
+      })
+      .text(`N° Certificat: ${certNumber}`, boxX + 20, boxY + 96, { width: boxW - 40 });
 
     const pageWidth = doc.page.width;
     const pageBottom = doc.page.height - 120;
