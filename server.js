@@ -410,7 +410,6 @@ const DEFAULT_SITE_CONTENT = {
       { role: 'Délégué Social Adjoint 2', name: 'TRAORE TALBI' },
       { role: 'Délégué Social Adjointe 3', name: 'MARIAMA BOUBACAR' },
       { role: 'Délégué Social Adjointe 4', name: 'DIARRASOUBA BINTA' },
-      { role: 'Délégué Social Adjointe 5', name: 'ZEYNABOU SIDIBE' },
       { role: 'Délégué de Mobilisation', name: 'KONATE NOURA' },
       { role: 'Délégué de Mobilisation Adjointe 1', name: 'SOW MARIAMA' },
       { role: 'Délégué de Mobilisation Adjointe 2', name: 'COULIBALY MADOUSSOU' },
@@ -491,6 +490,14 @@ function normalizeMemberKey(member) {
   const role = String(member?.role || '').toUpperCase().trim();
   const name = String(member?.name || '').toUpperCase().trim();
   return `${role}|${name}`;
+}
+
+const BLOCKED_COMMITTEE_KEYS = new Set([
+  'DELEGUE SOCIAL ADJOINTE 5|ZEYNABOU SIDIBE'
+]);
+
+function filterBlockedMembers(list = []) {
+  return list.filter((m) => !BLOCKED_COMMITTEE_KEYS.has(normalizeMemberKey(m)));
 }
 
 function mergeMembers(current = [], defaults = []) {
@@ -601,8 +608,8 @@ async function getSiteContent() {
         members:
           Array.isArray(parsed.committee?.members) &&
           parsed.committee.members.length
-            ? mergeMembers(parsed.committee.members, DEFAULT_SITE_CONTENT.committee.members)
-            : DEFAULT_SITE_CONTENT.committee.members
+            ? filterBlockedMembers(mergeMembers(parsed.committee.members, DEFAULT_SITE_CONTENT.committee.members))
+            : filterBlockedMembers(DEFAULT_SITE_CONTENT.committee.members)
       },
       programs: {
         items:
