@@ -19,6 +19,7 @@ const announcementBanner = document.getElementById('announcementBanner');
 const announcementBannerText = document.getElementById('announcementBannerText');
 const latestCommunique = document.getElementById('latestCommunique');
 const nextEvent = document.getElementById('nextEvent');
+const nextEventBar = document.getElementById('nextEventBar');
 const donationForm = document.getElementById('donationForm');
 const donationMsg = document.getElementById('donationMsg');
 const sponsorTrack = document.getElementById('sponsorTrack');
@@ -647,6 +648,34 @@ async function loadPublicSettings() {
           nextEvent.textContent = 'Aucun événement annoncé pour le moment.';
         } else {
           nextEvent.innerHTML = `<strong>${picked.date}</strong> ${picked.time ? `(${picked.time})` : ''} — ${picked.title || 'Événement ASAA'}`;
+        }
+      }
+    }
+    if (nextEventBar) {
+      if (!schedule.length) {
+        nextEventBar.style.display = 'none';
+      } else {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const normalized = schedule
+          .map((s) => ({
+            ...s,
+            date: s.date || '',
+            time: s.time || '00:00'
+          }))
+          .filter((s) => s.date);
+        const upcoming = normalized
+          .filter((s) => s.date >= todayStr)
+          .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+        const picked = upcoming[0] || normalized.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0];
+        if (!picked) {
+          nextEventBar.style.display = 'none';
+        } else {
+          nextEventBar.textContent = `Prochain événement : ${picked.date}${picked.time ? ` (${picked.time})` : ''} — ${picked.title || 'Événement ASAA'}`;
+          nextEventBar.style.display = 'block';
         }
       }
     }

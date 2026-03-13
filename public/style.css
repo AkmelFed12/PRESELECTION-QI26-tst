@@ -136,6 +136,31 @@ header.hero {
   flex-wrap: wrap;
 }
 
+.site-badge {
+  display: inline-block;
+  margin: 6px 0 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 212, 141, 0.7);
+  background: rgba(245, 212, 141, 0.15);
+  color: #f5d48d;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.event-bar {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff3d6;
+  color: var(--emerald);
+  font-weight: 600;
+  display: inline-block;
+}
+
 .hero .slogan {
   margin: 6px 0 0;
   font-size: 16px;
