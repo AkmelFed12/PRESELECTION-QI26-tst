@@ -364,6 +364,7 @@ function normalizeSettingsRow(row) {
     votingEnabled: 0,
     registrationLocked: 0,
     competitionClosed: 0,
+    certificatesEnabled: 1,
     announcementText: '',
     scheduleJson: '[]'
   };
@@ -371,6 +372,7 @@ function normalizeSettingsRow(row) {
     votingEnabled: row.votingenabled ?? row.votingEnabled ?? 0,
     registrationLocked: row.registrationlocked ?? row.registrationLocked ?? 0,
     competitionClosed: row.competitionclosed ?? row.competitionClosed ?? 0,
+    certificatesEnabled: row.certificatesenabled ?? row.certificatesEnabled ?? 1,
     announcementText: row.announcementtext ?? row.announcementText ?? '',
     scheduleJson: row.schedulejson ?? row.scheduleJson ?? '[]'
   };
@@ -802,6 +804,7 @@ async function initDatabase() {
         votingEnabled INTEGER DEFAULT 0,
         registrationLocked INTEGER DEFAULT 0,
         competitionClosed INTEGER DEFAULT 0,
+        certificatesEnabled INTEGER DEFAULT 1,
         announcementText TEXT DEFAULT '',
         scheduleJson TEXT DEFAULT '[]',
         updatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -1035,6 +1038,7 @@ async function initDatabase() {
     await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS imagesJson TEXT;`);
     await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS publishAt TIMESTAMP WITH TIME ZONE;`);
     await pool.query(`ALTER TABLE sponsors ADD COLUMN IF NOT EXISTS filesJson TEXT;`);
+    await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS certificatesEnabled INTEGER DEFAULT 1;`);
 
     await pool.query(`
       INSERT INTO poll (question, optionsJson, active)
@@ -1064,7 +1068,8 @@ async function initDatabase() {
            candidatesPerGroup = COALESCE(NULLIF(candidatesPerGroup, 0), 4),
            finalistsFromWinners = COALESCE(NULLIF(finalistsFromWinners, 0), 8),
            finalistsFromBestSecond = COALESCE(NULLIF(finalistsFromBestSecond, 0), 2),
-           totalFinalists = COALESCE(NULLIF(totalFinalists, 0), 10)
+           totalFinalists = COALESCE(NULLIF(totalFinalists, 0), 10),
+           certificatesEnabled = COALESCE(certificatesEnabled, 1)
        WHERE id = 1`
     );
 
@@ -1147,7 +1152,7 @@ app.get('/api/public-candidates', async (req, res) => {
 app.get('/api/public-settings', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT votingEnabled, registrationLocked, competitionClosed, announcementText, scheduleJson FROM tournament_settings WHERE id = 1'
+      'SELECT votingEnabled, registrationLocked, competitionClosed, certificatesEnabled, announcementText, scheduleJson FROM tournament_settings WHERE id = 1'
     );
     const normalized = normalizeSettingsRow(result.rows[0]);
     res.json(normalized);
@@ -1243,6 +1248,13 @@ app.get('/api/public/committee-pdf', async (req, res) => {
 // Public certificate verification
 app.get('/api/public/verify-certificate', async (req, res) => {
   try {
+    const settingsResult = await pool.query(
+      'SELECT certificatesEnabled FROM tournament_settings WHERE id = 1'
+    );
+    const certEnabled = settingsResult.rows[0]?.certificatesenabled ?? settingsResult.rows[0]?.certificatesEnabled ?? 1;
+    if (!certEnabled) {
+      return res.status(403).json({ valid: false, message: 'Vérification des certificats désactivée.' });
+    }
     const code = String(req.query.code || '').trim();
     const match = code.match(/^QI26-(\d+)-(\d{8})$/);
     if (!match) {
@@ -2002,13 +2014,13 @@ app.post('/api/admin/candidates', verifyAdmin, async (req, res) => {
 // Update tournament settings
 app.put('/api/tournament-settings', verifyAdmin, async (req, res) => {
   try {
-    const { votingEnabled, registrationLocked, competitionClosed, announcementText } = req.body;
+    const { votingEnabled, registrationLocked, competitionClosed, certificatesEnabled, announcementText } = req.body;
 
     await pool.query(
       `UPDATE tournament_settings 
-       SET votingEnabled = $1, registrationLocked = $2, competitionClosed = $3, announcementText = $4, updatedAt = NOW()
+       SET votingEnabled = $1, registrationLocked = $2, competitionClosed = $3, certificatesEnabled = $4, announcementText = $5, updatedAt = NOW()
        WHERE id = 1`,
-      [votingEnabled || 0, registrationLocked || 0, competitionClosed || 0, announcementText || '']
+      [votingEnabled || 0, registrationLocked || 0, competitionClosed || 0, certificatesEnabled ?? 1, announcementText || '']
     );
 
     res.json({ message: 'Paramètres mis à jour.' });
@@ -2344,6 +2356,13 @@ app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
 // GET - Certificate PDF for candidate
 app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
   try {
+    const settingsResult = await pool.query(
+      'SELECT certificatesEnabled FROM tournament_settings WHERE id = 1'
+    );
+    const certEnabled = settingsResult.rows[0]?.certificatesenabled ?? settingsResult.rows[0]?.certificatesEnabled ?? 1;
+    if (!certEnabled) {
+      return res.status(403).json({ message: 'Les certificats sont désactivés.' });
+    }
     const candidateId = Number(req.params.id);
     if (!candidateId) return res.status(400).json({ message: 'ID candidat invalide.' });
     const result = await pool.query(

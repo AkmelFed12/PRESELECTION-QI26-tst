@@ -2,6 +2,21 @@ const form = document.getElementById('verifyForm');
 const codeInput = document.getElementById('verifyCode');
 const resultBox = document.getElementById('verifyResult');
 
+async function checkCertificateEnabled() {
+  try {
+    const res = await fetch('/api/public-settings?ts=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    if (!data || !Number(data.certificatesEnabled)) {
+      if (form) form.style.display = 'none';
+      setResult('Vérification des certificats désactivée par l’administration.');
+      return false;
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 function setResult(text, ok = false) {
   if (!resultBox) return;
   resultBox.textContent = text;
@@ -32,7 +47,10 @@ form?.addEventListener('submit', (e) => {
 });
 
 const params = new URLSearchParams(window.location.search);
-if (params.get('code')) {
-  if (codeInput) codeInput.value = params.get('code');
-  verifyCode(params.get('code'));
-}
+checkCertificateEnabled().then((enabled) => {
+  if (!enabled) return;
+  if (params.get('code')) {
+    if (codeInput) codeInput.value = params.get('code');
+    verifyCode(params.get('code'));
+  }
+});
