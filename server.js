@@ -2392,16 +2392,31 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       .strokeColor('#f1e2c4')
       .stroke();
 
-    doc
-      .fontSize(36)
-      .fillColor('#0b6f4f')
-      .text('SESSION 2026', { align: 'center' })
-      .moveDown(0.2);
-
     const logoPath = join(__dirname, 'public', 'assets', 'logo.jpg');
+    const emerald = '#0b6f4f';
+    const gold = '#c59b3f';
+    const ink = '#1c1c1c';
+
+    // Header band
+    doc.save();
+    doc.rect(0, 0, pageW, 90).fill(emerald);
+    doc.restore();
     try {
-      doc.image(logoPath, 50, 40, { width: 80 });
+      doc.image(logoPath, 40, 15, { width: 60, height: 60 });
     } catch {}
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(20)
+      .fillColor('#ffffff')
+      .text('ASAA OFFICIEL', 0, 26, { align: 'center' });
+    doc
+      .font('Helvetica')
+      .fontSize(10)
+      .fillColor('#ffffff')
+      .text("Association des Serviteurs d'Allah Azawajal", 0, 52, { align: 'center' })
+      .text('Quiz Islamique 2026 — Présélections', 0, 66, { align: 'center' });
+
+    doc.moveTo(40, 92).lineTo(pageW - 40, 92).lineWidth(2).strokeColor(gold).stroke();
 
     // Watermark logo (center, low opacity)
     try {
@@ -2409,52 +2424,63 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
       const wmX = (pageW - wmWidth) / 2;
       const wmY = (pageH - wmWidth) / 2 - 20;
       doc.save();
-      doc.opacity(0.08);
+      doc.opacity(0.06);
       doc.image(logoPath, wmX, wmY, { width: wmWidth });
       doc.restore();
     } catch {}
 
+    let cursorY = 120;
     doc
+      .font('Times-Bold')
+      .fontSize(26)
+      .fillColor(ink)
+      .text('CERTIFICAT DE PARTICIPATION', 0, cursorY, { align: 'center' });
+    cursorY += 38;
+    doc.font('Helvetica').fontSize(12).text('Ce certificat est décerné à', 0, cursorY, { align: 'center' });
+    cursorY += 22;
+
+    const candidateName = candidate.fullname || candidate.fullName || 'Candidat';
+    doc
+      .font('Times-Bold')
       .fontSize(22)
-      .fillColor('#1c1c1c')
-      .text('Certificat de participation', { align: 'center' })
-      .moveDown(0.5);
+      .text(candidateName.toUpperCase(), 0, cursorY, { align: 'center' });
+    const nameWidth = doc.widthOfString(candidateName.toUpperCase());
+    const nameLineY = cursorY + 26;
     doc
-      .fontSize(12)
-      .text('Quiz Islamique 2026 — Présélections', { align: 'center' })
-      .moveDown(1.5);
+      .moveTo((pageW - nameWidth) / 2, nameLineY)
+      .lineTo((pageW + nameWidth) / 2, nameLineY)
+      .strokeColor(gold)
+      .lineWidth(1)
+      .stroke();
+    cursorY = nameLineY + 18;
+
+    doc
+      .font('Helvetica')
+      .fontSize(11)
+      .fillColor(ink)
+      .text("Pour sa participation active aux présélections du Quiz Islamique 2026.", 80, cursorY, {
+        align: 'center',
+        width: pageW - 160
+      });
+    cursorY += 28;
 
     const todayStr = formatDateFr(new Date());
     const certNumber = `QI26-${candidate.id}-${todayStr.replace(/\//g, '')}`;
     const verifyUrl = `${getFrontendUrl(req)}/verify-certificate.html?code=${encodeURIComponent(certNumber)}`;
+
+    const boxX = 90;
+    const boxW = pageW - 180;
+    const boxY = cursorY;
+    const boxH = 92;
+    doc.roundedRect(boxX, boxY, boxW, boxH, 8).lineWidth(1).strokeColor('#e7dcc5').stroke();
     doc
+      .font('Helvetica')
       .fontSize(11)
-      .fillColor('#6b6b6b')
-      .text(`N° Certificat: ${certNumber}`, { align: 'center' })
-      .moveDown(1.2);
-
-    doc
-      .fontSize(14)
-      .fillColor('#1c1c1c')
-      .text(`Nous certifions que :`, { align: 'center' })
-      .moveDown(0.8);
-    doc
-      .fontSize(18)
-      .fillColor('#1c1c1c')
-      .text(candidate.fullname || candidate.fullName || 'Candidat', { align: 'center' })
-      .moveDown(0.8);
-    doc
-      .fontSize(12)
-      .fillColor('#1c1c1c')
-      .text(`Commune: ${candidate.city || ''}`, { align: 'center' })
-      .text(`WhatsApp: ${candidate.whatsapp || ''}`, { align: 'center' })
-      .moveDown(1.5);
-
-    doc
-      .fontSize(12)
-      .fillColor('#1c1c1c')
-      .text(`Date: ${todayStr}`, { align: 'center' })
-      .moveDown(2);
+      .fillColor(ink)
+      .text(`Commune: ${candidate.city || '-'}`, boxX + 20, boxY + 16, { width: boxW - 40 })
+      .text(`WhatsApp: ${candidate.whatsapp || '-'}`, boxX + 20, boxY + 36, { width: boxW - 40 })
+      .text(`Date: ${todayStr}`, boxX + 20, boxY + 56, { width: boxW - 40 })
+      .text(`N° Certificat: ${certNumber}`, boxX + 20, boxY + 76, { width: boxW - 40 });
 
     const pageWidth = doc.page.width;
     const pageBottom = doc.page.height - 120;
