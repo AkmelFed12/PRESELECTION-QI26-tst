@@ -401,6 +401,7 @@ const DEFAULT_SITE_CONTENT = {
       { role: 'Secrétaire Général', name: 'OUATTARA LADJI MOUSSA' },
       { role: 'Secrétaire Adjointe 1', name: 'DIALLO MARIAMA' },
       { role: 'Secrétaire Adjointe 2', name: 'FONANA NAWA' },
+      { role: 'Secrétaire Adjointe 3', name: 'SANKARA RAMATA' },
       { role: 'Délégué Culturel', name: 'ADIANGO OUMAR' },
       { role: 'Délégué Culturel Adjoint 1', name: 'OUEDRAOGO ABDOUL RAHIM' },
       { role: 'Délégué Culturel Adjointe 2', name: 'BAH ZAYNAB' },
@@ -416,7 +417,8 @@ const DEFAULT_SITE_CONTENT = {
       { role: 'Délégué de Mobilisation Adjoint 3', name: 'SANA ABDOUL JALIL' },
       { role: 'Délégué de Mobilisation Adjointe 4', name: 'FATIM DIALLO' },
       { role: 'Trésorière', name: 'BELLO AMINATA' },
-      { role: 'Trésorière Adjoint', name: 'DIARRA FOUNE' }
+      { role: 'Trésorière Adjoint', name: 'DIARRA FOUNE' },
+      { role: 'Trésorière Adjointe 2', name: 'GBANE SAFFORA' }
     ]
   },
   programs: {
@@ -483,6 +485,25 @@ function safeText(value, maxLength = 800) {
 function sanitizeList(list, mapper, maxItems = 50) {
   const arr = Array.isArray(list) ? list.slice(0, maxItems) : [];
   return arr.map(mapper).filter(Boolean);
+}
+
+function normalizeMemberKey(member) {
+  const role = String(member?.role || '').toUpperCase().trim();
+  const name = String(member?.name || '').toUpperCase().trim();
+  return `${role}|${name}`;
+}
+
+function mergeMembers(current = [], defaults = []) {
+  const seen = new Set(current.map(normalizeMemberKey));
+  const merged = current.slice();
+  defaults.forEach((m) => {
+    const key = normalizeMemberKey(m);
+    if (!seen.has(key)) {
+      merged.push(m);
+      seen.add(key);
+    }
+  });
+  return merged;
 }
 
 function sanitizeSiteContent(payload = {}) {
@@ -579,8 +600,8 @@ async function getSiteContent() {
       committee: {
         members:
           Array.isArray(parsed.committee?.members) &&
-          parsed.committee.members.length >= DEFAULT_SITE_CONTENT.committee.members.length
-            ? parsed.committee.members
+          parsed.committee.members.length
+            ? mergeMembers(parsed.committee.members, DEFAULT_SITE_CONTENT.committee.members)
             : DEFAULT_SITE_CONTENT.committee.members
       },
       programs: {
