@@ -494,12 +494,37 @@ function normalizeMemberKey(member) {
   return `${role}|${name}`;
 }
 
+function normalizeRoleValue(role) {
+  return String(role || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
 const BLOCKED_COMMITTEE_KEYS = new Set([
   'DELEGUE SOCIAL ADJOINTE 5|ZEYNABOU SIDIBE'
 ]);
 
 function filterBlockedMembers(list = []) {
   return list.filter((m) => !BLOCKED_COMMITTEE_KEYS.has(normalizeMemberKey(m)));
+}
+
+const UNIQUE_COMMITTEE_ROLES = new Set([
+  'PRESIDENT',
+  'VICE PRESIDENT',
+  'SECRETAIRE GENERAL'
+]);
+
+function dedupeCommitteeByRole(list = []) {
+  const seen = new Set();
+  return list.filter((m) => {
+    const role = normalizeRoleValue(m?.role);
+    if (!UNIQUE_COMMITTEE_ROLES.has(role)) return true;
+    if (seen.has(role)) return false;
+    seen.add(role);
+    return true;
+  });
 }
 
 function mergeMembers(current = [], defaults = []) {
@@ -610,8 +635,12 @@ async function getSiteContent() {
         members:
           Array.isArray(parsed.committee?.members) &&
           parsed.committee.members.length
-            ? filterBlockedMembers(mergeMembers(parsed.committee.members, DEFAULT_SITE_CONTENT.committee.members))
-            : filterBlockedMembers(DEFAULT_SITE_CONTENT.committee.members)
+            ? dedupeCommitteeByRole(
+                filterBlockedMembers(
+                  mergeMembers(parsed.committee.members, DEFAULT_SITE_CONTENT.committee.members)
+                )
+              )
+            : dedupeCommitteeByRole(filterBlockedMembers(DEFAULT_SITE_CONTENT.committee.members))
       },
       programs: {
         items:
@@ -1200,7 +1229,7 @@ app.get('/api/public/committee-pdf', async (req, res) => {
   try {
     const content = await getSiteContent();
     const members = Array.isArray(content.committee?.members) ? content.committee.members : [];
-    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="comite-asaa.pdf"');
     doc.pipe(res);
