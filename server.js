@@ -1279,7 +1279,7 @@ app.get('/api/public/verify-certificate', async (req, res) => {
 app.get('/api/public-results', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT c.id, c.fullName, c.city, c.country, c.photoUrl,
+      SELECT c.id, c.fullname AS "fullName", c.city, c.country, c.photoUrl,
              COALESCE(v.totalVotes, 0) as totalVotes,
              COALESCE(s.averageScore, 0) as averageScore
       FROM candidates c
@@ -1291,7 +1291,7 @@ app.get('/api/public-results', async (req, res) => {
                CAST(AVG(COALESCE(themeChosenScore, 0) + COALESCE(themeImposedScore, 0)) AS NUMERIC(10,2)) as averageScore
         FROM scores GROUP BY candidateId
       ) s ON c.id = s.candidateId
-      ORDER BY COALESCE(v.totalVotes, 0) DESC, c.fullName ASC
+      ORDER BY COALESCE(v.totalVotes, 0) DESC, c.fullname ASC
     `);
     
     const candidates = result.rows;

@@ -26,7 +26,7 @@ async function loadRanking() {
               (c, idx) => `
             <tr>
               <td>${idx + 1}</td>
-              <td>${c.fullName || 'Inconnu'}</td>
+              <td>${c.fullName || c.fullname || 'Inconnu'}</td>
               <td>${c.city || ''}</td>
               <td>${c.totalVotes || 0}</td>
               <td>${c.averageScore || 0}</td>
