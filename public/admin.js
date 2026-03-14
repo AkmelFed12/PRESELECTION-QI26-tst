@@ -151,6 +151,7 @@ let newsCache = [];
 let sponsorsCache = [];
 let newsImages = [];
 let isEditing = false;
+let lastEditAt = 0;
 
 const manualNameMap = {
   "2250564108763": "OUATTARA FATOUMATA",
@@ -272,6 +273,11 @@ function setStatus(el, text) {
   if (el) el.textContent = text || '';
 }
 
+function markEditing() {
+  isEditing = true;
+  lastEditAt = Date.now();
+}
+
 function bindEditListeners() {
   const forms = [
     settingsForm,
@@ -287,14 +293,27 @@ function bindEditListeners() {
 
   forms.forEach((form) => {
     form.addEventListener('input', () => {
-      isEditing = true;
+      markEditing();
     });
     form.addEventListener('change', () => {
-      isEditing = true;
+      markEditing();
     });
     form.addEventListener('submit', () => {
       isEditing = false;
     });
+  });
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable)
+    ) {
+      markEditing();
+    }
   });
 }
 
@@ -1478,7 +1497,8 @@ scoreForm?.addEventListener('submit', async (e) => {
 });
 
 setInterval(() => {
-  if (isEditing) return;
+  if (isEditing && Date.now() - lastEditAt < 20000) return;
+  isEditing = false;
   if (loginCard && loginCard.classList.contains('admin-hidden')) {
     loadDashboard();
   }
