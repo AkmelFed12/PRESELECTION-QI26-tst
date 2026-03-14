@@ -122,6 +122,12 @@ const memberAuditList = document.getElementById('memberAuditList');
 const resetAllMembersPwd = document.getElementById('resetAllMembersPwd');
 const memberDefaultPasswordInput = document.getElementById('memberDefaultPassword');
 const updateDefaultMemberPwd = document.getElementById('updateDefaultMemberPwd');
+const memberToolsSection = document.getElementById('memberToolsSection');
+const memberToolsForm = document.getElementById('memberToolsForm');
+const memberMessagesInput = document.getElementById('memberMessagesInput');
+const memberTasksInput = document.getElementById('memberTasksInput');
+const memberDocsInput = document.getElementById('memberDocsInput');
+const memberToolsMsg = document.getElementById('memberToolsMsg');
 const dailyQuizSection = document.getElementById('dailyQuizSection');
 const dailyQuizForm = document.getElementById('dailyQuizForm');
 const dailyQuizTitle = document.getElementById('dailyQuizTitle');
@@ -315,6 +321,23 @@ function joinPipeLines(items, keys) {
     .join('\n');
 }
 
+async function loadMemberTools() {
+  if (!memberToolsSection) return;
+  memberToolsSection.classList.remove('admin-hidden');
+  const res = await authedFetch('/api/admin/member-tools');
+  if (!res.ok) return;
+  const data = await res.json();
+  if (memberMessagesInput) {
+    memberMessagesInput.value = joinPipeLines(data.messages || [], ['scope', 'title', 'body']);
+  }
+  if (memberTasksInput) {
+    memberTasksInput.value = joinPipeLines(data.tasks || [], ['assignee', 'title', 'dueDate', 'status']);
+  }
+  if (memberDocsInput) {
+    memberDocsInput.value = joinPipeLines(data.documents || [], ['title', 'url']);
+  }
+}
+
 async function authedFetch(url, options = {}) {
   if (!authHeader) {
     const stored = localStorage.getItem('adminAuth');
@@ -389,6 +412,7 @@ async function loadDashboard() {
   await loadSponsors();
   await loadMembers();
   await loadMemberAudit();
+  await loadMemberTools();
   await loadDailyQuizAdmin();
 
   renderGlobalSearch();
@@ -1760,6 +1784,23 @@ pollForm?.addEventListener('submit', async (e) => {
   const data = await res.json().catch(() => ({}));
   setStatus(pollMsg, data.message || (res.ok ? 'Sondage mis à jour.' : 'Erreur.'));
   await loadPollAdmin();
+});
+
+memberToolsForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setStatus(memberToolsMsg, 'Enregistrement...');
+  const messages = parsePipeLines(memberMessagesInput?.value || '', ['scope', 'title', 'body']);
+  const tasks = parsePipeLines(memberTasksInput?.value || '', ['assignee', 'title', 'dueDate', 'status']);
+  const documents = parsePipeLines(memberDocsInput?.value || '', ['title', 'url']);
+  const res = await authedFetch('/api/admin/member-tools', {
+    method: 'PUT',
+    body: JSON.stringify({ messages, tasks, documents })
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(memberToolsMsg, data.message || (res.ok ? 'Sauvegardé.' : 'Erreur.'));
+  if (res.ok) {
+    await loadMemberTools();
+  }
 });
 
 // Force login each time for security

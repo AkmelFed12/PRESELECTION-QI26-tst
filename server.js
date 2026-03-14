@@ -804,6 +804,61 @@ async function getSiteContent() {
   }
 }
 
+async function getMemberToolsConfig() {
+  const result = await pool.query(
+    "SELECT value FROM admin_config WHERE key = 'member_tools' LIMIT 1"
+  );
+  const raw = result.rows[0]?.value;
+  if (!raw) {
+    return { messages: [], tasks: [], documents: [] };
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      messages: Array.isArray(parsed.messages) ? parsed.messages : [],
+      tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+      documents: Array.isArray(parsed.documents) ? parsed.documents : []
+    };
+  } catch {
+    return { messages: [], tasks: [], documents: [] };
+  }
+}
+
+function sanitizeMemberTools(payload = {}) {
+  const messages = Array.isArray(payload.messages)
+    ? payload.messages
+        .map((m) => ({
+          scope: sanitizeString(m.scope || 'all', 80) || 'all',
+          title: sanitizeString(m.title, 140),
+          body: sanitizeString(m.body, 800),
+          createdAt: sanitizeString(m.createdAt, 40) || new Date().toISOString()
+        }))
+        .filter((m) => m.title && m.body)
+    : [];
+
+  const tasks = Array.isArray(payload.tasks)
+    ? payload.tasks
+        .map((t) => ({
+          assignee: sanitizeString(t.assignee || 'all', 80) || 'all',
+          title: sanitizeString(t.title, 160),
+          dueDate: sanitizeString(t.dueDate, 40),
+          status: sanitizeString(t.status, 40) || 'En cours'
+        }))
+        .filter((t) => t.title)
+    : [];
+
+  const documents = Array.isArray(payload.documents)
+    ? payload.documents
+        .map((d) => ({
+          title: sanitizeString(d.title, 160),
+          url: sanitizeString(d.url, 400)
+        }))
+        .filter((d) => d.title && d.url)
+    : [];
+
+  return { messages, tasks, documents };
+}
+
 // ==================== SECURITY HEADERS ====================
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -4097,6 +4152,68 @@ app.put('/api/admin/daily-quiz', verifyAdmin, async (req, res) => {
       [JSON.stringify(payload)]
     );
     res.json({ message: 'Quiz mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: member tools (messages, tasks, documents)
+app.get('/api/admin/member-tools', verifyAdmin, async (req, res) => {
+  try {
+    const tools = await getMemberToolsConfig();
+    res.json(tools);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/admin/member-tools', verifyAdmin, async (req, res) => {
+  try {
+    const sanitized = sanitizeMemberTools(req.body || {});
+    await pool.query(
+      "INSERT INTO admin_config (key, value) VALUES ('member_tools', $1)\n       ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
+      [JSON.stringify(sanitized)]
+    );
+    res.json({ message: 'Outils membres mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Member: tools + actions
+app.get('/api/members/member-tools', verifyMember, async (req, res) => {
+  try {
+    const tools = await getMemberToolsConfig();
+    const username = String(req.member?.username || '').toLowerCase();
+    const filteredMessages = (tools.messages || []).filter((m) => {
+      const scope = String(m.scope || 'all').toLowerCase();
+      return scope === 'all' || scope === username;
+    });
+    const filteredTasks = (tools.tasks || []).filter((t) => {
+      const assignee = String(t.assignee || 'all').toLowerCase();
+      return assignee === 'all' || assignee === username;
+    });
+    res.json({
+      messages: filteredMessages,
+      tasks: filteredTasks,
+      documents: tools.documents || []
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/members/actions', verifyMember, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT action, details, createdAt FROM member_audit WHERE memberId = $1 ORDER BY createdAt DESC LIMIT 30',
+      [req.member.id]
+    );
+    res.json({ actions: result.rows || [] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
