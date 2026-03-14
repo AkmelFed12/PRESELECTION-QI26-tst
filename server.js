@@ -90,6 +90,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ASAA';
 const ADMIN_WHATSAPP = process.env.ADMIN_WHATSAPP || '2250150070083';
 const CODE_PREFIX = 'QI26';
 const DEFAULT_COUNTRY = process.env.DEFAULT_COUNTRY || "COTE D'IVOIRE";
+let memberDefaultPassword = process.env.MEMBER_DEFAULT_PASSWORD || 'ASAA2026!';
 
 // Email config
 const transporter = nodemailer.createTransport({
@@ -399,7 +400,21 @@ function normalizeUsername(value) {
 }
 
 function defaultMemberPassword() {
-  return process.env.MEMBER_DEFAULT_PASSWORD || 'ASAA2026!';
+  return memberDefaultPassword || 'ASAA2026!';
+}
+
+async function loadMemberDefaultPassword() {
+  try {
+    const res = await pool.query(
+      "SELECT value FROM admin_config WHERE key = 'member_default_password' LIMIT 1"
+    );
+    const value = res.rows[0]?.value;
+    if (value && typeof value === 'string') {
+      memberDefaultPassword = value;
+    }
+  } catch (error) {
+    console.warn('⚠️ Impossible de charger le mot de passe par défaut des membres:', error.message);
+  }
 }
 
 function isQuizOpenNow(date = new Date()) {
@@ -466,7 +481,7 @@ const DEFAULT_SITE_CONTENT = {
       { role: 'Vice Président', name: 'BAH ALI MOHAMED' },
       { role: 'Secrétaire Général', name: 'OUATTARA LADJI MOUSSA' },
       { role: 'Secrétaire Adjointe 1', name: 'DIALLO MARIAMA' },
-      { role: 'Secrétaire Adjointe 2', name: 'FONANA NAWA' },
+      { role: 'Secrétaire Adjointe 2', name: 'FOFANA NAWA' },
       { role: 'Secrétaire Adjointe 3', name: 'SANKARA RAMATA' },
       { role: 'Délégué Culturel', name: 'ADIANGO OUMAR' },
       { role: 'Délégué Culturel Adjoint 1', name: 'OUEDRAOGO ABDOUL RAHIM' },
@@ -564,6 +579,16 @@ function normalizeRoleValue(role) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
+}
+
+function applyCommitteeFixes(list = []) {
+  return list.map((member) => {
+    const name = String(member?.name || '').toUpperCase().trim();
+    if (name === 'FONANA NAWA') {
+      return { ...member, name: 'FOFANA NAWA' };
+    }
+    return member;
+  });
 }
 
 const BLOCKED_COMMITTEE_KEYS = new Set([
@@ -696,15 +721,15 @@ async function getSiteContent() {
     return {
       about: { ...DEFAULT_SITE_CONTENT.about, ...(parsed.about || {}) },
       committee: {
-        members:
-          Array.isArray(parsed.committee?.members) &&
-          parsed.committee.members.length
+        members: applyCommitteeFixes(
+          Array.isArray(parsed.committee?.members) && parsed.committee.members.length
             ? dedupeCommitteeByRole(
                 filterBlockedMembers(
                   mergeMembers(parsed.committee.members, DEFAULT_SITE_CONTENT.committee.members)
                 )
               )
             : dedupeCommitteeByRole(filterBlockedMembers(DEFAULT_SITE_CONTENT.committee.members))
+        )
       },
       programs: {
         items:
@@ -1234,6 +1259,9 @@ async function initDatabase() {
         [username, rawName, member.role || '', defaultPass]
       );
     }
+    await pool.query(
+      "UPDATE member_accounts SET fullName = 'FOFANA NAWA' WHERE UPPER(fullName) = 'FONANA NAWA'"
+    );
 
     // Replace candidates with manual list if data mismatch detected
     const manualCandidates = loadManualCandidates();
@@ -4040,6 +4068,14 @@ app.put('/api/admin/daily-quiz', verifyAdmin, async (req, res) => {
 // Admin: reset all member passwords to default
 app.post('/api/admin/members/reset-passwords', verifyAdmin, async (req, res) => {
   try {
+    const requested = sanitizeString(req.body?.password, 200);
+    if (requested) {
+      memberDefaultPassword = requested;
+      await pool.query(
+        "INSERT INTO admin_config (key, value) VALUES ('member_default_password', $1)\n         ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
+        [requested]
+      );
+    }
     const passHash = await hashPassword(defaultMemberPassword());
     await pool.query('UPDATE member_accounts SET passwordHash = $1', [passHash]);
     res.json({ message: 'Mots de passe réinitialisés.' });
@@ -4474,7 +4510,8 @@ app.use((err, req, res, next) => {
 });
 
 // ==================== SERVER START ====================
-initDatabase().then(() => {
+initDatabase().then(async () => {
+  await loadMemberDefaultPassword();
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT}`);
   });

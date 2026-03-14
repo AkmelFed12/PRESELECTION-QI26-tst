@@ -120,6 +120,8 @@ const membersTableBody = document.querySelector('#membersTable tbody');
 const memberAuditSection = document.getElementById('memberAuditSection');
 const memberAuditList = document.getElementById('memberAuditList');
 const resetAllMembersPwd = document.getElementById('resetAllMembersPwd');
+const memberDefaultPasswordInput = document.getElementById('memberDefaultPassword');
+const updateDefaultMemberPwd = document.getElementById('updateDefaultMemberPwd');
 const dailyQuizSection = document.getElementById('dailyQuizSection');
 const dailyQuizForm = document.getElementById('dailyQuizForm');
 const dailyQuizTitle = document.getElementById('dailyQuizTitle');
@@ -1366,6 +1368,26 @@ resetAllMembersPwd?.addEventListener('click', async () => {
   const res = await authedFetch('/api/admin/members/reset-passwords', { method: 'POST' });
   const data = await res.json().catch(() => ({}));
   setStatus(memberMsg, data.message || (res.ok ? 'Mots de passe réinitialisés.' : 'Erreur.'));
+});
+
+updateDefaultMemberPwd?.addEventListener('click', async () => {
+  const newPwd = (memberDefaultPasswordInput?.value || '').trim();
+  if (!newPwd) {
+    setStatus(memberMsg, 'Veuillez saisir un mot de passe par défaut.');
+    return;
+  }
+  const ok = confirm('Mettre à jour le mot de passe de TOUS les membres ?');
+  if (!ok) return;
+  setStatus(memberMsg, 'Réinitialisation...');
+  const res = await authedFetch('/api/admin/members/reset-passwords', {
+    method: 'POST',
+    body: JSON.stringify({ password: newPwd })
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(memberMsg, data.message || (res.ok ? 'Mots de passe réinitialisés.' : 'Erreur.'));
+  if (res.ok && memberDefaultPasswordInput) {
+    memberDefaultPasswordInput.value = '';
+  }
 });
 
 dailyQuizForm?.addEventListener('submit', async (e) => {
