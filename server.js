@@ -396,7 +396,22 @@ function normalizeUsername(value) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '');
+    .replace(/[\s_-]+/g, '.')
+    .replace(/[^a-z0-9.]/g, '')
+    .replace(/\.+/g, '.')
+    .replace(/^\.+|\.+$/g, '');
+}
+
+function buildMemberUsername(fullName) {
+  const tokens = String(fullName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!tokens.length) return '';
+  if (tokens.length === 1) return normalizeUsername(tokens[0]);
+  const lastName = tokens[0];
+  const firstInitial = tokens[1][0] || '';
+  return normalizeUsername(`${lastName}.${firstInitial}`);
 }
 
 function defaultMemberPassword() {
@@ -1249,14 +1264,20 @@ async function initDatabase() {
     for (const member of DEFAULT_SITE_CONTENT.committee.members) {
       const rawName = String(member.name || '').trim();
       if (!rawName) continue;
-      const firstName = rawName.split(/\s+/)[0];
-      const username = normalizeUsername(firstName);
+      const username = buildMemberUsername(rawName);
       if (!username) continue;
       await pool.query(
         `INSERT INTO member_accounts (username, fullName, role, passwordHash)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (username) DO NOTHING`,
         [username, rawName, member.role || '', defaultPass]
+      );
+
+      await pool.query(
+        `UPDATE member_accounts
+         SET username = $1, fullName = $2, role = $3
+         WHERE UPPER(fullName) = UPPER($2) AND username <> $1`,
+        [username, rawName, member.role || '']
       );
     }
     await pool.query(
@@ -3799,15 +3820,32 @@ app.post('/api/admin/login', async (req, res) => {
 app.post('/api/members/login', async (req, res) => {
   try {
     const { username, password } = req.body || {};
-    if (!username || !password) {
+    const rawUsername = sanitizeString(username, 80);
+    if (!rawUsername || !password) {
       return res.status(400).json({ message: 'Identifiant et mot de passe requis.' });
     }
-    const normalized = normalizeUsername(username);
-    const result = await pool.query(
+    const normalized = normalizeUsername(rawUsername);
+    let result = await pool.query(
       'SELECT id, username, fullName, role, email, phone, passwordHash, active FROM member_accounts WHERE username = $1',
       [normalized]
     );
-    const member = result.rows[0];
+    let member = result.rows[0];
+
+    if (!member) {
+      const matched = DEFAULT_SITE_CONTENT.committee.members.filter((m) =>
+        String(m.name || '').toLowerCase().startsWith(rawUsername.toLowerCase())
+      );
+      if (matched.length === 1) {
+        const fallback = buildMemberUsername(matched[0].name);
+        if (fallback && fallback !== normalized) {
+          result = await pool.query(
+            'SELECT id, username, fullName, role, email, phone, passwordHash, active FROM member_accounts WHERE username = $1',
+            [fallback]
+          );
+          member = result.rows[0];
+        }
+      }
+    }
     if (!member || !member.active) {
       return res.status(401).json({ message: 'Identifiants incorrects.' });
     }

@@ -144,6 +144,7 @@ let candidatesCache = [];
 let newsCache = [];
 let sponsorsCache = [];
 let newsImages = [];
+let isEditing = false;
 
 const manualNameMap = {
   "2250564108763": "OUATTARA FATOUMATA",
@@ -263,6 +264,32 @@ function hideAdmin() {
 
 function setStatus(el, text) {
   if (el) el.textContent = text || '';
+}
+
+function bindEditListeners() {
+  const forms = [
+    settingsForm,
+    candidateForm,
+    scoreForm,
+    newsForm,
+    sponsorForm,
+    pollForm,
+    siteContentForm,
+    memberForm,
+    dailyQuizForm
+  ].filter(Boolean);
+
+  forms.forEach((form) => {
+    form.addEventListener('input', () => {
+      isEditing = true;
+    });
+    form.addEventListener('change', () => {
+      isEditing = true;
+    });
+    form.addEventListener('submit', () => {
+      isEditing = false;
+    });
+  });
 }
 
 function parsePipeLines(text, expectedParts) {
@@ -1427,6 +1454,7 @@ scoreForm?.addEventListener('submit', async (e) => {
 });
 
 setInterval(() => {
+  if (isEditing) return;
   if (loginCard && loginCard.classList.contains('admin-hidden')) {
     loadDashboard();
   }
@@ -1737,6 +1765,7 @@ pollForm?.addEventListener('submit', async (e) => {
 // Force login each time for security
 hideAdmin();
 localStorage.removeItem('adminAuth');
+bindEditListeners();
 
 exportCandidatesCsv?.addEventListener('click', async () => {
   const res = await authedFetch('/api/admin/export/candidates');
