@@ -211,6 +211,47 @@
         <p id="siteContentMsg" class="status"></p>
       </section>
 
+      <section class="card admin-hidden" id="memberAccountsSection">
+        <h2>Comptes bureau (membres)</h2>
+        <form id="memberForm" class="form-grid">
+          <div><label>ID (modifier)</label><input id="memberId" name="id" type="number" /></div>
+          <div><label>Identifiant</label><input id="memberUsername" name="username" required /></div>
+          <div><label>Nom complet</label><input id="memberFullName" name="fullName" required /></div>
+          <div><label>Rôle</label><input id="memberRole" name="role" /></div>
+          <div><label>Email</label><input id="memberEmail" name="email" type="email" /></div>
+          <div><label>Téléphone</label><input id="memberPhone" name="phone" /></div>
+          <div><label>Mot de passe</label><input id="memberPassword" name="password" type="password" /></div>
+          <div><label>Statut</label>
+            <select id="memberActive" name="active">
+              <option value="1">Actif</option>
+              <option value="0">Inactif</option>
+            </select>
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Enregistrer</button>
+          </div>
+        </form>
+        <p id="memberMsg" class="status"></p>
+        <table class="table" id="membersTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Identifiant</th>
+              <th>Nom</th>
+              <th>Rôle</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="card admin-hidden" id="memberAuditSection">
+        <h2>Rapport d’activité des membres</h2>
+        <div id="memberAuditList" class="status">Chargement...</div>
+      </section>
+
       <section class="card admin-hidden" id="candidatesSection">
         <h2>Gestion des candidats</h2>
         <div class="form-grid" style="margin-bottom:12px;">

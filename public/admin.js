@@ -105,6 +105,20 @@ const valuesBulletsInput = document.getElementById('valuesBulletsInput');
 const communiquesInput = document.getElementById('communiquesInput');
 const documentsInput = document.getElementById('documentsInput');
 const documentsSummaryInput = document.getElementById('documentsSummaryInput');
+const memberAccountsSection = document.getElementById('memberAccountsSection');
+const memberForm = document.getElementById('memberForm');
+const memberMsg = document.getElementById('memberMsg');
+const memberIdInput = document.getElementById('memberId');
+const memberUsernameInput = document.getElementById('memberUsername');
+const memberFullNameInput = document.getElementById('memberFullName');
+const memberRoleInput = document.getElementById('memberRole');
+const memberEmailInput = document.getElementById('memberEmail');
+const memberPhoneInput = document.getElementById('memberPhone');
+const memberPasswordInput = document.getElementById('memberPassword');
+const memberActiveInput = document.getElementById('memberActive');
+const membersTableBody = document.querySelector('#membersTable tbody');
+const memberAuditSection = document.getElementById('memberAuditSection');
+const memberAuditList = document.getElementById('memberAuditList');
 const transparencyBodyInput = document.getElementById('transparencyBodyInput');
 const transparencyStatsInput = document.getElementById('transparencyStatsInput');
 const transparencyReportsInput = document.getElementById('transparencyReportsInput');
@@ -117,6 +131,7 @@ const footerHoursInput = document.getElementById('footerHoursInput');
 
 let authHeader = '';
 let scheduleCache = [];
+let membersCache = [];
 let candidatesCache = [];
 let newsCache = [];
 let sponsorsCache = [];
@@ -337,6 +352,8 @@ async function loadDashboard() {
 
   // sponsors
   await loadSponsors();
+  await loadMembers();
+  await loadMemberAudit();
 
   renderGlobalSearch();
   await loadFinances();
@@ -599,6 +616,61 @@ function renderCommuneFilter(list) {
   candidateCommuneFilter.innerHTML = `<option value="">Toutes les communes</option>${communes
     .map((c) => `<option value="${c}">${c}</option>`)
     .join('')}`;
+}
+
+async function loadMembers() {
+  if (!memberAccountsSection) return;
+  memberAccountsSection.classList.remove('admin-hidden');
+  const res = await authedFetch('/api/admin/members');
+  if (!res.ok) return;
+  const data = await res.json();
+  membersCache = data.members || [];
+  renderMembers();
+}
+
+function renderMembers() {
+  if (!membersTableBody) return;
+  membersTableBody.innerHTML = membersCache
+    .map((m) => `
+      <tr>
+        <td>${m.id}</td>
+        <td>${m.username || ''}</td>
+        <td>${m.fullname || m.fullName || ''}</td>
+        <td>${m.role || ''}</td>
+        <td>${Number(m.active) === 1 ? 'Actif' : 'Inactif'}</td>
+        <td>
+          <button data-member-edit="${m.id}">Modifier</button>
+          <button data-member-delete="${m.id}">Supprimer</button>
+        </td>
+      </tr>
+    `)
+    .join('');
+}
+
+async function loadMemberAudit() {
+  if (!memberAuditSection) return;
+  memberAuditSection.classList.remove('admin-hidden');
+  if (memberAuditList) memberAuditList.textContent = 'Chargement...';
+  const res = await authedFetch('/api/admin/member-audit');
+  if (!res.ok) return;
+  const data = await res.json();
+  const logs = data.logs || [];
+  if (!memberAuditList) return;
+  memberAuditList.innerHTML = logs.length
+    ? `<table class="table">
+        <thead><tr><th>Date</th><th>Membre</th><th>Action</th><th>Détails</th></tr></thead>
+        <tbody>
+          ${logs
+            .map((l) => {
+              const when = l.createdat || l.createdAt || '';
+              const name = l.fullname || l.fullName || l.username || 'Membre';
+              const payload = l.payload ? String(l.payload).slice(0, 120) : '';
+              return `<tr><td>${when}</td><td>${name}</td><td>${l.action || ''}</td><td>${payload}</td></tr>`;
+            })
+            .join('')}
+        </tbody>
+      </table>`
+    : 'Aucune activité.';
 }
 
 function renderMonthlyBarChart(target, data) {
@@ -1210,6 +1282,58 @@ candidatesTable?.addEventListener('click', (e) => {
       alert('Suppression impossible.');
     }
   });
+});
+
+memberForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setStatus(memberMsg, 'Sauvegarde...');
+  const payload = Object.fromEntries(new FormData(memberForm).entries());
+  if (payload.active !== undefined) payload.active = Number(payload.active);
+  const id = payload.id;
+  delete payload.id;
+  if (!payload.password) delete payload.password;
+  const res = await authedFetch(id ? `/api/admin/members/${id}` : '/api/admin/members', {
+    method: id ? 'PUT' : 'POST',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(memberMsg, data.message || (res.ok ? 'Enregistré.' : 'Erreur.'));
+  if (res.ok) {
+    memberForm.reset();
+    await loadMembers();
+  }
+});
+
+membersTableBody?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('button[data-member-edit]');
+  if (editBtn) {
+    const id = editBtn.getAttribute('data-member-edit');
+    const member = membersCache.find((m) => String(m.id) === String(id));
+    if (member) {
+      memberIdInput.value = member.id;
+      memberUsernameInput.value = member.username || '';
+      memberFullNameInput.value = member.fullname || member.fullName || '';
+      memberRoleInput.value = member.role || '';
+      memberEmailInput.value = member.email || '';
+      memberPhoneInput.value = member.phone || '';
+      memberActiveInput.value = Number(member.active) === 1 ? '1' : '0';
+    }
+    return;
+  }
+  const delBtn = e.target.closest('button[data-member-delete]');
+  if (delBtn) {
+    const id = delBtn.getAttribute('data-member-delete');
+    if (!id) return;
+    const ok = confirm('Supprimer ce compte membre ?');
+    if (!ok) return;
+    authedFetch(`/api/admin/members/${id}`, { method: 'DELETE' }).then(async (res) => {
+      if (res.ok) {
+        await loadMembers();
+      } else {
+        alert('Suppression impossible.');
+      }
+    });
+  }
 });
 
 scoreForm?.addEventListener('submit', async (e) => {

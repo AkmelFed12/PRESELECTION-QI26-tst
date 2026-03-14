@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASAA Officiel — Connexion membres</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
+      <div>
+        <h1>Connexion membres du bureau</h1>
+        <p class="subtitle">Accès réservé aux responsables ASAA</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="index.html">Accueil</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Se connecter</h2>
+        <form id="memberLoginForm" class="form-grid">
+          <div>
+            <label>Identifiant</label>
+            <input name="username" required />
+          </div>
+          <div>
+            <label>Mot de passe</label>
+            <input name="password" type="password" required />
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Connexion</button>
+          </div>
+        </form>
+        <p id="memberLoginMsg" class="status"></p>
+      </section>
+    </main>
+
+    <footer>
+      <div>Association des Serviteurs d'Allah Azawajal — ASAA</div>
+      <div class="footer-signature">Design & Created by LMO Web Services</div>
+    </footer>
+
+    <script src="member-login.js"></script>
+  </body>
+</html>

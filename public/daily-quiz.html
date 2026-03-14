@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASAA Officiel — Quiz journalier</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
+      <div>
+        <h1>Quiz journalier</h1>
+        <p class="subtitle">Ouvert tous les jours de 22h00 à 23h59</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="member-portal.html">Mon profil</a>
+        <a class="btn outline" href="index.html">Accueil</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2 id="quizTitle">Quiz du jour</h2>
+        <div id="quizStatus" class="status">Chargement...</div>
+        <form id="dailyQuizForm" class="form-grid" style="display:none;"></form>
+        <div id="quizResult" class="status" style="margin-top:12px;"></div>
+      </section>
+    </main>
+
+    <footer>
+      <div>Association des Serviteurs d'Allah Azawajal — ASAA</div>
+      <div class="footer-signature">Design & Created by LMO Web Services</div>
+    </footer>
+
+    <script src="daily-quiz.js"></script>
+  </body>
+</html>

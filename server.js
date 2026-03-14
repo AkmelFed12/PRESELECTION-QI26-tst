@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readdir, stat, access } from 'fs/promises';
 import { createReadStream, readFileSync } from 'fs';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import rateLimit from 'express-rate-limit';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
@@ -389,6 +389,70 @@ function formatDateFr(date = new Date()) {
 function stripContacts(value) {
   return String(value || '').replace(/\s*\(?\+?\d[\d\s.-]*\)?/g, '').trim();
 }
+
+function normalizeUsername(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function defaultMemberPassword() {
+  return process.env.MEMBER_DEFAULT_PASSWORD || 'ASAA2026';
+}
+
+function isQuizOpenNow(date = new Date()) {
+  const hour = date.getHours();
+  return hour >= 22 && hour <= 23;
+}
+
+function quizDateKey(date = new Date()) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function generateToken() {
+  return randomBytes(24).toString('hex');
+}
+
+const DEFAULT_DAILY_QUIZ = {
+  title: 'Quiz Islamique — Jour',
+  questions: [
+    {
+      id: 'q1',
+      question: 'Combien de piliers compte l’Islam ?',
+      options: ['3', '4', '5', '6'],
+      answerIndex: 2
+    },
+    {
+      id: 'q2',
+      question: 'Quelle sourate est appelée “La mère du Livre” ?',
+      options: ['Al-Ikhlas', 'Al-Fatiha', 'Al-Baqara', 'An-Nas'],
+      answerIndex: 1
+    },
+    {
+      id: 'q3',
+      question: 'En quel mois les musulmans jeûnent-ils ?',
+      options: ['Muharram', 'Safar', 'Ramadan', 'Dhul Hijjah'],
+      answerIndex: 2
+    },
+    {
+      id: 'q4',
+      question: 'Quelle est la direction de la Qibla ?',
+      options: ['Kaaba à La Mecque', 'Jérusalem', 'Médine', 'La mer Rouge'],
+      answerIndex: 0
+    },
+    {
+      id: 'q5',
+      question: 'Combien de prières obligatoires par jour ?',
+      options: ['2', '3', '5', '6'],
+      answerIndex: 2
+    }
+  ]
+};
 
 const DEFAULT_SITE_CONTENT = {
   about: {
@@ -1035,6 +1099,47 @@ async function initDatabase() {
         archivedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS member_accounts (
+        id BIGSERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        fullName TEXT NOT NULL,
+        role TEXT,
+        email TEXT,
+        phone TEXT,
+        passwordHash TEXT NOT NULL,
+        active INTEGER DEFAULT 1,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS member_sessions (
+        id BIGSERIAL PRIMARY KEY,
+        memberId BIGINT NOT NULL REFERENCES member_accounts(id) ON DELETE CASCADE,
+        token TEXT UNIQUE NOT NULL,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        expiresAt TIMESTAMP WITH TIME ZONE
+      );
+
+      CREATE TABLE IF NOT EXISTS member_audit (
+        id BIGSERIAL PRIMARY KEY,
+        memberId BIGINT REFERENCES member_accounts(id) ON DELETE SET NULL,
+        action TEXT NOT NULL,
+        payload TEXT,
+        ip TEXT,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS daily_quiz_attempts (
+        id BIGSERIAL PRIMARY KEY,
+        memberId BIGINT REFERENCES member_accounts(id) ON DELETE SET NULL,
+        quizDate TEXT NOT NULL,
+        score INTEGER DEFAULT 0,
+        total INTEGER DEFAULT 0,
+        answersJson TEXT,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(memberId, quizDate)
+      );
+
       INSERT INTO tournament_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 
       CREATE INDEX IF NOT EXISTS idx_votes_candidate ON votes(candidateId);
@@ -1058,6 +1163,9 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_poll_active ON poll(active);
       CREATE INDEX IF NOT EXISTS idx_news_status ON news_posts(status);
       CREATE INDEX IF NOT EXISTS idx_sponsors_status ON sponsors(status);
+      CREATE INDEX IF NOT EXISTS idx_member_sessions_token ON member_sessions(token);
+      CREATE INDEX IF NOT EXISTS idx_member_audit_member ON member_audit(memberId);
+      CREATE INDEX IF NOT EXISTS idx_daily_quiz_date ON daily_quiz_attempts(quizDate);
     `);
 
     await pool.query(`ALTER TABLE media_events ADD COLUMN IF NOT EXISTS favorites BIGINT DEFAULT 0;`);
@@ -1106,6 +1214,26 @@ async function initDatabase() {
       "INSERT INTO admin_config (key, value) VALUES ('site_content', $1) ON CONFLICT (key) DO NOTHING",
       [JSON.stringify(DEFAULT_SITE_CONTENT)]
     );
+    await pool.query(
+      "INSERT INTO admin_config (key, value) VALUES ('daily_quiz', $1) ON CONFLICT (key) DO NOTHING",
+      [JSON.stringify(DEFAULT_DAILY_QUIZ)]
+    );
+
+    // Seed member accounts from committee list (first name as username)
+    const defaultPass = await hashPassword(defaultMemberPassword());
+    for (const member of DEFAULT_SITE_CONTENT.committee.members) {
+      const rawName = String(member.name || '').trim();
+      if (!rawName) continue;
+      const firstName = rawName.split(/\s+/)[0];
+      const username = normalizeUsername(firstName);
+      if (!username) continue;
+      await pool.query(
+        `INSERT INTO member_accounts (username, fullName, role, passwordHash)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (username) DO NOTHING`,
+        [username, rawName, member.role || '', defaultPass]
+      );
+    }
 
     // Replace candidates with manual list if data mismatch detected
     const manualCandidates = loadManualCandidates();
@@ -2608,6 +2736,51 @@ function toCsv(rows, headers) {
   return lines.join('\n');
 }
 
+async function verifyMember(req, res, next) {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Accès membre non autorisé.' });
+  }
+  const token = auth.slice(7).trim();
+  if (!token) return res.status(401).json({ message: 'Accès membre non autorisé.' });
+  try {
+    const result = await pool.query(
+      `SELECT s.id as sessionId, s.memberId, s.expiresAt, m.username, m.fullName, m.role, m.email, m.phone, m.active
+       FROM member_sessions s
+       JOIN member_accounts m ON m.id = s.memberId
+       WHERE s.token = $1
+       LIMIT 1`,
+      [token]
+    );
+    const row = result.rows[0];
+    if (!row || !row.active) return res.status(401).json({ message: 'Accès membre non autorisé.' });
+    if (row.expiresat && new Date(row.expiresat).getTime() < Date.now()) {
+      return res.status(401).json({ message: 'Session expirée.' });
+    }
+    req.member = {
+      id: row.memberid,
+      username: row.username,
+      fullName: row.fullname || row.fullName,
+      role: row.role,
+      email: row.email,
+      phone: row.phone
+    };
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Accès membre non autorisé.' });
+  }
+}
+
+async function logMemberAction(memberId, action, payload, req) {
+  try {
+    await pool.query(
+      `INSERT INTO member_audit (memberId, action, payload, ip)
+       VALUES ($1, $2, $3, $4)`,
+      [memberId, action, JSON.stringify(payload || {}), getClientIp(req)]
+    );
+  } catch {}
+}
+
 app.get('/api/admin/export/candidates', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
@@ -3591,6 +3764,241 @@ app.post('/api/admin/login', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Member login
+app.post('/api/members/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Identifiant et mot de passe requis.' });
+    }
+    const normalized = normalizeUsername(username);
+    const result = await pool.query(
+      'SELECT id, username, fullName, role, email, phone, passwordHash, active FROM member_accounts WHERE username = $1',
+      [normalized]
+    );
+    const member = result.rows[0];
+    if (!member || !member.active) {
+      return res.status(401).json({ message: 'Identifiants incorrects.' });
+    }
+    const valid = await checkPassword(password, member.passwordhash || member.passwordHash || '');
+    if (!valid) {
+      return res.status(401).json({ message: 'Identifiants incorrects.' });
+    }
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await pool.query(
+      'INSERT INTO member_sessions (memberId, token, expiresAt) VALUES ($1, $2, $3)',
+      [member.id, token, expiresAt]
+    );
+    await logMemberAction(member.id, 'login', { username: member.username }, req);
+    res.json({
+      token,
+      member: {
+        id: member.id,
+        username: member.username,
+        fullName: member.fullname || member.fullName,
+        role: member.role,
+        email: member.email,
+        phone: member.phone
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// Member profile
+app.get('/api/members/me', verifyMember, async (req, res) => {
+  res.json({ member: req.member });
+});
+
+app.put('/api/members/me', verifyMember, async (req, res) => {
+  try {
+    const { fullName, email, phone } = req.body || {};
+    const safeName = sanitizeString(fullName, 255) || req.member.fullName;
+    const safeEmail = sanitizeString(email, 120);
+    const safePhone = sanitizeString(phone, 30);
+    if (safeEmail && !validateEmail(safeEmail)) {
+      return res.status(400).json({ message: 'Email invalide.' });
+    }
+    await pool.query(
+      `UPDATE member_accounts
+       SET fullName = $1, email = $2, phone = $3, updatedAt = NOW()
+       WHERE id = $4`,
+      [safeName, safeEmail || null, safePhone || null, req.member.id]
+    );
+    await logMemberAction(req.member.id, 'profile_update', { fullName: safeName, email: safeEmail, phone: safePhone }, req);
+    res.json({ message: 'Profil mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+async function getDailyQuizConfig() {
+  try {
+    const result = await pool.query(
+      "SELECT value FROM admin_config WHERE key = 'daily_quiz' LIMIT 1"
+    );
+    const raw = result.rows[0]?.value;
+    if (!raw) return DEFAULT_DAILY_QUIZ;
+    const parsed = JSON.parse(raw);
+    return parsed && Array.isArray(parsed.questions) ? parsed : DEFAULT_DAILY_QUIZ;
+  } catch {
+    return DEFAULT_DAILY_QUIZ;
+  }
+}
+
+// Daily quiz (members only, 22:00–23:59)
+app.get('/api/members/daily-quiz', verifyMember, async (req, res) => {
+  const now = new Date();
+  if (!isQuizOpenNow(now)) {
+    return res.status(403).json({ open: false, message: 'Le quiz est ouvert de 22h00 à 23h59.' });
+  }
+  const quiz = await getDailyQuizConfig();
+  const quizDate = quizDateKey(now);
+  const attempt = await pool.query(
+    'SELECT score, total FROM daily_quiz_attempts WHERE memberId = $1 AND quizDate = $2',
+    [req.member.id, quizDate]
+  );
+  const attempted = attempt.rows[0];
+  const safeQuestions = quiz.questions.map(({ answerIndex, ...rest }) => rest);
+  res.json({
+    open: true,
+    title: quiz.title || 'Quiz du jour',
+    quizDate,
+    attempted: Boolean(attempted),
+    previousScore: attempted ? attempted.score : null,
+    previousTotal: attempted ? attempted.total : null,
+    questions: attempted ? [] : safeQuestions
+  });
+});
+
+app.post('/api/members/daily-quiz/submit', verifyMember, async (req, res) => {
+  const now = new Date();
+  if (!isQuizOpenNow(now)) {
+    return res.status(403).json({ message: 'Le quiz est ouvert de 22h00 à 23h59.' });
+  }
+  const quiz = await getDailyQuizConfig();
+  const quizDate = quizDateKey(now);
+  const existing = await pool.query(
+    'SELECT id FROM daily_quiz_attempts WHERE memberId = $1 AND quizDate = $2',
+    [req.member.id, quizDate]
+  );
+  if (existing.rows.length) {
+    return res.status(409).json({ message: 'Quiz déjà soumis pour aujourd’hui.' });
+  }
+  const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
+  let score = 0;
+  quiz.questions.forEach((q, idx) => {
+    if (Number(answers[idx]) === Number(q.answerIndex)) score += 1;
+  });
+  const total = quiz.questions.length;
+  await pool.query(
+    `INSERT INTO daily_quiz_attempts (memberId, quizDate, score, total, answersJson)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [req.member.id, quizDate, score, total, JSON.stringify(answers)]
+  );
+  await logMemberAction(req.member.id, 'daily_quiz_submit', { quizDate, score, total }, req);
+  res.json({ message: 'Quiz enregistré.', score, total });
+});
+
+// Admin: member accounts
+app.get('/api/admin/members', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, username, fullName, role, email, phone, active, createdAt, updatedAt FROM member_accounts ORDER BY id ASC'
+    );
+    res.json({ members: result.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/admin/members', verifyAdmin, async (req, res) => {
+  try {
+    const { username, fullName, role, email, phone, password } = req.body || {};
+    const uname = normalizeUsername(username);
+    const name = sanitizeString(fullName, 255);
+    if (!uname || !name) return res.status(400).json({ message: 'Identifiant et nom requis.' });
+    if (email && !validateEmail(email)) return res.status(400).json({ message: 'Email invalide.' });
+    const passHash = await hashPassword(password || defaultMemberPassword());
+    await pool.query(
+      `INSERT INTO member_accounts (username, fullName, role, email, phone, passwordHash)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [uname, name, role || '', email || null, phone || null, passHash]
+    );
+    res.status(201).json({ message: 'Compte membre créé.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/admin/members/:id', verifyAdmin, async (req, res) => {
+  try {
+    const memberId = Number(req.params.id);
+    if (!memberId) return res.status(400).json({ message: 'ID invalide.' });
+    const { username, fullName, role, email, phone, password, active } = req.body || {};
+    const uname = username ? normalizeUsername(username) : null;
+    const name = fullName ? sanitizeString(fullName, 255) : null;
+    if (email && !validateEmail(email)) return res.status(400).json({ message: 'Email invalide.' });
+    if (uname) {
+      await pool.query('UPDATE member_accounts SET username = $1 WHERE id = $2', [uname, memberId]);
+    }
+    if (name) {
+      await pool.query('UPDATE member_accounts SET fullName = $1 WHERE id = $2', [name, memberId]);
+    }
+    await pool.query(
+      `UPDATE member_accounts
+       SET role = COALESCE($1, role),
+           email = COALESCE($2, email),
+           phone = COALESCE($3, phone),
+           active = COALESCE($4, active),
+           updatedAt = NOW()
+       WHERE id = $5`,
+      [role ?? null, email ?? null, phone ?? null, typeof active === 'number' ? active : null, memberId]
+    );
+    if (password) {
+      const passHash = await hashPassword(password);
+      await pool.query('UPDATE member_accounts SET passwordHash = $1 WHERE id = $2', [passHash, memberId]);
+    }
+    res.json({ message: 'Compte membre mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/admin/members/:id', verifyAdmin, async (req, res) => {
+  try {
+    const memberId = Number(req.params.id);
+    if (!memberId) return res.status(400).json({ message: 'ID invalide.' });
+    await pool.query('UPDATE member_accounts SET active = 0 WHERE id = $1', [memberId]);
+    res.json({ message: 'Compte membre désactivé.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/member-audit', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.id, a.action, a.payload, a.createdAt, m.fullName, m.username
+       FROM member_audit a
+       LEFT JOIN member_accounts m ON m.id = a.memberId
+       ORDER BY a.id DESC LIMIT 200`
+    );
+    res.json({ logs: result.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

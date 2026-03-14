@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASAA Officiel — Espace membre</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
+      <div>
+        <h1>Espace membres du bureau</h1>
+        <p class="subtitle">Profil et accès au quiz journalier</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="index.html">Accueil</a>
+        <a class="btn outline" href="daily-quiz.html">Quiz journalier</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Mon profil</h2>
+        <form id="memberProfileForm" class="form-grid">
+          <div>
+            <label>Nom complet</label>
+            <input id="memberFullName" name="fullName" required />
+          </div>
+          <div>
+            <label>Email</label>
+            <input id="memberEmail" name="email" type="email" />
+          </div>
+          <div>
+            <label>Téléphone</label>
+            <input id="memberPhone" name="phone" />
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Mettre à jour</button>
+          </div>
+        </form>
+        <p id="memberProfileMsg" class="status"></p>
+      </section>
+    </main>
+
+    <footer>
+      <div>Association des Serviteurs d'Allah Azawajal — ASAA</div>
+      <div class="footer-signature">Design & Created by LMO Web Services</div>
+    </footer>
+
+    <script src="member-portal.js"></script>
+  </body>
+</html>
