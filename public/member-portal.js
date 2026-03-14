@@ -3,6 +3,7 @@ const msg = document.getElementById('memberProfileMsg');
 const fullNameInput = document.getElementById('memberFullName');
 const emailInput = document.getElementById('memberEmail');
 const phoneInput = document.getElementById('memberPhone');
+const logoutBtn = document.getElementById('memberLogout');
 
 function setMsg(text, ok = false) {
   if (!msg) return;
@@ -52,3 +53,8 @@ form?.addEventListener('submit', async (e) => {
 });
 
 loadProfile();
+
+logoutBtn?.addEventListener('click', () => {
+  localStorage.removeItem('memberAuth');
+  window.location.href = 'member-login.html';
+});

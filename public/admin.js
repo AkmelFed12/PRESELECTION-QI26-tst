@@ -119,6 +119,12 @@ const memberActiveInput = document.getElementById('memberActive');
 const membersTableBody = document.querySelector('#membersTable tbody');
 const memberAuditSection = document.getElementById('memberAuditSection');
 const memberAuditList = document.getElementById('memberAuditList');
+const resetAllMembersPwd = document.getElementById('resetAllMembersPwd');
+const dailyQuizSection = document.getElementById('dailyQuizSection');
+const dailyQuizForm = document.getElementById('dailyQuizForm');
+const dailyQuizTitle = document.getElementById('dailyQuizTitle');
+const dailyQuizQuestions = document.getElementById('dailyQuizQuestions');
+const dailyQuizMsg = document.getElementById('dailyQuizMsg');
 const transparencyBodyInput = document.getElementById('transparencyBodyInput');
 const transparencyStatsInput = document.getElementById('transparencyStatsInput');
 const transparencyReportsInput = document.getElementById('transparencyReportsInput');
@@ -354,6 +360,7 @@ async function loadDashboard() {
   await loadSponsors();
   await loadMembers();
   await loadMemberAudit();
+  await loadDailyQuizAdmin();
 
   renderGlobalSearch();
   await loadFinances();
@@ -645,6 +652,22 @@ function renderMembers() {
       </tr>
     `)
     .join('');
+}
+
+async function loadDailyQuizAdmin() {
+  if (!dailyQuizSection) return;
+  dailyQuizSection.classList.remove('admin-hidden');
+  const res = await authedFetch('/api/admin/daily-quiz');
+  if (!res.ok) return;
+  const data = await res.json();
+  if (dailyQuizTitle) dailyQuizTitle.value = data.title || '';
+  if (dailyQuizQuestions) {
+    const lines = (data.questions || []).map((q) => {
+      const options = (q.options || []).join(';');
+      return `${q.question} | ${options} | ${q.answerIndex}`;
+    });
+    dailyQuizQuestions.value = lines.join('\n');
+  }
 }
 
 async function loadMemberAudit() {
@@ -1334,6 +1357,38 @@ membersTableBody?.addEventListener('click', (e) => {
       }
     });
   }
+});
+
+resetAllMembersPwd?.addEventListener('click', async () => {
+  const ok = confirm('Réinitialiser le mot de passe de TOUS les membres ?');
+  if (!ok) return;
+  setStatus(memberMsg, 'Réinitialisation...');
+  const res = await authedFetch('/api/admin/members/reset-passwords', { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  setStatus(memberMsg, data.message || (res.ok ? 'Mots de passe réinitialisés.' : 'Erreur.'));
+});
+
+dailyQuizForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setStatus(dailyQuizMsg, 'Enregistrement...');
+  const title = dailyQuizTitle?.value || '';
+  const raw = dailyQuizQuestions?.value || '';
+  const questions = raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [questionPart, optionsPart, answerPart] = line.split('|').map((s) => (s || '').trim());
+      const options = (optionsPart || '').split(';').map((s) => s.trim()).filter(Boolean);
+      const answerIndex = Number(answerPart);
+      return { question: questionPart, options, answerIndex };
+    });
+  const res = await authedFetch('/api/admin/daily-quiz', {
+    method: 'PUT',
+    body: JSON.stringify({ title, questions })
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(dailyQuizMsg, data.message || (res.ok ? 'Quiz mis à jour.' : 'Erreur.'));
 });
 
 scoreForm?.addEventListener('submit', async (e) => {

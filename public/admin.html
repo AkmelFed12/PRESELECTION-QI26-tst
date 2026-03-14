@@ -232,6 +232,9 @@
           </div>
         </form>
         <p id="memberMsg" class="status"></p>
+        <div class="nav-links" style="margin-bottom:10px;">
+          <button class="btn outline" type="button" id="resetAllMembersPwd">Réinitialiser tous les mots de passe</button>
+        </div>
         <table class="table" id="membersTable">
           <thead>
             <tr>
@@ -245,6 +248,24 @@
           </thead>
           <tbody></tbody>
         </table>
+      </section>
+
+      <section class="card admin-hidden" id="dailyQuizSection">
+        <h2>Quiz journalier (22h–23h59)</h2>
+        <form id="dailyQuizForm" class="form-grid">
+          <div class="full">
+            <label>Titre du quiz</label>
+            <input id="dailyQuizTitle" />
+          </div>
+          <div class="full">
+            <label>Questions (1 ligne = Question | option1;option2;option3;option4 | indexBonneRéponse 0-3)</label>
+            <textarea id="dailyQuizQuestions" rows="6" placeholder="Combien de piliers compte l’Islam ? | 3;4;5;6 | 2"></textarea>
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Enregistrer le quiz</button>
+          </div>
+        </form>
+        <p id="dailyQuizMsg" class="status"></p>
       </section>
 
       <section class="card admin-hidden" id="memberAuditSection">

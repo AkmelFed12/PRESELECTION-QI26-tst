@@ -399,7 +399,7 @@ function normalizeUsername(value) {
 }
 
 function defaultMemberPassword() {
-  return process.env.MEMBER_DEFAULT_PASSWORD || 'ASAA2026';
+  return process.env.MEMBER_DEFAULT_PASSWORD || 'ASAA2026!';
 }
 
 function isQuizOpenNow(date = new Date()) {
@@ -3996,6 +3996,53 @@ app.get('/api/admin/member-audit', verifyAdmin, async (req, res) => {
        ORDER BY a.id DESC LIMIT 200`
     );
     res.json({ logs: result.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: daily quiz config
+app.get('/api/admin/daily-quiz', verifyAdmin, async (req, res) => {
+  try {
+    const quiz = await getDailyQuizConfig();
+    res.json(quiz);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/admin/daily-quiz', verifyAdmin, async (req, res) => {
+  try {
+    const title = sanitizeString(req.body?.title, 160) || 'Quiz du jour';
+    const questions = Array.isArray(req.body?.questions) ? req.body.questions : [];
+    const sanitized = questions
+      .map((q) => ({
+        id: q.id || `q${Math.random().toString(36).slice(2, 7)}`,
+        question: sanitizeString(q.question, 200),
+        options: Array.isArray(q.options) ? q.options.map((o) => sanitizeString(o, 120)).filter(Boolean) : [],
+        answerIndex: Number.isInteger(q.answerIndex) ? q.answerIndex : Number(q.answerIndex || 0)
+      }))
+      .filter((q) => q.question && q.options.length >= 2 && q.answerIndex >= 0 && q.answerIndex < q.options.length);
+    const payload = { title, questions: sanitized.length ? sanitized : DEFAULT_DAILY_QUIZ.questions };
+    await pool.query(
+      "INSERT INTO admin_config (key, value) VALUES ('daily_quiz', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
+      [JSON.stringify(payload)]
+    );
+    res.json({ message: 'Quiz mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: reset all member passwords to default
+app.post('/api/admin/members/reset-passwords', verifyAdmin, async (req, res) => {
+  try {
+    const passHash = await hashPassword(defaultMemberPassword());
+    await pool.query('UPDATE member_accounts SET passwordHash = $1', [passHash]);
+    res.json({ message: 'Mots de passe réinitialisés.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
