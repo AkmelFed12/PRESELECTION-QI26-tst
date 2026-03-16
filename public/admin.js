@@ -526,6 +526,8 @@ function printAttendanceList() {
           <td>${c.city || ''}</td>
           <td style="height:26px;"></td>
           <td style="height:26px;"></td>
+          <td style="height:26px;"></td>
+          <td style="height:26px;"></td>
         </tr>
       `,
     )
@@ -553,8 +555,10 @@ function printAttendanceList() {
               <th>Nom</th>
               <th>WhatsApp</th>
               <th>Commune</th>
-              <th>Présent</th>
-              <th>Signature</th>
+      <th>Phase</th>
+      <th>Notes phase</th>
+      <th>Présent</th>
+      <th>Signature</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -1240,6 +1244,8 @@ downloadAttendanceDoc?.addEventListener('click', () => {
           <td>${resolveName(c)}</td>
           <td>${c.whatsapp || ''}</td>
           <td>${c.city || ''}</td>
+          <td style="height:24px;"></td>
+          <td style="height:24px;"></td>
           <td style="height:24px;"></td>
           <td style="height:24px;"></td>
         </tr>
