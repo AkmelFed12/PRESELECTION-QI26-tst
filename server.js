@@ -972,11 +972,13 @@ async function initDatabase() {
         id BIGSERIAL PRIMARY KEY,
         candidateId BIGINT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
         judgeName TEXT NOT NULL,
-        themeChosenScore REAL DEFAULT 0,
-        themeImposedScore REAL DEFAULT 0,
+        themeScore REAL DEFAULT 0,
+        pontAsSiratScore REAL DEFAULT 0,
         notes TEXT,
         createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      ALTER TABLE scores ADD COLUMN IF NOT EXISTS themeScore REAL DEFAULT 0;
+      ALTER TABLE scores ADD COLUMN IF NOT EXISTS pontAsSiratScore REAL DEFAULT 0;
 
       CREATE TABLE IF NOT EXISTS tournament_settings (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -1561,7 +1563,7 @@ app.get('/api/public-results', async (req, res) => {
       ) v ON c.id = v.candidateId
       LEFT JOIN (
         SELECT candidateId,
-               CAST(AVG(COALESCE(themeChosenScore, 0) + COALESCE(themeImposedScore, 0)) AS NUMERIC(10,2)) as averageScore
+               CAST(AVG(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore
         FROM scores GROUP BY candidateId
       ) s ON c.id = s.candidateId
       ORDER BY COALESCE(v.totalVotes, 0) DESC, c.fullname ASC
@@ -1804,7 +1806,7 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
       `),
       pool.query(`
         SELECT c.id, c.fullName,
-               CAST(AVG(COALESCE(s.themeChosenScore, 0) + COALESCE(s.themeImposedScore, 0)) AS NUMERIC(10,2)) as averageScore,
+               CAST(AVG(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
                COUNT(s.id) as passages
         FROM candidates c
         LEFT JOIN scores s ON c.id = s.candidateId
@@ -2913,7 +2915,7 @@ app.get('/api/admin/export/ranking', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.fullName,
-             CAST(AVG(COALESCE(s.themeChosenScore, 0) + COALESCE(s.themeImposedScore, 0)) AS NUMERIC(10,2)) as averageScore,
+             CAST(AVG(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s ON c.id = s.candidateId
@@ -2953,7 +2955,7 @@ app.get('/api/admin/export/ranking-xls', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.fullName,
-             CAST(AVG(COALESCE(s.themeChosenScore, 0) + COALESCE(s.themeImposedScore, 0)) AS NUMERIC(10,2)) as averageScore,
+             CAST(AVG(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s ON c.id = s.candidateId
@@ -2989,7 +2991,7 @@ app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
 // Admin scores (notation)
 app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
   try {
-    const { candidateId, judgeName, themeChosenScore, themeImposedScore, notes } = req.body || {};
+    const { candidateId, judgeName, themeScore, pontAsSiratScore, notes } = req.body || {};
     if (!candidateId || !judgeName) {
       return res.status(400).json({ message: 'ID candidat et nom du juge requis.' });
     }
@@ -3000,13 +3002,13 @@ app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO scores (candidateId, judgeName, themeChosenScore, themeImposedScore, notes)
+      `INSERT INTO scores (candidateId, judgeName, themeScore, pontAsSiratScore, notes)
        VALUES ($1, $2, $3, $4, $5)`,
       [
         candidateId,
         sanitizeString(judgeName, 100),
-        Number(themeChosenScore || 0),
-        Number(themeImposedScore || 0),
+        Number(themeScore || 0),
+        Number(pontAsSiratScore || 0),
         sanitizeString(notes, 500),
       ]
     );
