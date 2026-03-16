@@ -2991,12 +2991,12 @@ app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
 // Admin scores (notation)
 app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
   try {
-    const { candidateId, judgeName, themeScore, pontAsSiratScore, notes } = req.body || {};
+    const { candidateId, judgeName, themeChosenScore, themeImposedScore, notes } = req.body || {};
     if (!candidateId || !judgeName) {
       return res.status(400).json({ message: 'ID candidat et nom du juge requis.' });
     }
 
-    const candidate = await pool.query('SELECT id FROM candidates WHERE id = $1', [candidateId]);
+    const candidate = await pool.query('SELECT id, fullName FROM candidates WHERE id = $1', [candidateId]);
     if (candidate.rows.length === 0) {
       return res.status(404).json({ message: 'Candidat introuvable.' });
     }
@@ -3013,7 +3013,10 @@ app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
       ]
     );
 
-    res.status(201).json({ message: 'Note enregistrée.' });
+    res.status(201).json({ 
+      message: 'Note enregistrée.',
+      candidateName: candidate.rows[0].fullName
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -3032,11 +3035,28 @@ app.get('/api/admin/scores', verifyAdmin, async (req, res) => {
               s.notes,
               s.createdAt
        FROM scores s
-       JOIN candidates c ON c.id = s.candidateId
+       LEFT JOIN candidates c ON c.id = s.candidateId
        ORDER BY s.id DESC
-       LIMIT 200`
+       LIMIT 500`
     );
-    res.json({ items: result.rows || [] });
+    res.json(result.rows || []);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
+  try {
+    const candidateId = Number(req.params.id);
+    if (!Number.isFinite(candidateId)) {
+      return res.status(400).json({ error: 'Invalid candidate id' });
+    }
+    const result = await pool.query('SELECT id, fullName FROM candidates WHERE id = $1', [candidateId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Candidat introuvable.' });
+    }
+    res.json(result.rows[0]);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
