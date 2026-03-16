@@ -1039,6 +1039,33 @@ class Handler(BaseHTTPRequestHandler):
                             rows = cur.fetchall()
                     return self._send_json(rows)
 
+                if path.startswith("/api/admin/candidates/"):
+                    candidate_id = path.rsplit("/", 1)[-1]
+                    if candidate_id.isdigit():
+                        with get_conn() as conn:
+                            with conn.cursor(row_factory=dict_row) as cur:
+                                cur.execute("select id, fullName from candidates where id = %s", (candidate_id,))
+                                candidate = cur.fetchone()
+                        if candidate:
+                            return self._send_json(candidate)
+                        return self._send_json({"message": "Candidat introuvable."}, 404)
+
+                if path == "/api/admin/scores":
+                    with get_conn() as conn:
+                        with conn.cursor(row_factory=dict_row) as cur:
+                            cur.execute(
+                                """
+                                select s.id, s.candidateId, c.fullName, s.judgeName, 
+                                       s.themeChosenScore, s.themeImposedScore, s.notes, s.createdAt
+                                from scores s
+                                left join candidates c on s.candidateId = c.id
+                                order by s.id desc
+                                limit 500
+                                """
+                            )
+                            rows = cur.fetchall()
+                    return self._send_json([_row_to_camel(r) for r in rows])
+
                 return self._send_json({"message": "Not found"}, 404)
 
             return self._serve_file(path)
@@ -1458,9 +1485,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_json({"message": "Certains champs dépassent la taille maximale."}, 400)
 
             with get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("select id from candidates where id = %s", (candidate_id,))
-                    if not cur.fetchone():
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute("select id, fullName from candidates where id = %s", (candidate_id,))
+                    candidate = cur.fetchone()
+                    if not candidate:
                         return self._send_json({"message": "Candidat introuvable."}, 404)
                     cur.execute(
                         """
@@ -1477,7 +1505,10 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 conn.commit()
             self._audit("score_create", {"candidateId": candidate_id, "judgeName": judge})
-            return self._send_json({"message": "Notation enregistrée."}, 201)
+            return self._send_json({
+                "message": "Notation enregistrée.",
+                "candidateName": candidate.get("fullName", "Inconnu")
+            }, 201)
 
         return self._send_json({"message": "Not found"}, 404)
 
@@ -1587,6 +1618,24 @@ class Handler(BaseHTTPRequestHandler):
                 conn.commit()
             self._audit("contact_delete", {"id": message_id})
             return self._send_json({"message": "Message supprimé."})
+        
+        if path.startswith("/api/admin/scores/"):
+            if not self._require_admin():
+                return
+            if not self._require_db():
+                return
+            score_id = path.rsplit("/", 1)[-1]
+            if not score_id.isdigit():
+                return self._send_json({"message": "ID note invalide."}, 400)
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("delete from scores where id = %s", (score_id,))
+                    if cur.rowcount == 0:
+                        return self._send_json({"message": "Note introuvable."}, 404)
+                conn.commit()
+            self._audit("score_delete", {"id": score_id})
+            return self._send_json({"message": "Note supprimée."})
+        
         if not path.startswith("/api/admin/candidates/"):
             return self._send_json({"message": "Not found"}, 404)
         if not self._require_admin():

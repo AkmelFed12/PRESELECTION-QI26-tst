@@ -3020,6 +3020,46 @@ app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/scores', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT s.id,
+              s.candidateId,
+              c.fullName as "fullName",
+              s.judgeName,
+              s.themeScore,
+              s.pontAsSiratScore,
+              s.notes,
+              s.createdAt
+       FROM scores s
+       JOIN candidates c ON c.id = s.candidateId
+       ORDER BY s.id DESC
+       LIMIT 200`
+    );
+    res.json({ items: result.rows || [] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/admin/scores/:id', verifyAdmin, async (req, res) => {
+  try {
+    const scoreId = Number(req.params.id);
+    if (!Number.isFinite(scoreId)) {
+      return res.status(400).json({ error: 'Invalid score id' });
+    }
+    const result = await pool.query('DELETE FROM scores WHERE id = $1', [scoreId]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Score not found' });
+    }
+    res.json({ message: 'Note supprimée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.post('/api/admin/replace-candidates', verifyAdmin, async (req, res) => {
   try {
     const manualCandidates = loadManualCandidates();

@@ -44,7 +44,9 @@ const modalCandidateStatus = document.getElementById('modalCandidateStatus');
 
 const scoreForm = document.getElementById('scoreForm');
 const scoreMsg = document.getElementById('scoreMsg');
+const candidateName = document.getElementById('candidateName');
 const rankingTable = document.querySelector('#rankingTable tbody');
+const scoresTable = document.querySelector('#scoresTable tbody');
 const exportCandidatesCsv = document.getElementById('exportCandidatesCsv');
 const exportRankingCsv = document.getElementById('exportRankingCsv');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
@@ -423,6 +425,7 @@ async function loadDashboard() {
 
   // ranking
   renderRanking(data.ranking || []);
+  await loadScoresTable();
 
   // news
   await loadNewsAdmin();
@@ -1489,6 +1492,57 @@ dailyQuizForm?.addEventListener('submit', async (e) => {
   setStatus(dailyQuizMsg, data.message || (res.ok ? 'Quiz mis à jour.' : 'Erreur.'));
 });
 
+async function loadScoresTable() {
+  if (!scoresTable) return;
+  const res = await authedFetch('/api/admin/scores');
+  const scores = await res.json().catch(() => []);
+  scoresTable.innerHTML = scores
+    .map((s) => `
+      <tr>
+        <td>${s.fullName || 'Inconnu'}</td>
+        <td>${s.judgeName || '-'}</td>
+        <td>${s.themeChosenScore ?? '-'}</td>
+        <td>${s.themeImposedScore ?? '-'}</td>
+        <td>${(parseFloat(s.themeChosenScore || 0) + parseFloat(s.themeImposedScore || 0)).toFixed(1)}</td>
+        <td>
+          <button class="btn-small outline" type="button" onclick="deleteScore(${s.id})">Supprimer</button>
+        </td>
+      </tr>
+    `)
+    .join('');
+}
+
+async function deleteScore(scoreId) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) return;
+  const res = await authedFetch(`/api/admin/scores/${scoreId}`, { method: 'DELETE' });
+  const data = await res.json().catch(() => ({}));
+  setStatus(scoreMsg, data.message || 'Note supprimée.');
+  await loadScoresTable();
+  await loadDashboard();
+}
+
+async function loadCandidateName(candidateId) {
+  if (!candidateId) {
+    if (candidateName) candidateName.textContent = 'À remplir';
+    return;
+  }
+  const res = await authedFetch(`/api/admin/candidates/${candidateId}`);
+  const data = await res.json().catch(() => ({}));
+  if (candidateName) {
+    candidateName.textContent = data.fullName || 'Candidat introuvable';
+  }
+}
+
+const candidateIdInput = scoreForm?.querySelector('input[name="candidateId"]');
+if (candidateIdInput) {
+  candidateIdInput.addEventListener('blur', async () => {
+    await loadCandidateName(candidateIdInput.value);
+  });
+  candidateIdInput.addEventListener('change', async () => {
+    await loadCandidateName(candidateIdInput.value);
+  });
+}
+
 scoreForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(scoreMsg, 'Enregistrement...');
@@ -1499,6 +1553,11 @@ scoreForm?.addEventListener('submit', async (e) => {
   });
   const data = await res.json().catch(() => ({}));
   setStatus(scoreMsg, data.message || (res.ok ? 'Note enregistrée.' : 'Erreur.'));
+  if (res.ok) {
+    scoreForm.reset();
+    if (candidateName) candidateName.textContent = 'À remplir';
+    await loadScoresTable();
+  }
   await loadDashboard();
 });
 

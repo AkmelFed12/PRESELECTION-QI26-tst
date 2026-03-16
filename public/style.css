@@ -314,6 +314,28 @@ main.layout {
   background: var(--emerald-dark);
 }
 
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.btn.outline,
+button.outline {
+  background: transparent;
+  color: var(--emerald);
+  border: 2px solid var(--emerald);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn.outline:hover,
+button.outline:hover {
+  background: rgba(11, 111, 79, 0.1);
+}
+
 .status {
   padding: 10px 12px;
   border-radius: 8px;
