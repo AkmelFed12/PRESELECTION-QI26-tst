@@ -665,7 +665,8 @@ function renderRanking(list) {
   rankingTable.innerHTML = list
     .map((r) => {
       const name = resolveName({ fullName: r.fullName || r.fullname, whatsapp: r.whatsapp });
-      return `<tr><td>${name || 'Inconnu'}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`;
+      const total = r.totalScore ?? r.totalscore ?? r.averageScore ?? 0;
+      return `<tr><td>${name || 'Inconnu'}</td><td>${Number(total).toFixed(2)}</td><td>${r.passages}</td></tr>`;
     })
     .join('');
 }

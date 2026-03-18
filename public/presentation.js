@@ -31,7 +31,7 @@ async function loadRanking() {
                 <td>${c.fullName || c.fullname || 'Inconnu'}</td>
                 <td>${c.city || ''}</td>
                 <td>${c.totalVotes || 0}</td>
-                <td>${c.averageScore || 0}</td>
+                <td>${Number(c.totalScore ?? c.totalscore ?? c.averageScore ?? 0).toFixed(2)}</td>
               </tr>`,
             )
             .join('')}

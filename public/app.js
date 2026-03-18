@@ -401,8 +401,8 @@ async function loadPublicResults() {
     const sorted = list
       .slice()
       .sort((a, b) => {
-        const aScore = Number(a.averageScore || 0);
-        const bScore = Number(b.averageScore || 0);
+        const aScore = Number(a.totalScore ?? a.totalscore ?? a.averageScore ?? 0);
+        const bScore = Number(b.totalScore ?? b.totalscore ?? b.averageScore ?? 0);
         if (bScore !== aScore) return bScore - aScore;
         return Number(b.totalVotes || 0) - Number(a.totalVotes || 0);
       })
@@ -424,7 +424,7 @@ async function loadPublicResults() {
               <tr>
                 <td>${idx + 1}</td>
                 <td>${c.fullName || c.name || 'Inconnu'}</td>
-                <td>${Number(c.averageScore || 0).toFixed(2)}</td>
+                <td>${Number(c.totalScore ?? c.totalscore ?? c.averageScore ?? 0).toFixed(2)}</td>
                 <td>${c.totalVotes || 0}</td>
               </tr>
             `,
