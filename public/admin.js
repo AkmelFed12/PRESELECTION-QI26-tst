@@ -682,15 +682,18 @@ async function renderScoresTable() {
       : [];
   scoresTable.innerHTML = rows
     .map((s) => {
-      const total = Number(s.themeScore || 0) + Number(s.pontAsSiratScore || 0);
-      const date = s.createdAt ? new Date(s.createdAt).toLocaleString('fr-FR') : '';
+      const themeScore = s.themeScore ?? s.themescore ?? 0;
+      const pontScore = s.pontAsSiratScore ?? s.pontassiratscore ?? 0;
+      const total = Number(themeScore || 0) + Number(pontScore || 0);
+      const created = s.createdAt || s.createdat;
+      const date = created ? new Date(created).toLocaleString('fr-FR') : '';
       return `
         <tr>
           <td>${s.id}</td>
-          <td>${s.fullName || 'Inconnu'}</td>
-          <td>${s.judgeName || ''}</td>
-          <td>${s.themeScore ?? 0}</td>
-          <td>${s.pontAsSiratScore ?? 0}</td>
+          <td>${s.fullName || s.fullname || 'Inconnu'}</td>
+          <td>${s.judgeName || s.judgename || ''}</td>
+          <td>${themeScore ?? 0}</td>
+          <td>${pontScore ?? 0}</td>
           <td>${total}</td>
           <td>${date}</td>
           <td><button data-delete-score="${s.id}">Supprimer</button></td>

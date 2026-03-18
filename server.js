@@ -3029,11 +3029,11 @@ app.get('/api/admin/scores', verifyAdmin, async (req, res) => {
       `SELECT s.id,
               s.candidateId,
               c.fullName as "fullName",
-              s.judgeName,
-              s.themeScore,
-              s.pontAsSiratScore,
+              s.judgeName as "judgeName",
+              s.themeScore as "themeScore",
+              s.pontAsSiratScore as "pontAsSiratScore",
               s.notes,
-              s.createdAt
+              s.createdAt as "createdAt"
        FROM scores s
        LEFT JOIN candidates c ON c.id = s.candidateId
        ORDER BY s.id DESC
