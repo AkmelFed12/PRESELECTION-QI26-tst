@@ -425,6 +425,7 @@ async function loadDashboard() {
 
   // ranking
   renderRanking(data.ranking || []);
+  renderScoresTable();
   await loadScoresTable();
 
   // news
@@ -662,7 +663,36 @@ function filterCandidates() {
 function renderRanking(list) {
   if (!rankingTable) return;
   rankingTable.innerHTML = list
-    .map((r) => `<tr><td>${r.fullName || 'Inconnu'}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`)
+    .map((r) => {
+      const name = resolveName({ fullName: r.fullName || r.fullname, whatsapp: r.whatsapp });
+      return `<tr><td>${name || 'Inconnu'}</td><td>${r.averageScore ?? '-'}</td><td>${r.passages}</td></tr>`;
+    })
+    .join('');
+}
+
+async function renderScoresTable() {
+  if (!scoresTable) return;
+  const res = await authedFetch('/api/admin/scores');
+  if (!res.ok) return;
+  const data = await res.json();
+  const rows = Array.isArray(data.items) ? data.items : [];
+  scoresTable.innerHTML = rows
+    .map((s) => {
+      const total = Number(s.themeScore || 0) + Number(s.pontAsSiratScore || 0);
+      const date = s.createdAt ? new Date(s.createdAt).toLocaleString('fr-FR') : '';
+      return `
+        <tr>
+          <td>${s.id}</td>
+          <td>${s.fullName || 'Inconnu'}</td>
+          <td>${s.judgeName || ''}</td>
+          <td>${s.themeScore ?? 0}</td>
+          <td>${s.pontAsSiratScore ?? 0}</td>
+          <td>${total}</td>
+          <td>${date}</td>
+          <td><button data-delete-score="${s.id}">Supprimer</button></td>
+        </tr>
+      `;
+    })
     .join('');
 }
 
@@ -1713,6 +1743,21 @@ sponsorForm?.addEventListener('submit', async (e) => {
   setStatus(sponsorMsg, data.message || (res.ok ? 'Sponsor enregistré.' : 'Erreur.'));
   if (res.ok) sponsorForm.reset();
   await loadSponsors();
+});
+
+scoresTable?.addEventListener('click', async (e) => {
+  const deleteBtn = e.target.closest('button[data-delete-score]');
+  if (!deleteBtn) return;
+  const id = deleteBtn.dataset.deleteScore;
+  const ok = confirm('Supprimer cette note ?');
+  if (!ok) return;
+  const res = await authedFetch(`/api/admin/scores/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    await renderScoresTable();
+    await loadDashboard();
+  } else {
+    alert('Suppression impossible.');
+  }
 });
 
 sponsorLogoFile?.addEventListener('change', async () => {
