@@ -1563,7 +1563,7 @@ app.get('/api/public-results', async (req, res) => {
       ) v ON c.id = v.candidateId
       LEFT JOIN (
         SELECT candidateId,
-               CAST(AVG(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore
+               CAST(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore
         FROM scores GROUP BY candidateId
       ) s ON c.id = s.candidateId
       ORDER BY COALESCE(v.totalVotes, 0) DESC, c.fullname ASC
@@ -1806,7 +1806,7 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
       `),
       pool.query(`
         SELECT c.id, c.fullName,
-               CAST(AVG(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
+               CAST(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
                COUNT(s.id) as passages
         FROM candidates c
         LEFT JOIN scores s ON c.id = s.candidateId
@@ -2915,7 +2915,7 @@ app.get('/api/admin/export/ranking', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.fullName,
-             CAST(AVG(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
+             CAST(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s ON c.id = s.candidateId
@@ -2955,7 +2955,7 @@ app.get('/api/admin/export/ranking-xls', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.fullName,
-             CAST(AVG(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
+             CAST(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s ON c.id = s.candidateId
@@ -2968,7 +2968,7 @@ app.get('/api/admin/export/ranking-xls', verifyAdmin, async (req, res) => {
           `<tr><td>${r.fullname || ''}</td><td>${r.averagescore || ''}</td><td>${r.passages || ''}</td></tr>`,
       )
       .join('');
-    const html = `<table><tr><th>Nom</th><th>Moyenne</th><th>Passages</th></tr>${rows}</table>`;
+    const html = `<table><tr><th>Nom</th><th>Total</th><th>Passages</th></tr>${rows}</table>`;
     res.setHeader('Content-Type', 'application/vnd.ms-excel');
     res.send(html);
   } catch (error) {

@@ -413,7 +413,7 @@ async function loadPublicResults() {
           <tr>
             <th>#</th>
             <th>Nom</th>
-            <th>Moyenne</th>
+            <th>Total</th>
             <th>Votes</th>
           </tr>
         </thead>

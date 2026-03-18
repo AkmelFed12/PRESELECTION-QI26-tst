@@ -20,7 +20,7 @@ async function loadRanking() {
     rankingWrap.innerHTML = `
       <table>
         <thead>
-          <tr><th>Rang</th><th>Candidat</th><th>Commune</th><th>Votes</th><th>Moyenne</th></tr>
+          <tr><th>Rang</th><th>Candidat</th><th>Commune</th><th>Votes</th><th>Total</th></tr>
         </thead>
         <tbody>
           ${list

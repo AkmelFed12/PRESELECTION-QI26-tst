@@ -2009,7 +2009,7 @@ exportRankingPdf?.addEventListener('click', () => {
       <body>
         <h1>Classement — Quiz Islamique 2026</h1>
         <table>
-          <thead><tr><th>Candidat</th><th>Moyenne</th><th>Passages</th></tr></thead>
+          <thead><tr><th>Candidat</th><th>Total</th><th>Passages</th></tr></thead>
           <tbody>${bodyRows}</tbody>
         </table>
       </body>
@@ -2104,7 +2104,7 @@ exportFullPdf?.addEventListener('click', () => {
         </table>
         <h2>Classement</h2>
         <table>
-          <thead><tr><th>Candidat</th><th>Moyenne</th><th>Passages</th></tr></thead>
+          <thead><tr><th>Candidat</th><th>Total</th><th>Passages</th></tr></thead>
           <tbody>${rankingRows}</tbody>
         </table>
       </body>
