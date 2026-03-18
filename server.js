@@ -2991,7 +2991,7 @@ app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
 // Admin scores (notation)
 app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
   try {
-    const { candidateId, judgeName, themeChosenScore, themeImposedScore, notes } = req.body || {};
+    const { candidateId, judgeName, themeScore, pontAsSiratScore, notes } = req.body || {};
     if (!candidateId || !judgeName) {
       return res.status(400).json({ message: 'ID candidat et nom du juge requis.' });
     }
@@ -3039,7 +3039,7 @@ app.get('/api/admin/scores', verifyAdmin, async (req, res) => {
        ORDER BY s.id DESC
        LIMIT 500`
     );
-    res.json(result.rows || []);
+    res.json({ items: result.rows || [] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

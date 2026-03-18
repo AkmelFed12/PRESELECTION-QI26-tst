@@ -675,7 +675,11 @@ async function renderScoresTable() {
   const res = await authedFetch('/api/admin/scores');
   if (!res.ok) return;
   const data = await res.json();
-  const rows = Array.isArray(data.items) ? data.items : [];
+  const rows = Array.isArray(data.items)
+    ? data.items
+    : Array.isArray(data)
+      ? data
+      : [];
   scoresTable.innerHTML = rows
     .map((s) => {
       const total = Number(s.themeScore || 0) + Number(s.pontAsSiratScore || 0);
