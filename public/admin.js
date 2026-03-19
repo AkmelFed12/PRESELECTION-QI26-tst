@@ -1,3 +1,4 @@
+window.__adminLoaded = true;
 const loginForm = document.getElementById('loginForm');
 const loginMsg = document.getElementById('loginMsg');
 const loginCard = document.getElementById('loginCard');

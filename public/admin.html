@@ -654,6 +654,15 @@
     </footer>
 
     <script src="admin.js?v=20260319"></script>
+    <script>
+      setTimeout(function () {
+        if (!window.__adminLoaded) {
+          var s = document.createElement('script');
+          s.src = '/admin.js?v=' + Date.now();
+          document.body.appendChild(s);
+        }
+      }, 1200);
+    </script>
   </body>
 </html>
 
