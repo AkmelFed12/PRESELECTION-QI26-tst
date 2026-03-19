@@ -2981,6 +2981,64 @@ app.get('/api/admin/export/ranking-xls', verifyAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/export/ranking-official-pdf', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.fullName as "fullName",
+             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+             COUNT(s.id) as passages
+      FROM candidates c
+      LEFT JOIN scores s ON c.id = s.candidateId
+      GROUP BY c.id, c.fullName
+      ORDER BY totalScore DESC NULLS LAST
+    `);
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="classement-officiel.pdf"');
+    doc.pipe(res);
+
+    const logoPath = join(__dirname, 'public', 'assets', 'logo.jpg');
+    try {
+      doc.image(logoPath, 40, 30, { width: 70 });
+    } catch {}
+    doc.fontSize(18).text('Classement Officiel — Quiz Islamique 2026', 120, 40);
+    doc.fontSize(11).text(`Date : ${formatDateFr(new Date())}`, 120, 65);
+
+    let y = 110;
+    doc.fontSize(11).text('Candidat', 40, y);
+    doc.text('Total', 330, y);
+    doc.text('Passages', 420, y);
+    y += 10;
+    doc.moveTo(40, y).lineTo(555, y).stroke();
+    y += 10;
+
+    result.rows.forEach((row) => {
+      const name = row.fullName || '';
+      const total = row.totalScore || 0;
+      const passages = row.passages || 0;
+      doc.fontSize(10).text(name, 40, y, { width: 260 });
+      doc.text(String(total), 330, y);
+      doc.text(String(passages), 420, y);
+      y += 16;
+      if (y > 760) {
+        doc.addPage();
+        y = 50;
+      }
+    });
+
+    doc.moveDown(2);
+    doc.text('Signatures', 40, y + 20);
+    doc.text('Président', 40, y + 40);
+    doc.text('Secrétaire Général', 240, y + 40);
+
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Admin: force sync manual candidates (fix "Inconnu")
 app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
   try {
@@ -3078,6 +3136,31 @@ app.delete('/api/admin/scores/:id', verifyAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Score not found' });
     }
     res.json({ message: 'Note supprimée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/candidates/:id/scores', verifyAdmin, async (req, res) => {
+  try {
+    const candidateId = Number(req.params.id);
+    if (!Number.isFinite(candidateId)) {
+      return res.status(400).json({ error: 'Invalid candidate id' });
+    }
+    const result = await pool.query(
+      `SELECT id,
+              judgeName as "judgeName",
+              themeScore as "themeScore",
+              pontAsSiratScore as "pontAsSiratScore",
+              notes,
+              createdAt as "createdAt"
+       FROM scores
+       WHERE candidateId = $1
+       ORDER BY createdAt DESC`,
+      [candidateId]
+    );
+    res.json({ items: result.rows || [] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

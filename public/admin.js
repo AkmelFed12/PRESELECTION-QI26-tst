@@ -34,6 +34,7 @@ const candidateModalForm = document.getElementById('candidateModalForm');
 const candidateModalMsg = document.getElementById('candidateModalMsg');
 const candidateModalDelete = document.getElementById('candidateModalDelete');
 const candidateModalWhatsapp = document.getElementById('candidateModalWhatsapp');
+const candidateModalScores = document.getElementById('candidateModalScores');
 const modalCandidateId = document.getElementById('modalCandidateId');
 const modalCandidateName = document.getElementById('modalCandidateName');
 const modalCandidateCity = document.getElementById('modalCandidateCity');
@@ -50,6 +51,7 @@ const scoresTable = document.querySelector('#scoresTable tbody');
 const exportCandidatesCsv = document.getElementById('exportCandidatesCsv');
 const exportRankingCsv = document.getElementById('exportRankingCsv');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
+const exportRankingOfficialPdf = document.getElementById('exportRankingOfficialPdf');
 const exportCandidatesPdf = document.getElementById('exportCandidatesPdf');
 const exportFullPdf = document.getElementById('exportFullPdf');
 const newsSection = document.getElementById('newsSection');
@@ -503,12 +505,67 @@ function openCandidateModal(candidate) {
   modalCandidateEmail.value = candidate.email || '';
   modalCandidateStatus.value = candidate.status || 'approved';
   if (candidateModalMsg) candidateModalMsg.textContent = '';
+  loadCandidateScores(candidate.id);
   candidateModal.style.display = 'flex';
 }
 
 function closeCandidateModal() {
   if (!candidateModal) return;
   candidateModal.style.display = 'none';
+}
+
+async function loadCandidateScores(candidateId) {
+  if (!candidateModalScores) return;
+  if (!candidateId) {
+    candidateModalScores.textContent = 'Aucune note.';
+    return;
+  }
+  candidateModalScores.textContent = 'Chargement...';
+  const res = await authedFetch(`/api/admin/candidates/${candidateId}/scores`);
+  if (!res.ok) {
+    candidateModalScores.textContent = 'Aucune note.';
+    return;
+  }
+  const data = await res.json();
+  const rows = Array.isArray(data.items) ? data.items : [];
+  if (!rows.length) {
+    candidateModalScores.textContent = 'Aucune note.';
+    return;
+  }
+  candidateModalScores.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Juge</th>
+          <th>Thèmes /30</th>
+          <th>Pont As Sirat /25</th>
+          <th>Total</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map((s) => {
+            const theme = Number(s.themeScore || 0);
+            const pont = Number(s.pontAsSiratScore || 0);
+            const total = theme + pont;
+            const date = s.createdAt ? new Date(s.createdAt).toLocaleString('fr-FR') : '';
+            return `
+              <tr>
+                <td>${date}</td>
+                <td>${s.judgeName || ''}</td>
+                <td>${theme}</td>
+                <td>${pont}</td>
+                <td>${total}</td>
+                <td>${s.notes || ''}</td>
+              </tr>
+            `;
+          })
+          .join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 function printAttendanceList() {
@@ -2021,6 +2078,20 @@ exportRankingPdf?.addEventListener('click', () => {
   win.document.close();
   win.focus();
   win.print();
+});
+
+exportRankingOfficialPdf?.addEventListener('click', async () => {
+  const res = await authedFetch('/api/admin/export/ranking-official-pdf');
+  if (!res.ok) return;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'classement-officiel.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 });
 
 exportCandidatesPdf?.addEventListener('click', () => {
