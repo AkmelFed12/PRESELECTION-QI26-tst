@@ -87,6 +87,8 @@ const waitlistLimiter = rateLimit({
 // Constants
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'asaa';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ASAA';
+const ADMIN_USERNAME_ALT = process.env.ADMIN_USERNAME_ALT || 'asaa2026';
+const ADMIN_PASSWORD_ALT = process.env.ADMIN_PASSWORD_ALT || 'ASAALMO2026';
 const ADMIN_WHATSAPP = process.env.ADMIN_WHATSAPP || '2250150070083';
 const CODE_PREFIX = 'QI26';
 const DEFAULT_COUNTRY = process.env.DEFAULT_COUNTRY || "COTE D'IVOIRE";
@@ -4048,22 +4050,25 @@ app.post('/api/admin/login', async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ message: 'Identifiant et mot de passe requis.' });
     }
-    if (username !== ADMIN_USERNAME) {
+    if (username !== ADMIN_USERNAME && username !== ADMIN_USERNAME_ALT) {
       return res.status(401).json({ message: 'Accès non autorisé' });
     }
 
+    const hashKey = username === ADMIN_USERNAME ? 'admin_password_hash' : 'admin_password_hash_alt';
+    const defaultPassword = username === ADMIN_USERNAME ? ADMIN_PASSWORD : ADMIN_PASSWORD_ALT;
     const result = await pool.query(
-      "SELECT value FROM admin_config WHERE key = 'admin_password_hash' LIMIT 1"
+      "SELECT value FROM admin_config WHERE key = $1 LIMIT 1",
+      [hashKey]
     );
-    const adminHash = result.rows[0]?.value || await hashPassword(ADMIN_PASSWORD);
+    const adminHash = result.rows[0]?.value || await hashPassword(defaultPassword);
     let valid = await checkPassword(password, adminHash);
 
-    if (!valid && password === ADMIN_PASSWORD) {
+    if (!valid && password === defaultPassword) {
       valid = true;
-      const newHash = await hashPassword(ADMIN_PASSWORD);
+      const newHash = await hashPassword(defaultPassword);
       await pool.query(
-        "INSERT INTO admin_config (key, value) VALUES ('admin_password_hash', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
-        [newHash]
+        "INSERT INTO admin_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+        [hashKey, newHash]
       );
     }
 
@@ -4071,7 +4076,7 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(401).json({ message: 'Identifiants incorrects.' });
     }
 
-    return res.json({ token: ADMIN_PASSWORD });
+    return res.json({ token: defaultPassword });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur serveur.' });
