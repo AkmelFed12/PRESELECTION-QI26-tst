@@ -28,6 +28,11 @@ const candidateCommuneFilter = document.getElementById('candidateCommuneFilter')
 const downloadAttendanceDoc = document.getElementById('downloadAttendanceDoc');
 const printAbidjanNord = document.getElementById('printAbidjanNord');
 const printAbidjanSud = document.getElementById('printAbidjanSud');
+const showAllCandidates = document.getElementById('showAllCandidates');
+const showEliminatedCandidates = document.getElementById('showEliminatedCandidates');
+const eliminatedTable = document.querySelector('#eliminatedTable tbody');
+const eliminatedTableWrap = document.getElementById('eliminatedTable');
+const eliminatedTitle = document.getElementById('eliminatedTitle');
 const candidateModal = document.getElementById('candidateModal');
 const candidateModalClose = document.getElementById('candidateModalClose');
 const candidateModalForm = document.getElementById('candidateModalForm');
@@ -35,6 +40,7 @@ const candidateModalMsg = document.getElementById('candidateModalMsg');
 const candidateModalDelete = document.getElementById('candidateModalDelete');
 const candidateModalWhatsapp = document.getElementById('candidateModalWhatsapp');
 const candidateModalScores = document.getElementById('candidateModalScores');
+const candidateModalPdf = document.getElementById('candidateModalPdf');
 const modalCandidateId = document.getElementById('modalCandidateId');
 const modalCandidateName = document.getElementById('modalCandidateName');
 const modalCandidateCity = document.getElementById('modalCandidateCity');
@@ -44,6 +50,7 @@ const modalCandidateEmail = document.getElementById('modalCandidateEmail');
 const modalCandidateStatus = document.getElementById('modalCandidateStatus');
 
 const scoreForm = document.getElementById('scoreForm');
+const scoreQuickForm = document.getElementById('scoreQuickForm');
 const scoreMsg = document.getElementById('scoreMsg');
 const candidateName = document.getElementById('candidateName');
 const rankingTable = document.querySelector('#rankingTable tbody');
@@ -321,6 +328,15 @@ function bindEditListeners() {
   });
 }
 
+function toggleEliminated(showEliminated) {
+  if (eliminatedTableWrap) eliminatedTableWrap.style.display = showEliminated ? 'table' : 'none';
+  if (eliminatedTitle) eliminatedTitle.style.display = showEliminated ? 'block' : 'none';
+  if (candidatesTable) {
+    const wrap = candidatesTable.closest('table');
+    if (wrap) wrap.style.display = showEliminated ? 'none' : 'table';
+  }
+}
+
 function parsePipeLines(text, expectedParts) {
   return (text || '')
     .split('\n')
@@ -422,6 +438,7 @@ async function loadDashboard() {
   // candidates
   candidatesCache = data.candidates || [];
   renderCandidates(candidatesCache);
+  renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
   renderCommuneStats(candidatesCache);
   renderCommuneFilter(candidatesCache);
 
@@ -466,6 +483,7 @@ function renderFromCache(data) {
   renderSchedule();
   candidatesCache = data.candidates || [];
   renderCandidates(candidatesCache);
+  renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
   renderCommuneStats(candidatesCache);
   renderCommuneFilter(candidatesCache);
   renderRanking(data.ranking || []);
@@ -486,9 +504,28 @@ function renderCandidates(list) {
         <td>
           <button data-edit="${c.id}">Modifier</button>
           <button data-whatsapp="${c.id}">WhatsApp</button>
+          <button data-pdf="${c.id}">Fiche PDF</button>
           <button data-cert="${c.id}">Certificat</button>
           <button data-delete="${c.id}">Supprimer</button>
         </td>
+      </tr>
+    `,
+    )
+    .join('');
+}
+
+function renderEliminated(list) {
+  if (!eliminatedTable) return;
+  eliminatedTable.innerHTML = list
+    .map(
+      (c) => `
+      <tr>
+        <td>${c.id}</td>
+        <td>${resolveName(c)}</td>
+        <td>${c.whatsapp || ''}</td>
+        <td>${c.city || ''}</td>
+        <td>${c.status || 'eliminated'}</td>
+        <td><button data-edit="${c.id}">Modifier</button></td>
       </tr>
     `,
     )
@@ -1422,6 +1459,22 @@ candidateModalWhatsapp?.addEventListener('click', () => {
   openWhatsappChat(phone, name);
 });
 
+candidateModalPdf?.addEventListener('click', async () => {
+  const id = modalCandidateId?.value;
+  if (!id) return;
+  const res = await authedFetch(`/api/admin/candidates/${id}/pdf`);
+  if (!res.ok) return;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `candidat-${id}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
 candidateModalDelete?.addEventListener('click', async () => {
   const id = modalCandidateId.value;
   if (!id) return;
@@ -1459,6 +1512,23 @@ candidatesTable?.addEventListener('click', (e) => {
     } else {
       openWhatsappChat('', '');
     }
+    return;
+  }
+  const pdfBtn = e.target.closest('button[data-pdf]');
+  if (pdfBtn) {
+    const id = pdfBtn.getAttribute('data-pdf');
+    if (!id) return;
+    const res = await authedFetch(`/api/admin/candidates/${id}/pdf`);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `candidat-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
     return;
   }
   const certBtn = e.target.closest('button[data-cert]');
@@ -1642,6 +1712,13 @@ scoreForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(scoreMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(scoreForm).entries());
+  if (Number(payload.themeScore || 0) > 30 || Number(payload.pontAsSiratScore || 0) > 25) {
+    const ok = confirm('Attention: une note dépasse le maximum autorisé. Continuer ?');
+    if (!ok) {
+      setStatus(scoreMsg, 'Annulé.');
+      return;
+    }
+  }
   const res = await authedFetch('/api/admin/scores', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -1656,6 +1733,30 @@ scoreForm?.addEventListener('submit', async (e) => {
   await loadDashboard();
 });
 
+scoreQuickForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setStatus(scoreMsg, 'Enregistrement...');
+  const payload = Object.fromEntries(new FormData(scoreQuickForm).entries());
+  if (Number(payload.themeScore || 0) > 30 || Number(payload.pontAsSiratScore || 0) > 25) {
+    const ok = confirm('Attention: une note dépasse le maximum autorisé. Continuer ?');
+    if (!ok) {
+      setStatus(scoreMsg, 'Annulé.');
+      return;
+    }
+  }
+  const res = await authedFetch('/api/admin/scores', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(scoreMsg, data.message || (res.ok ? 'Note enregistrée.' : 'Erreur.'));
+  if (res.ok) {
+    scoreQuickForm.reset();
+    await loadScoresTable();
+  }
+  await loadDashboard();
+});
+
 setInterval(() => {
   if (isEditing && Date.now() - lastEditAt < 20000) return;
   isEditing = false;
@@ -1663,6 +1764,14 @@ setInterval(() => {
     loadDashboard();
   }
 }, 30000);
+
+showAllCandidates?.addEventListener('click', () => {
+  toggleEliminated(false);
+});
+
+showEliminatedCandidates?.addEventListener('click', () => {
+  toggleEliminated(true);
+});
 
 newsForm?.addEventListener('submit', async (e) => {
   e.preventDefault();

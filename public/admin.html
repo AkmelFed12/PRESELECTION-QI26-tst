@@ -308,6 +308,10 @@
 
       <section class="card admin-hidden" id="candidatesSection">
         <h2>Gestion des candidats</h2>
+        <div class="nav-links" style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn outline" type="button" id="showAllCandidates">Tous les candidats</button>
+          <button class="btn outline" type="button" id="showEliminatedCandidates">Candidats éliminés</button>
+        </div>
         <div class="form-grid" style="margin-bottom:12px;">
           <div class="full">
             <label>Recherche rapide (nom / commune / WhatsApp)</label>
@@ -364,6 +368,21 @@
           </thead>
           <tbody></tbody>
         </table>
+
+        <h3 id="eliminatedTitle" style="display:none; margin-top:18px;">Candidats éliminés</h3>
+        <table class="table" id="eliminatedTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>WhatsApp</th>
+              <th>Commune</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </section>
 
       <div class="modal-backdrop" id="candidateModal" style="display:none;">
@@ -386,13 +405,14 @@
                 <option value="eliminated">Éliminé</option>
               </select>
             </div>
-            <div class="full">
-              <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="btn-primary" type="submit">Enregistrer les modifications</button>
-                <button class="btn outline" type="button" id="candidateModalWhatsapp">WhatsApp</button>
-                <button class="btn outline" type="button" id="candidateModalDelete">Supprimer ce candidat</button>
-              </div>
+          <div class="full">
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn-primary" type="submit">Enregistrer les modifications</button>
+              <button class="btn outline" type="button" id="candidateModalPdf">Fiche candidat (PDF)</button>
+              <button class="btn outline" type="button" id="candidateModalWhatsapp">WhatsApp</button>
+              <button class="btn outline" type="button" id="candidateModalDelete">Supprimer ce candidat</button>
             </div>
+          </div>
           </form>
           <p id="candidateModalMsg" class="status"></p>
           <div class="card" style="margin-top:16px;">
@@ -404,6 +424,17 @@
 
       <section class="card admin-hidden" id="scoresSection">
         <h2>Notation des candidats</h2>
+        <div class="card" style="margin-bottom:14px;">
+          <h3>Saisie rapide</h3>
+          <form id="scoreQuickForm" class="form-grid">
+            <div><label>ID candidat</label><input name="candidateId" required /></div>
+            <div><label>Nom du juge</label><input name="judgeName" required /></div>
+            <div><label>Thèmes /30</label><input name="themeScore" type="number" step="0.1" /></div>
+            <div><label>Pont As Sirat /25</label><input name="pontAsSiratScore" type="number" step="0.1" /></div>
+            <div class="full"><label>Notes</label><textarea name="notes"></textarea></div>
+            <div class="full"><button class="btn-primary" type="submit">Enregistrer la note (rapide)</button></div>
+          </form>
+        </div>
         <form id="scoreForm" class="form-grid">
           <div><label>ID candidat</label><input name="candidateId" required /></div>
           <div><label>Nom du juge</label><input name="judgeName" required /></div>

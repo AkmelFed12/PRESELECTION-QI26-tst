@@ -3125,6 +3125,64 @@ app.get('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/candidates/:id/pdf', verifyAdmin, async (req, res) => {
+  try {
+    const candidateId = Number(req.params.id);
+    if (!Number.isFinite(candidateId)) {
+      return res.status(400).json({ error: 'Invalid candidate id' });
+    }
+    const candidateRes = await pool.query(
+      'SELECT id, fullName, city, whatsapp, phone, email, status FROM candidates WHERE id = $1',
+      [candidateId]
+    );
+    if (!candidateRes.rows.length) {
+      return res.status(404).json({ error: 'Candidat introuvable' });
+    }
+    const candidate = candidateRes.rows[0];
+    const scoresRes = await pool.query(
+      `SELECT judgeName, themeScore, pontAsSiratScore, notes, createdAt
+       FROM scores WHERE candidateId = $1 ORDER BY createdAt DESC`,
+      [candidateId]
+    );
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="candidat-${candidateId}.pdf"`);
+    doc.pipe(res);
+
+    const logoPath = join(__dirname, 'public', 'assets', 'logo.jpg');
+    try {
+      doc.image(logoPath, 40, 30, { width: 70 });
+    } catch {}
+    doc.fontSize(18).text('Fiche Candidat — Quiz Islamique 2026', 120, 40);
+    doc.fontSize(11).text(`Date : ${formatDateFr(new Date())}`, 120, 65);
+
+    doc.moveDown(2);
+    doc.fontSize(12).text(`Nom : ${candidate.fullname || candidate.fullName || ''}`);
+    doc.text(`Commune : ${candidate.city || ''}`);
+    doc.text(`WhatsApp : ${candidate.whatsapp || ''}`);
+    doc.text(`Téléphone : ${candidate.phone || ''}`);
+    doc.text(`Email : ${candidate.email || ''}`);
+    doc.text(`Statut : ${candidate.status || ''}`);
+
+    doc.moveDown();
+    doc.fontSize(13).text('Historique des notes', { underline: true });
+    doc.moveDown(0.5);
+
+    scoresRes.rows.forEach((s) => {
+      const total = Number(s.themescore || s.themeScore || 0) + Number(s.pontassiratscore || s.pontAsSiratScore || 0);
+      const date = s.createdat || s.createdAt ? new Date(s.createdat || s.createdAt).toLocaleString('fr-FR') : '';
+      doc.fontSize(10).text(`${date} — Juge: ${s.judgename || s.judgeName || ''} — Total: ${total}`);
+      if (s.notes) doc.text(`Notes: ${s.notes}`);
+      doc.moveDown(0.5);
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.delete('/api/admin/scores/:id', verifyAdmin, async (req, res) => {
   try {
     const scoreId = Number(req.params.id);
