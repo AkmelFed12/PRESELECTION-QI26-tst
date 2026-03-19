@@ -1221,28 +1221,52 @@ async function downloadCertificate(candidateId) {
   downloadBlob(`certificat-${candidateId}.pdf`, blob);
 }
 
+async function doAdminLogin(payload) {
+  setStatus(loginMsg, 'Connexion...');
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setStatus(loginMsg, data.message || 'Identifiants incorrects.');
+      return;
+    }
+    authHeader = `Bearer ${data.token}`;
+    localStorage.setItem('adminAuth', authHeader);
+    showAdmin();
+    try {
+      await authedFetch('/api/admin/sync-manual-candidates', { method: 'POST' });
+    } catch {}
+    await loadDashboard();
+  } catch (error) {
+    setStatus(loginMsg, 'Erreur réseau. Réessaie.');
+  }
+}
+
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  setStatus(loginMsg, 'Connexion...');
   const payload = Object.fromEntries(new FormData(loginForm).entries());
-  const res = await fetch('/api/admin/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    setStatus(loginMsg, data.message || 'Identifiants incorrects.');
-    return;
-  }
-  authHeader = `Bearer ${data.token}`;
-  localStorage.setItem('adminAuth', authHeader);
-  showAdmin();
-  try {
-    await authedFetch('/api/admin/sync-manual-candidates', { method: 'POST' });
-  } catch {}
-  await loadDashboard();
+  await doAdminLogin(payload);
 });
+
+// Auto-login when credentials are provided in URL (?username=...&password=...)
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  const username = params.get('username');
+  const password = params.get('password');
+  if (username && password && loginForm) {
+    const userInput = loginForm.querySelector('input[name="username"]');
+    const passInput = loginForm.querySelector('input[name="password"]');
+    if (userInput) userInput.value = username;
+    if (passInput) passInput.value = password;
+    doAdminLogin({ username, password }).then(() => {
+      history.replaceState({}, document.title, window.location.pathname);
+    });
+  }
+})();
 
 settingsForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
