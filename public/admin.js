@@ -1518,7 +1518,7 @@ globalSearchInput?.addEventListener('input', () => {
   renderGlobalSearch();
 });
 
-candidatesTable?.addEventListener('click', (e) => {
+candidatesTable?.addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-edit]');
   if (btn) {
     const id = btn.getAttribute('data-edit');
