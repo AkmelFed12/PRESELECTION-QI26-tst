@@ -848,19 +848,23 @@ function renderCommuneStats(list) {
   }, {});
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const max = Math.max(...entries.map(([, v]) => v));
-  communeStats.innerHTML = entries
-    .map(
-      ([name, value]) => `
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-        <div style="min-width:90px; font-weight:600;">${name}</div>
-        <div style="flex:1; background:#efe6d6; border-radius:999px; height:10px; position:relative;">
-          <div style="background:var(--emerald); width:${Math.round((value / max) * 100)}%; height:10px; border-radius:999px;"></div>
+  communeStats.innerHTML = `
+    <div class="commune-stats">
+      ${entries
+        .map(
+          ([name, value]) => `
+        <div class="commune-row">
+          <div class="commune-name">${name}</div>
+          <div class="commune-bar">
+            <div class="commune-bar-fill" style="width:${Math.round((value / max) * 100)}%;"></div>
+          </div>
+          <div class="commune-value">${value}</div>
         </div>
-        <div style="width:32px; text-align:right;">${value}</div>
-      </div>
-    `,
-    )
-    .join('');
+      `,
+        )
+        .join('')}
+    </div>
+  `;
 }
 
 function renderCommuneFilter(list) {

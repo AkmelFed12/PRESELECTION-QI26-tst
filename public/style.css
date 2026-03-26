@@ -514,6 +514,48 @@ button.outline:hover {
   font-weight: 700;
 }
 
+.commune-stats {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.commune-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr 48px;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #fffaf0;
+  border: 1px solid var(--border);
+}
+
+.commune-name {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.commune-bar {
+  background: #efe6d6;
+  border-radius: 999px;
+  height: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.commune-bar-fill {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--emerald);
+}
+
+.commune-value {
+  text-align: right;
+  font-weight: 800;
+  color: #1f1f1f;
+}
+
 footer {
   padding: 24px 20px 40px;
   text-align: center;
@@ -1387,6 +1429,15 @@ body.dark .modal-card {
 
   .stats-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commune-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .commune-value {
+    text-align: left;
   }
 
   .table {
