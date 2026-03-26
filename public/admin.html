@@ -53,14 +53,23 @@
 
       <section class="card admin-hidden" id="dashboard">
         <h2>Tableau de bord</h2>
-        <div class="grid-three">
-          <div class="status">Candidats inscrits: <strong id="statCandidates">0</strong></div>
-          <div class="status">Votes exprimés: <strong id="statVotes">0</strong></div>
-          <div class="status">Passages notés: <strong id="statScores">0</strong></div>
+        <div class="stats-bar admin-stats">
+          <div class="stat-card">
+            <div class="stat-label">Candidats inscrits</div>
+            <div class="stat-value" id="statCandidates">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Votes exprimés</div>
+            <div class="stat-value" id="statVotes">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Passages notés</div>
+            <div class="stat-value" id="statScores">0</div>
+          </div>
         </div>
-        <div class="status" style="margin-top:12px;">
-          <strong>Statistiques par commune</strong>
-          <div id="communeStats" style="margin-top:8px;">Aucune donnée.</div>
+        <div class="commune-card">
+          <div class="card-subtitle">Statistiques par commune</div>
+          <div id="communeStats">Aucune donnée.</div>
         </div>
       </section>
 

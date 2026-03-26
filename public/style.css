@@ -440,6 +440,10 @@ button.outline:hover {
   margin-bottom: 14px;
 }
 
+.admin-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .stat-card {
   background: #fffaf0;
   border: 1px solid var(--border);
@@ -460,6 +464,23 @@ button.outline:hover {
   font-weight: 800;
   color: #1f1f1f;
   margin-top: 4px;
+}
+
+.card-subtitle {
+  font-weight: 800;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b5b3f;
+  margin-bottom: 10px;
+}
+
+.commune-card {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid var(--border);
 }
 
 .score-badge {
@@ -1428,6 +1449,10 @@ body.dark .modal-card {
   }
 
   .stats-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
