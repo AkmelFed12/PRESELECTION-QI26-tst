@@ -53,9 +53,15 @@ const modalCandidateStatus = document.getElementById('modalCandidateStatus');
 const scoreForm = document.getElementById('scoreForm');
 const scoreQuickForm = document.getElementById('scoreQuickForm');
 const scoreMsg = document.getElementById('scoreMsg');
+const scoreLiveMsg = document.getElementById('scoreLiveMsg');
 const candidateName = document.getElementById('candidateName');
 const rankingTable = document.querySelector('#rankingTable tbody');
 const scoresTable = document.querySelector('#scoresTable tbody');
+const scoresJudgeFilter = document.getElementById('scoresJudgeFilter');
+const scoresDateFrom = document.getElementById('scoresDateFrom');
+const scoresDateTo = document.getElementById('scoresDateTo');
+const scoresFilterClear = document.getElementById('scoresFilterClear');
+const scoresFilterInfo = document.getElementById('scoresFilterInfo');
 const exportCandidatesCsv = document.getElementById('exportCandidatesCsv');
 const exportRankingCsv = document.getElementById('exportRankingCsv');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
@@ -159,6 +165,7 @@ let authHeader = '';
 let scheduleCache = [];
 let membersCache = [];
 let candidatesCache = [];
+let scoresCache = [];
 let newsCache = [];
 let sponsorsCache = [];
 let newsImages = [];
@@ -445,8 +452,8 @@ async function loadDashboard() {
 
   // ranking
   renderRanking(data.ranking || []);
-  renderScoresTable();
   await loadScoresTable();
+  updateLiveScoreValidation();
 
   // news
   await loadNewsAdmin();
@@ -570,7 +577,15 @@ async function loadCandidateScores(candidateId) {
     candidateModalScores.textContent = 'Aucune note.';
     return;
   }
+  const totals = rows.map((s) => {
+    const theme = Number(s.themeScore || 0);
+    const pont = Number(s.pontAsSiratScore || 0);
+    const recognition = Number(s.recognitionScore || s.recognitionscore || 0);
+    return theme + pont + recognition;
+  });
+  const average = totals.reduce((sum, v) => sum + v, 0) / totals.length;
   candidateModalScores.innerHTML = `
+    <div class="status">Passages: ${rows.length} | Moyenne: ${average.toFixed(2)}</div>
     <table class="table">
       <thead>
         <tr>
@@ -792,16 +807,9 @@ function renderRanking(list) {
     .join('');
 }
 
-async function renderScoresTable() {
+function renderScoresTable(list) {
   if (!scoresTable) return;
-  const res = await authedFetch('/api/admin/scores');
-  if (!res.ok) return;
-  const data = await res.json();
-  const rows = Array.isArray(data.items)
-    ? data.items
-    : Array.isArray(data)
-      ? data
-      : [];
+  const rows = Array.isArray(list) ? list : [];
   scoresTable.innerHTML = rows
     .map((s) => {
       const themeScore = s.themeScore ?? s.themescore ?? 0;
@@ -863,6 +871,41 @@ function renderCommuneFilter(list) {
   candidateCommuneFilter.innerHTML = `<option value="">Toutes les communes</option>${communes
     .map((c) => `<option value="${c}">${c}</option>`)
     .join('')}`;
+}
+
+function updateLiveScoreValidation() {
+  const entries = [
+    { form: scoreForm, name: 'themeScore', max: 30, label: 'Thèmes /30' },
+    { form: scoreForm, name: 'pontAsSiratScore', max: 25, label: 'Pont As Sirat /25' },
+    { form: scoreForm, name: 'recognitionScore', max: 5, label: 'Reconnaissance /5' },
+    { form: scoreQuickForm, name: 'themeScore', max: 30, label: 'Thèmes /30' },
+    { form: scoreQuickForm, name: 'pontAsSiratScore', max: 25, label: 'Pont As Sirat /25' },
+    { form: scoreQuickForm, name: 'recognitionScore', max: 5, label: 'Reconnaissance /5' },
+  ];
+
+  const exceeded = [];
+  entries.forEach(({ form, name, max, label }) => {
+    const input = form?.querySelector(`input[name="${name}"]`);
+    if (!input) return;
+    const value = Number(input.value || 0);
+    if (value > max) {
+      input.classList.add('input-error');
+      exceeded.push(label);
+    } else {
+      input.classList.remove('input-error');
+    }
+  });
+
+  if (!scoreLiveMsg) return;
+  if (exceeded.length) {
+    scoreLiveMsg.classList.remove('status-success');
+    scoreLiveMsg.classList.add('status-warning');
+    scoreLiveMsg.textContent = `Attention: max dépassé pour ${exceeded.join(', ')}.`;
+  } else {
+    scoreLiveMsg.classList.remove('status-warning');
+    scoreLiveMsg.classList.add('status-success');
+    scoreLiveMsg.textContent = 'Saisie OK.';
+  }
 }
 
 async function loadMembers() {
@@ -1710,24 +1753,44 @@ dailyQuizForm?.addEventListener('submit', async (e) => {
   setStatus(dailyQuizMsg, data.message || (res.ok ? 'Quiz mis à jour.' : 'Erreur.'));
 });
 
+function applyScoresFilters() {
+  const judgeQuery = (scoresJudgeFilter?.value || '').trim().toLowerCase();
+  const fromValue = scoresDateFrom?.value || '';
+  const toValue = scoresDateTo?.value || '';
+  const fromDate = fromValue ? new Date(`${fromValue}T00:00:00`) : null;
+  const toDate = toValue ? new Date(`${toValue}T23:59:59`) : null;
+
+  const filtered = scoresCache.filter((s) => {
+    const judge = (s.judgeName || s.judgename || '').toLowerCase();
+    if (judgeQuery && !judge.includes(judgeQuery)) return false;
+    const createdRaw = s.createdAt || s.createdat;
+    if (fromDate || toDate) {
+      if (!createdRaw) return false;
+      const created = new Date(createdRaw);
+      if (fromDate && created < fromDate) return false;
+      if (toDate && created > toDate) return false;
+    }
+    return true;
+  });
+
+  if (scoresFilterInfo) {
+    const total = scoresCache.length;
+    scoresFilterInfo.textContent = `${filtered.length} / ${total} résultats`;
+  }
+  renderScoresTable(filtered);
+}
+
 async function loadScoresTable() {
   if (!scoresTable) return;
   const res = await authedFetch('/api/admin/scores');
-  const scores = await res.json().catch(() => []);
-  scoresTable.innerHTML = scores
-    .map((s) => `
-      <tr>
-        <td>${s.fullName || 'Inconnu'}</td>
-        <td>${s.judgeName || '-'}</td>
-        <td>${s.themeChosenScore ?? '-'}</td>
-        <td>${s.themeImposedScore ?? '-'}</td>
-        <td>${(parseFloat(s.themeChosenScore || 0) + parseFloat(s.themeImposedScore || 0)).toFixed(1)}</td>
-        <td>
-          <button class="btn-small outline" type="button" onclick="deleteScore(${s.id})">Supprimer</button>
-        </td>
-      </tr>
-    `)
-    .join('');
+  if (!res.ok) return;
+  const data = await res.json().catch(() => ({}));
+  scoresCache = Array.isArray(data.items)
+    ? data.items
+    : Array.isArray(data)
+      ? data
+      : [];
+  applyScoresFilters();
 }
 
 async function deleteScore(scoreId) {
@@ -1760,6 +1823,9 @@ if (candidateIdInput) {
     await loadCandidateName(candidateIdInput.value);
   });
 }
+
+scoreForm?.addEventListener('input', updateLiveScoreValidation);
+scoreQuickForm?.addEventListener('input', updateLiveScoreValidation);
 
 scoreForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -1825,6 +1891,16 @@ setInterval(() => {
     loadDashboard();
   }
 }, 30000);
+
+scoresJudgeFilter?.addEventListener('input', applyScoresFilters);
+scoresDateFrom?.addEventListener('change', applyScoresFilters);
+scoresDateTo?.addEventListener('change', applyScoresFilters);
+scoresFilterClear?.addEventListener('click', () => {
+  if (scoresJudgeFilter) scoresJudgeFilter.value = '';
+  if (scoresDateFrom) scoresDateFrom.value = '';
+  if (scoresDateTo) scoresDateTo.value = '';
+  applyScoresFilters();
+});
 
 showAllCandidates?.addEventListener('click', () => {
   toggleEliminated(false);

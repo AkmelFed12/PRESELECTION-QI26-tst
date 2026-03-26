@@ -433,6 +433,78 @@ button.outline:hover {
   background: #faf7f0;
 }
 
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stat-card {
+  background: #fffaf0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1f1f1f;
+  margin-top: 4px;
+}
+
+.score-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #0b6f4f;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.rank-tie {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b6a2f;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.skeleton-row td {
+  padding: 12px 10px;
+}
+
+.skeleton-line {
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f1eee6 25%, #f8f6f2 50%, #f1eee6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+.input-error {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 2px rgba(224, 76, 76, 0.15);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .admin-hidden {
   display: none;
 }
@@ -1311,6 +1383,25 @@ body.dark .modal-card {
 
   .card h2 {
     font-size: 22px;
+  }
+
+  .stats-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table {
+    font-size: 15px;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px;
+  }
+
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea {
+    font-size: 15px;
   }
 
   .grid-two, .grid-three, .form-grid, .moment-grid {

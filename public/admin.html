@@ -445,8 +445,29 @@
           <div class="full"><label>Notes</label><textarea name="notes"></textarea></div>
           <div class="full"><button class="btn-primary" type="submit">Enregistrer la note</button></div>
         </form>
+        <div id="scoreLiveMsg" class="status">—</div>
         <p id="scoreMsg" class="status"></p>
         <h3>Notes récentes</h3>
+        <div class="form-grid" style="grid-template-columns: repeat(4, minmax(0,1fr)); gap:10px; margin-bottom:12px;">
+          <div>
+            <label>Filtrer par juge</label>
+            <input id="scoresJudgeFilter" placeholder="Nom du juge" />
+          </div>
+          <div>
+            <label>Date début</label>
+            <input id="scoresDateFrom" type="date" />
+          </div>
+          <div>
+            <label>Date fin</label>
+            <input id="scoresDateTo" type="date" />
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button class="btn outline" id="scoresFilterClear" type="button">Réinitialiser</button>
+          </div>
+          <div class="full">
+            <div id="scoresFilterInfo" class="status">Tous les résultats.</div>
+          </div>
+        </div>
         <table class="table" id="scoresTable">
           <thead>
             <tr>

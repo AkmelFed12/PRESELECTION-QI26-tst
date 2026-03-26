@@ -28,6 +28,39 @@
       <section class="card">
         <h2>Classement actuel</h2>
         <p class="muted">Les résultats sont publiés par l’administration.</p>
+        <div class="stats-bar" id="publicStats">
+          <div class="stat-card">
+            <div class="stat-label">Candidats</div>
+            <div class="stat-value" id="statPublicCandidates">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Votes</div>
+            <div class="stat-value" id="statPublicVotes">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Communes</div>
+            <div class="stat-value" id="statPublicCities">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pays</div>
+            <div class="stat-value" id="statPublicCountries">-</div>
+          </div>
+        </div>
+        <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; margin-bottom:12px;">
+          <div>
+            <label>Recherche candidat</label>
+            <input id="rankingSearch" placeholder="Nom du candidat" />
+          </div>
+          <div>
+            <label>Filtrer par commune</label>
+            <select id="rankingCommune">
+              <option value="">Toutes les communes</option>
+            </select>
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button class="btn outline" id="rankingClear" type="button">Réinitialiser</button>
+          </div>
+        </div>
         <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; margin-bottom:12px;">
           <div>
             <label>Auto-refresh</label>
