@@ -365,6 +365,41 @@ button.outline:hover {
   font-size: 12px;
 }
 
+.pill-success {
+  background: rgba(11, 111, 79, 0.12);
+  color: var(--emerald);
+}
+
+.pill-danger {
+  background: rgba(224, 76, 76, 0.12);
+  color: var(--danger);
+}
+
+.admin-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(224, 76, 76, 0.4);
+  background: #fff1f1;
+  color: var(--danger);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #ffe6e6;
+}
+
 .whatsapp-fab {
   position: fixed;
   right: 18px;
@@ -1454,6 +1489,11 @@ body.dark .modal-card {
 
   .admin-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .commune-row {

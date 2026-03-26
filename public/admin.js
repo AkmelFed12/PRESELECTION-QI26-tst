@@ -108,6 +108,10 @@ const pollQuestionInput = document.getElementById('pollQuestionInput');
 const pollOptionsInput = document.getElementById('pollOptionsInput');
 const pollActive = document.getElementById('pollActive');
 
+const adminRegistrationStatus = document.getElementById('adminRegistrationStatus');
+const openRegistrationBtn = document.getElementById('openRegistrationBtn');
+const closeRegistrationBtn = document.getElementById('closeRegistrationBtn');
+
 const siteContentSection = document.getElementById('siteContentSection');
 const siteContentForm = document.getElementById('siteContentForm');
 const siteContentMsg = document.getElementById('siteContentMsg');
@@ -166,6 +170,7 @@ let scheduleCache = [];
 let membersCache = [];
 let candidatesCache = [];
 let scoresCache = [];
+let settingsCache = {};
 let newsCache = [];
 let sponsorsCache = [];
 let newsImages = [];
@@ -433,6 +438,7 @@ async function loadDashboard() {
 
   // settings
   const settings = data.settings || {};
+  settingsCache = settings;
   Array.from(settingsForm.elements).forEach((el) => {
     if (!el.name) return;
     el.value = settings[el.name] ?? '';
@@ -469,6 +475,7 @@ async function loadDashboard() {
   await loadFinances();
   await loadPollAdmin();
   await loadSiteContentAdmin();
+  updateAdminRegistrationStatus();
 }
 
 function renderFromCache(data) {
@@ -480,6 +487,7 @@ function renderFromCache(data) {
     ? data.ranking.reduce((sum, r) => sum + Number(r.passages || 0), 0)
     : 0;
   const settings = data.settings || {};
+  settingsCache = settings;
   Array.from(settingsForm.elements).forEach((el) => {
     if (!el.name) return;
     el.value = settings[el.name] ?? '';
@@ -496,6 +504,7 @@ function renderFromCache(data) {
   renderCommuneFilter(candidatesCache);
   renderRanking(data.ranking || []);
   renderGlobalSearch();
+  updateAdminRegistrationStatus();
 }
 
 function renderCandidates(list) {
@@ -875,6 +884,36 @@ function renderCommuneFilter(list) {
   candidateCommuneFilter.innerHTML = `<option value="">Toutes les communes</option>${communes
     .map((c) => `<option value="${c}">${c}</option>`)
     .join('')}`;
+}
+
+function updateAdminRegistrationStatus() {
+  if (!adminRegistrationStatus) return;
+  const closed = Number(settingsCache.registrationLocked || 0) === 1;
+  adminRegistrationStatus.textContent = closed ? 'Inscriptions: fermées' : 'Inscriptions: ouvertes';
+  adminRegistrationStatus.classList.toggle('pill-danger', closed);
+  adminRegistrationStatus.classList.toggle('pill-success', !closed);
+}
+
+async function setRegistrationLocked(value) {
+  const payload = {
+    votingEnabled: Number(settingsCache.votingEnabled || 0),
+    registrationLocked: value ? 1 : 0,
+    competitionClosed: Number(settingsCache.competitionClosed || 0),
+    certificatesEnabled: Number(settingsCache.certificatesEnabled ?? 1),
+    announcementText: settingsCache.announcementText || ''
+  };
+  const res = await authedFetch('/api/tournament-settings', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    setStatus(settingsMsg, data.message || 'Erreur.');
+    return;
+  }
+  settingsCache.registrationLocked = payload.registrationLocked;
+  updateAdminRegistrationStatus();
+  setStatus(settingsMsg, 'Paramètres mis à jour.');
 }
 
 function updateLiveScoreValidation() {
@@ -1359,6 +1398,10 @@ settingsForm?.addEventListener('submit', async (e) => {
   });
   const data = await res.json().catch(() => ({}));
   setStatus(settingsMsg, data.message || (res.ok ? 'Mis à jour.' : 'Erreur.'));
+  if (res.ok) {
+    settingsCache = { ...settingsCache, ...payload };
+    updateAdminRegistrationStatus();
+  }
 });
 
 siteContentForm?.addEventListener('submit', async (e) => {
@@ -1904,6 +1947,14 @@ scoresFilterClear?.addEventListener('click', () => {
   if (scoresDateFrom) scoresDateFrom.value = '';
   if (scoresDateTo) scoresDateTo.value = '';
   applyScoresFilters();
+});
+
+openRegistrationBtn?.addEventListener('click', async () => {
+  await setRegistrationLocked(false);
+});
+
+closeRegistrationBtn?.addEventListener('click', async () => {
+  await setRegistrationLocked(true);
 });
 
 showAllCandidates?.addEventListener('click', () => {
