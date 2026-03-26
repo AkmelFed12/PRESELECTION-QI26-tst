@@ -976,11 +976,13 @@ async function initDatabase() {
         judgeName TEXT NOT NULL,
         themeScore REAL DEFAULT 0,
         pontAsSiratScore REAL DEFAULT 0,
+        recognitionScore REAL DEFAULT 0,
         notes TEXT,
         createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       ALTER TABLE scores ADD COLUMN IF NOT EXISTS themeScore REAL DEFAULT 0;
       ALTER TABLE scores ADD COLUMN IF NOT EXISTS pontAsSiratScore REAL DEFAULT 0;
+      ALTER TABLE scores ADD COLUMN IF NOT EXISTS recognitionScore REAL DEFAULT 0;
 
       CREATE TABLE IF NOT EXISTS tournament_settings (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -1565,8 +1567,8 @@ app.get('/api/public-results', async (req, res) => {
       ) v ON c.id = v.candidateId
       LEFT JOIN (
         SELECT candidateId,
-               CAST(COALESCE(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
-               CAST(COALESCE(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as averageScore
+               CAST(COALESCE(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0) + COALESCE(recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+               CAST(COALESCE(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0) + COALESCE(recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore
         FROM scores GROUP BY candidateId
       ) s ON c.id = s.candidateId
       ORDER BY COALESCE(v.totalVotes, 0) DESC, c.fullname ASC
@@ -1809,8 +1811,8 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
       `),
       pool.query(`
         SELECT c.id, c.fullName,
-               CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
-               CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
+               CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+               CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
                COUNT(s.id) as passages
         FROM candidates c
         LEFT JOIN scores s ON c.id = s.candidateId
@@ -2846,6 +2848,31 @@ function toCsv(rows, headers) {
   return lines.join('\n');
 }
 
+function formatRank(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return n === 1 ? '1er' : `${n}e`;
+}
+
+function addRankLabels(rows, scoreKey) {
+  let prevScore = null;
+  let prevRank = 0;
+  return rows.map((row, idx) => {
+    row.fullName = row.fullName ?? row.fullname ?? '';
+    row.averageScore = row.averageScore ?? row.averagescore ?? row.totalScore ?? row.totalscore ?? 0;
+    row.totalScore = row.totalScore ?? row.totalscore ?? row.averageScore ?? row.averagescore ?? 0;
+    const score = Number(row[scoreKey] ?? row[scoreKey?.toLowerCase?.()] ?? 0);
+    let rank = 1;
+    if (idx > 0) {
+      rank = score === prevScore ? prevRank : idx + 1;
+    }
+    prevScore = score;
+    prevRank = rank;
+    row.rang = formatRank(rank);
+    return row;
+  });
+}
+
 async function verifyMember(req, res, next) {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) {
@@ -2919,15 +2946,16 @@ app.get('/api/admin/export/ranking', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.fullName,
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
+             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s ON c.id = s.candidateId
       GROUP BY c.id, c.fullName
       ORDER BY averageScore DESC NULLS LAST
     `);
-    const csv = toCsv(result.rows, ['fullName', 'averageScore', 'passages']);
+    const rows = addRankLabels(result.rows, 'averageScore');
+    const csv = toCsv(rows, ['rang', 'fullName', 'averageScore', 'passages']);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.send(csv);
   } catch (error) {
@@ -2960,21 +2988,21 @@ app.get('/api/admin/export/ranking-xls', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.fullName,
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
+             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s ON c.id = s.candidateId
       GROUP BY c.id, c.fullName
       ORDER BY averageScore DESC NULLS LAST
     `);
-    const rows = result.rows
+    const rows = addRankLabels(result.rows, 'averageScore')
       .map(
         (r) =>
-          `<tr><td>${r.fullname || ''}</td><td>${r.averagescore || ''}</td><td>${r.passages || ''}</td></tr>`,
+          `<tr><td>${r.rang || ''}</td><td>${r.fullName || r.fullname || ''}</td><td>${r.averageScore ?? r.averagescore ?? ''}</td><td>${r.passages || ''}</td></tr>`,
       )
       .join('');
-    const html = `<table><tr><th>Nom</th><th>Total</th><th>Passages</th></tr>${rows}</table>`;
+    const html = `<table><tr><th>Rang</th><th>Nom</th><th>Total</th><th>Passages</th></tr>${rows}</table>`;
     res.setHeader('Content-Type', 'application/vnd.ms-excel');
     res.send(html);
   } catch (error) {
@@ -2987,7 +3015,7 @@ app.get('/api/admin/export/ranking-official-pdf', verifyAdmin, async (req, res) 
   try {
     const result = await pool.query(`
       SELECT c.fullName as "fullName",
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s ON c.id = s.candidateId
@@ -3008,20 +3036,23 @@ app.get('/api/admin/export/ranking-official-pdf', verifyAdmin, async (req, res) 
     doc.fontSize(11).text(`Date : ${formatDateFr(new Date())}`, 120, 65);
 
     let y = 110;
-    doc.fontSize(11).text('Candidat', 40, y);
-    doc.text('Total', 330, y);
-    doc.text('Passages', 420, y);
+    doc.fontSize(11).text('Rang', 40, y);
+    doc.text('Candidat', 80, y);
+    doc.text('Total', 350, y);
+    doc.text('Passages', 450, y);
     y += 10;
     doc.moveTo(40, y).lineTo(555, y).stroke();
     y += 10;
 
-    result.rows.forEach((row) => {
+    const rows = addRankLabels(result.rows, 'totalScore');
+    rows.forEach((row) => {
       const name = row.fullName || '';
       const total = row.totalScore || 0;
       const passages = row.passages || 0;
-      doc.fontSize(10).text(name, 40, y, { width: 260 });
-      doc.text(String(total), 330, y);
-      doc.text(String(passages), 420, y);
+      doc.fontSize(10).text(row.rang || '', 40, y);
+      doc.text(name, 80, y, { width: 260 });
+      doc.text(String(total), 350, y);
+      doc.text(String(passages), 450, y);
       y += 16;
       if (y > 760) {
         doc.addPage();
@@ -3055,7 +3086,7 @@ app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
 // Admin scores (notation)
 app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
   try {
-    const { candidateId, judgeName, themeScore, pontAsSiratScore, notes } = req.body || {};
+    const { candidateId, judgeName, themeScore, pontAsSiratScore, recognitionScore, notes } = req.body || {};
     if (!candidateId || !judgeName) {
       return res.status(400).json({ message: 'ID candidat et nom du juge requis.' });
     }
@@ -3066,13 +3097,14 @@ app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO scores (candidateId, judgeName, themeScore, pontAsSiratScore, notes)
-       VALUES ($1, $2, $3, $4, $5)`,
+      `INSERT INTO scores (candidateId, judgeName, themeScore, pontAsSiratScore, recognitionScore, notes)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
       [
         candidateId,
         sanitizeString(judgeName, 100),
         Number(themeScore || 0),
         Number(pontAsSiratScore || 0),
+        Number(recognitionScore || 0),
         sanitizeString(notes, 500),
       ]
     );
@@ -3096,6 +3128,7 @@ app.get('/api/admin/scores', verifyAdmin, async (req, res) => {
               s.judgeName as "judgeName",
               s.themeScore as "themeScore",
               s.pontAsSiratScore as "pontAsSiratScore",
+              s.recognitionScore as "recognitionScore",
               s.notes,
               s.createdAt as "createdAt"
        FROM scores s
@@ -3142,7 +3175,7 @@ app.get('/api/admin/candidates/:id/pdf', verifyAdmin, async (req, res) => {
     }
     const candidate = candidateRes.rows[0];
     const scoresRes = await pool.query(
-      `SELECT judgeName, themeScore, pontAsSiratScore, notes, createdAt
+      `SELECT judgeName, themeScore, pontAsSiratScore, recognitionScore, notes, createdAt
        FROM scores WHERE candidateId = $1 ORDER BY createdAt DESC`,
       [candidateId]
     );
@@ -3171,7 +3204,10 @@ app.get('/api/admin/candidates/:id/pdf', verifyAdmin, async (req, res) => {
     doc.moveDown(0.5);
 
     scoresRes.rows.forEach((s) => {
-      const total = Number(s.themescore || s.themeScore || 0) + Number(s.pontassiratscore || s.pontAsSiratScore || 0);
+      const total =
+        Number(s.themescore || s.themeScore || 0) +
+        Number(s.pontassiratscore || s.pontAsSiratScore || 0) +
+        Number(s.recognitionscore || s.recognitionScore || 0);
       const date = s.createdat || s.createdAt ? new Date(s.createdat || s.createdAt).toLocaleString('fr-FR') : '';
       doc.fontSize(10).text(`${date} — Juge: ${s.judgename || s.judgeName || ''} — Total: ${total}`);
       if (s.notes) doc.text(`Notes: ${s.notes}`);
@@ -3213,6 +3249,7 @@ app.get('/api/admin/candidates/:id/scores', verifyAdmin, async (req, res) => {
               judgeName as "judgeName",
               themeScore as "themeScore",
               pontAsSiratScore as "pontAsSiratScore",
+              recognitionScore as "recognitionScore",
               notes,
               createdAt as "createdAt"
        FROM scores

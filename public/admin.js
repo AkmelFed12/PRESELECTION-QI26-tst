@@ -578,6 +578,7 @@ async function loadCandidateScores(candidateId) {
           <th>Juge</th>
           <th>Thèmes /30</th>
           <th>Pont As Sirat /25</th>
+          <th>Reconnaissance de Verset /5</th>
           <th>Total</th>
           <th>Notes</th>
         </tr>
@@ -587,7 +588,8 @@ async function loadCandidateScores(candidateId) {
           .map((s) => {
             const theme = Number(s.themeScore || 0);
             const pont = Number(s.pontAsSiratScore || 0);
-            const total = theme + pont;
+            const recognition = Number(s.recognitionScore || s.recognitionscore || 0);
+            const total = theme + pont + recognition;
             const date = s.createdAt ? new Date(s.createdAt).toLocaleString('fr-FR') : '';
             return `
               <tr>
@@ -595,6 +597,7 @@ async function loadCandidateScores(candidateId) {
                 <td>${s.judgeName || ''}</td>
                 <td>${theme}</td>
                 <td>${pont}</td>
+                <td>${recognition}</td>
                 <td>${total}</td>
                 <td>${s.notes || ''}</td>
               </tr>
@@ -755,13 +758,36 @@ function filterCandidates() {
   renderCandidates(filtered);
 }
 
+function formatRank(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return n === 1 ? '1er' : `${n}e`;
+}
+
+function computeRanks(list, getScore) {
+  let prevScore = null;
+  let prevRank = 0;
+  return list.map((item, idx) => {
+    const score = Number(getScore(item));
+    let rank = 1;
+    if (idx > 0) {
+      rank = score === prevScore ? prevRank : idx + 1;
+    }
+    prevScore = score;
+    prevRank = rank;
+    return rank;
+  });
+}
+
 function renderRanking(list) {
   if (!rankingTable) return;
+  const ranks = computeRanks(list, (r) => r.totalScore ?? r.totalscore ?? r.averageScore ?? 0);
   rankingTable.innerHTML = list
-    .map((r) => {
+    .map((r, idx) => {
       const name = resolveName({ fullName: r.fullName || r.fullname, whatsapp: r.whatsapp });
       const total = r.totalScore ?? r.totalscore ?? r.averageScore ?? 0;
-      return `<tr><td>${name || 'Inconnu'}</td><td>${Number(total).toFixed(2)}</td><td>${r.passages}</td></tr>`;
+      const rank = formatRank(ranks[idx]);
+      return `<tr><td>${rank}</td><td>${name || 'Inconnu'}</td><td>${Number(total).toFixed(2)}</td><td>${r.passages}</td></tr>`;
     })
     .join('');
 }
@@ -780,7 +806,8 @@ async function renderScoresTable() {
     .map((s) => {
       const themeScore = s.themeScore ?? s.themescore ?? 0;
       const pontScore = s.pontAsSiratScore ?? s.pontassiratscore ?? 0;
-      const total = Number(themeScore || 0) + Number(pontScore || 0);
+      const recognitionScore = s.recognitionScore ?? s.recognitionscore ?? 0;
+      const total = Number(themeScore || 0) + Number(pontScore || 0) + Number(recognitionScore || 0);
       const created = s.createdAt || s.createdat;
       const date = created ? new Date(created).toLocaleString('fr-FR') : '';
       return `
@@ -790,6 +817,7 @@ async function renderScoresTable() {
           <td>${s.judgeName || s.judgename || ''}</td>
           <td>${themeScore ?? 0}</td>
           <td>${pontScore ?? 0}</td>
+          <td>${recognitionScore ?? 0}</td>
           <td>${total}</td>
           <td>${date}</td>
           <td><button data-delete-score="${s.id}">Supprimer</button></td>
@@ -1737,7 +1765,11 @@ scoreForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(scoreMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(scoreForm).entries());
-  if (Number(payload.themeScore || 0) > 30 || Number(payload.pontAsSiratScore || 0) > 25) {
+  if (
+    Number(payload.themeScore || 0) > 30 ||
+    Number(payload.pontAsSiratScore || 0) > 25 ||
+    Number(payload.recognitionScore || 0) > 5
+  ) {
     const ok = confirm('Attention: une note dépasse le maximum autorisé. Continuer ?');
     if (!ok) {
       setStatus(scoreMsg, 'Annulé.');
@@ -1762,7 +1794,11 @@ scoreQuickForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(scoreMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(scoreQuickForm).entries());
-  if (Number(payload.themeScore || 0) > 30 || Number(payload.pontAsSiratScore || 0) > 25) {
+  if (
+    Number(payload.themeScore || 0) > 30 ||
+    Number(payload.pontAsSiratScore || 0) > 25 ||
+    Number(payload.recognitionScore || 0) > 5
+  ) {
     const ok = confirm('Attention: une note dépasse le maximum autorisé. Continuer ?');
     if (!ok) {
       setStatus(scoreMsg, 'Annulé.');

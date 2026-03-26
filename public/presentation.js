@@ -6,6 +6,27 @@ const fullscreenBtn = document.getElementById('presentationFullscreen');
 let refreshMs = 10000;
 let refreshTimer = null;
 
+function formatRank(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return n === 1 ? '1er' : `${n}e`;
+}
+
+function computeRanks(list, getScore) {
+  let prevScore = null;
+  let prevRank = 0;
+  return list.map((item, idx) => {
+    const score = Number(getScore(item));
+    let rank = 1;
+    if (idx > 0) {
+      rank = score === prevScore ? prevRank : idx + 1;
+    }
+    prevScore = score;
+    prevRank = rank;
+    return rank;
+  });
+}
+
 async function loadRanking() {
   if (!rankingWrap) return;
   rankingWrap.textContent = 'Chargement...';
@@ -17,6 +38,7 @@ async function loadRanking() {
       rankingWrap.textContent = 'Aucun résultat publié pour le moment.';
       return;
     }
+    const ranks = computeRanks(list, (c) => c.totalScore ?? c.totalscore ?? c.averageScore ?? 0);
     rankingWrap.innerHTML = `
       <table>
         <thead>
@@ -27,7 +49,7 @@ async function loadRanking() {
             .map(
               (c, idx) => `
               <tr>
-                <td>${idx + 1}</td>
+                <td>${formatRank(ranks[idx])}</td>
                 <td>${c.fullName || c.fullname || 'Inconnu'}</td>
                 <td>${c.city || ''}</td>
                 <td>${c.totalVotes || 0}</td>
