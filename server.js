@@ -498,6 +498,16 @@ const DEFAULT_DAILY_QUIZ = {
   ]
 };
 
+const DEFAULT_PROGRAM_SCHEDULE = [
+  { date: '2026-03-16', time: '', title: 'Phase 1 en ligne (16–31 mars)' },
+  { date: '2026-04-06', time: '', title: 'Phase 1 en présentiel (06–26 avril, dimanches)' },
+  { date: '2026-05-04', time: '', title: 'Phase 2 en ligne (04–29 mai)' },
+  { date: '2026-06-07', time: '', title: 'Face à face (présentiel) Treichville + Adjamé' },
+  { date: '2026-06-22', time: '', title: 'Dernière phase en ligne (22–28 juin)' },
+  { date: '2026-07-05', time: '', title: 'Dernière phase en présentiel — Treichville' },
+  { date: '', time: '', title: 'Grande finale (août — date à préciser)' }
+];
+
 const DEFAULT_SITE_CONTENT = {
   about: {
     title: "Association des Serviteurs d'Allah Azawajal",
@@ -1310,10 +1320,10 @@ async function initDatabase() {
     // Defaults for 2026 format (modifiable in admin)
     await pool.query(
       `UPDATE tournament_settings
-       SET maxCandidates = COALESCE(NULLIF(maxCandidates, 0), 64),
-           directQualified = COALESCE(NULLIF(directQualified, 0), 16),
-           playoffParticipants = COALESCE(NULLIF(playoffParticipants, 0), 32),
-           playoffWinners = COALESCE(NULLIF(playoffWinners, 0), 16),
+       SET maxCandidates = COALESCE(NULLIF(maxCandidates, 0), 59),
+           directQualified = COALESCE(NULLIF(directQualified, 0), 24),
+           playoffParticipants = COALESCE(NULLIF(playoffParticipants, 0), 16),
+           playoffWinners = COALESCE(NULLIF(playoffWinners, 0), 8),
            groupsCount = COALESCE(NULLIF(groupsCount, 0), 8),
            candidatesPerGroup = COALESCE(NULLIF(candidatesPerGroup, 0), 4),
            finalistsFromWinners = COALESCE(NULLIF(finalistsFromWinners, 0), 8),
@@ -1321,6 +1331,14 @@ async function initDatabase() {
            totalFinalists = COALESCE(NULLIF(totalFinalists, 0), 10),
            certificatesEnabled = COALESCE(certificatesEnabled, 1)
        WHERE id = 1`
+    );
+
+    await pool.query(
+      `UPDATE tournament_settings
+       SET scheduleJson = $1
+       WHERE id = 1
+         AND (scheduleJson IS NULL OR TRIM(scheduleJson) = '' OR scheduleJson = '[]')`,
+      [JSON.stringify(DEFAULT_PROGRAM_SCHEDULE)]
     );
 
     await pool.query(
