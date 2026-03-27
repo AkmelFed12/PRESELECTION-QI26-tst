@@ -374,6 +374,34 @@ function getFrontendUrl(req) {
   return `${proto}://${host}`;
 }
 
+async function getAdminConfigValue(key) {
+  try {
+    const res = await pool.query('SELECT value FROM admin_config WHERE key = $1 LIMIT 1', [key]);
+    return res.rows[0]?.value || '';
+  } catch {
+    return '';
+  }
+}
+
+async function setAdminConfigValue(key, value) {
+  await pool.query(
+    'INSERT INTO admin_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updatedAt = NOW()',
+    [key, value]
+  );
+}
+
+async function isSeasonArchived() {
+  const val = await getAdminConfigValue('season_archived');
+  return String(val || '') === '1';
+}
+
+async function ensureNotArchived(res) {
+  const archived = await isSeasonArchived();
+  if (!archived) return true;
+  res.status(403).json({ message: 'Saison archivée. Modifications bloquées.' });
+  return false;
+}
+
 function normalizeSettingsRow(row) {
   if (!row) return {
     votingEnabled: 0,
@@ -1872,6 +1900,47 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/archive-status', verifyAdmin, async (req, res) => {
+  try {
+    const archived = await isSeasonArchived();
+    const label = await getAdminConfigValue('season_label');
+    const archivedAt = await getAdminConfigValue('season_archived_at');
+    res.json({ archived, label, archivedAt });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/admin/archive', verifyAdmin, async (req, res) => {
+  try {
+    const label = sanitizeString(req.body?.label, 20) || '2026';
+    await setAdminConfigValue('season_archived', '1');
+    await setAdminConfigValue('season_label', label);
+    await setAdminConfigValue('season_archived_at', new Date().toISOString());
+    await pool.query(
+      `UPDATE tournament_settings
+       SET registrationLocked = 1,
+           competitionClosed = 1
+       WHERE id = 1`
+    );
+    res.json({ message: 'Saison archivée.', label });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.post('/api/admin/unarchive', verifyAdmin, async (req, res) => {
+  try {
+    await setAdminConfigValue('season_archived', '0');
+    res.json({ message: 'Saison déverrouillée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Waitlist when registrations are closed
 app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
   try {
@@ -2206,9 +2275,41 @@ app.post('/api/admin/change-password', verifyAdmin, async (req, res) => {
   }
 });
 
+// Admin candidates bulk status update
+app.post('/api/admin/candidates/bulk-status', verifyAdmin, async (req, res) => {
+  try {
+    if (!(await ensureNotArchived(res))) return;
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((id) => Number(id)).filter(Boolean) : [];
+    const status = req.body?.status;
+    const safeStatus = ['approved', 'pending', 'eliminated'].includes(status) ? status : 'approved';
+    if (!ids.length) return res.status(400).json({ message: 'Aucun candidat sélectionné.' });
+    await pool.query('UPDATE candidates SET status = $1 WHERE id = ANY($2::bigint[])', [safeStatus, ids]);
+    if (safeStatus === 'eliminated') {
+      await pool.query(
+        `INSERT INTO eliminated_candidates (candidateId, fullName, whatsapp, city, status)
+         SELECT id, fullName, whatsapp, city, $1
+         FROM candidates
+         WHERE id = ANY($2::bigint[])
+         ON CONFLICT (candidateId)
+         DO UPDATE SET fullName = EXCLUDED.fullName,
+                       whatsapp = EXCLUDED.whatsapp,
+                       city = EXCLUDED.city,
+                       status = EXCLUDED.status,
+                       archivedAt = NOW()`,
+        [safeStatus, ids]
+      );
+    }
+    res.json({ message: 'Statuts mis à jour.', count: ids.length });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Admin candidates management
 app.post('/api/admin/candidates', verifyAdmin, async (req, res) => {
   try {
+    if (!(await ensureNotArchived(res))) return;
     const { fullName, whatsapp, email, phone, city, country, age, quranLevel, motivation, status, candidateId: candidateIdRaw } = req.body;
     const sanitizedName = sanitizeString(fullName, 255);
     const sanitizedCity = normalizeCommune(city);
@@ -2577,6 +2678,7 @@ app.post('/api/donations', async (req, res) => {
 
 app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
   try {
+    if (!(await ensureNotArchived(res))) return;
     const candidateId = Number(req.params.id);
     if (!candidateId) return res.status(400).json({ message: 'ID candidat invalide.' });
     const { fullName, whatsapp, email, phone, city, country, age, quranLevel, motivation, status } = req.body;
@@ -2859,6 +2961,7 @@ app.get('/api/admin/certificates/:id', verifyAdmin, async (req, res) => {
 
 app.delete('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
   try {
+    if (!(await ensureNotArchived(res))) return;
     const candidateId = Number(req.params.id);
     if (!candidateId) return res.status(400).json({ message: 'ID candidat invalide.' });
     await pool.query('DELETE FROM candidates WHERE id = $1', [candidateId]);
@@ -3116,6 +3219,7 @@ app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
 // Admin scores (notation)
 app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
   try {
+    if (!(await ensureNotArchived(res))) return;
     const { candidateId, judgeName, themeScore, pontAsSiratScore, recognitionScore, notes } = req.body || {};
     if (!candidateId || !judgeName) {
       return res.status(400).json({ message: 'ID candidat et nom du juge requis.' });
@@ -3253,6 +3357,7 @@ app.get('/api/admin/candidates/:id/pdf', verifyAdmin, async (req, res) => {
 
 app.delete('/api/admin/scores/:id', verifyAdmin, async (req, res) => {
   try {
+    if (!(await ensureNotArchived(res))) return;
     const scoreId = Number(req.params.id);
     if (!Number.isFinite(scoreId)) {
       return res.status(400).json({ error: 'Invalid score id' });

@@ -129,6 +129,19 @@
         <div class="muted" style="margin-top:8px;">
           Pré‑requis secrets: DATABASE_URL, RCLONE_CONFIG, GDRIVE_FOLDER.
         </div>
+        <div class="form-grid" style="margin-top:16px;">
+          <div class="full">
+            <label>Saison active</label>
+            <input id="seasonLabelInput" placeholder="2026" />
+          </div>
+          <div class="full" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-danger" type="button" id="archiveSeasonBtn">Archiver la saison</button>
+            <button class="btn outline" type="button" id="unarchiveSeasonBtn">Déverrouiller la saison</button>
+          </div>
+          <div class="full">
+            <p id="archiveStatusMsg" class="status"></p>
+          </div>
+        </div>
       </section>
 
       <section class="card admin-hidden" id="siteContentSection">
@@ -329,6 +342,13 @@
           <button class="btn outline" type="button" id="showAllCandidates">Tous les candidats</button>
           <button class="btn outline" type="button" id="showEliminatedCandidates">Candidats éliminés</button>
         </div>
+        <div class="status" id="bulkSelectionInfo" style="margin-bottom:8px;">0 sélectionné</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+          <button class="btn-primary" type="button" id="bulkApproveBtn">Valider sélection</button>
+          <button class="btn-danger" type="button" id="bulkEliminateBtn">Éliminer sélection</button>
+          <button class="btn outline" type="button" id="bulkCompareBtn">Comparer (2)</button>
+          <button class="btn outline" type="button" id="bulkClearSelection">Vider sélection</button>
+        </div>
         <div class="form-grid" style="margin-bottom:12px;">
           <div class="full">
             <label>Recherche rapide (nom / commune / WhatsApp)</label>
@@ -375,6 +395,7 @@
         <table class="table" id="candidatesTable">
           <thead>
             <tr>
+              <th style="width:42px;"><input type="checkbox" id="selectAllCandidates" /></th>
               <th>ID</th>
               <th>Nom</th>
               <th>WhatsApp</th>
@@ -436,6 +457,16 @@
             <h4>Historique des notes</h4>
             <div id="candidateModalScores" class="status">Aucune note.</div>
           </div>
+        </div>
+      </div>
+
+      <div class="modal-backdrop" id="compareModal" style="display:none;">
+        <div class="modal-card" style="max-width:980px;">
+          <div class="modal-header">
+            <h3>Comparer deux candidats</h3>
+            <button class="btn outline" type="button" id="compareModalClose">Fermer</button>
+          </div>
+          <div id="compareBody" class="status">Aucune comparaison.</div>
         </div>
       </div>
 
@@ -511,6 +542,11 @@
           <button class="btn-primary" id="exportCandidatesPdf" type="button">Exporter candidats (PDF)</button>
           <button class="btn-primary" id="exportFullPdf" type="button">Exporter rapport complet (PDF)</button>
         </div>
+        <div class="nav-links" style="margin-bottom: 12px;">
+          <button class="btn outline" id="generateGroupsBtn" type="button">Générer groupes (8×4)</button>
+          <button class="btn outline" id="exportGroupsPdfBtn" type="button">Exporter groupes (PDF)</button>
+        </div>
+        <div id="groupsPreview" class="status" style="margin-bottom:12px;">Aucun groupe généré.</div>
         <table class="table" id="rankingTable">
           <thead>
             <tr><th>Rang</th><th>Candidat</th><th>Total</th><th>Passages</th></tr>

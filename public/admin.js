@@ -7,6 +7,7 @@ const loginMsg = document.getElementById('loginMsg');
 const loginCard = document.getElementById('loginCard');
 const dashboard = document.getElementById('dashboard');
 const settingsSection = document.getElementById('settingsSection');
+const maintenanceSection = document.getElementById('maintenanceSection');
 const candidatesSection = document.getElementById('candidatesSection');
 const scoresSection = document.getElementById('scoresSection');
 const communeStats = document.getElementById('communeStats');
@@ -35,6 +36,12 @@ const printAbidjanNord = document.getElementById('printAbidjanNord');
 const printAbidjanSud = document.getElementById('printAbidjanSud');
 const showAllCandidates = document.getElementById('showAllCandidates');
 const showEliminatedCandidates = document.getElementById('showEliminatedCandidates');
+const bulkSelectionInfo = document.getElementById('bulkSelectionInfo');
+const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+const bulkEliminateBtn = document.getElementById('bulkEliminateBtn');
+const bulkCompareBtn = document.getElementById('bulkCompareBtn');
+const bulkClearSelection = document.getElementById('bulkClearSelection');
+const selectAllCandidates = document.getElementById('selectAllCandidates');
 const eliminatedTable = document.querySelector('#eliminatedTable tbody');
 const eliminatedTableWrap = document.getElementById('eliminatedTable');
 const eliminatedTitle = document.getElementById('eliminatedTitle');
@@ -53,6 +60,9 @@ const modalCandidateWhatsapp = document.getElementById('modalCandidateWhatsapp')
 const modalCandidatePhone = document.getElementById('modalCandidatePhone');
 const modalCandidateEmail = document.getElementById('modalCandidateEmail');
 const modalCandidateStatus = document.getElementById('modalCandidateStatus');
+const compareModal = document.getElementById('compareModal');
+const compareModalClose = document.getElementById('compareModalClose');
+const compareBody = document.getElementById('compareBody');
 
 const scoreForm = document.getElementById('scoreForm');
 const scoreQuickForm = document.getElementById('scoreQuickForm');
@@ -72,6 +82,13 @@ const exportRankingPdf = document.getElementById('exportRankingPdf');
 const exportRankingOfficialPdf = document.getElementById('exportRankingOfficialPdf');
 const exportCandidatesPdf = document.getElementById('exportCandidatesPdf');
 const exportFullPdf = document.getElementById('exportFullPdf');
+const generateGroupsBtn = document.getElementById('generateGroupsBtn');
+const exportGroupsPdfBtn = document.getElementById('exportGroupsPdfBtn');
+const groupsPreview = document.getElementById('groupsPreview');
+const seasonLabelInput = document.getElementById('seasonLabelInput');
+const archiveSeasonBtn = document.getElementById('archiveSeasonBtn');
+const unarchiveSeasonBtn = document.getElementById('unarchiveSeasonBtn');
+const archiveStatusMsg = document.getElementById('archiveStatusMsg');
 const newsSection = document.getElementById('newsSection');
 const newsForm = document.getElementById('newsForm');
 const newsMsg = document.getElementById('newsMsg');
@@ -173,6 +190,10 @@ let authHeader = '';
 let scheduleCache = [];
 let membersCache = [];
 let candidatesCache = [];
+let rankingCache = [];
+let groupsCache = [];
+let archiveLocked = false;
+const selectedCandidateIds = new Set();
 let scoresCache = [];
 let settingsCache = {};
 let newsCache = [];
@@ -273,6 +294,7 @@ function showAdmin() {
   loginCard.classList.add('admin-hidden');
   dashboard.classList.remove('admin-hidden');
   settingsSection.classList.remove('admin-hidden');
+  maintenanceSection?.classList.remove('admin-hidden');
   siteContentSection?.classList.remove('admin-hidden');
   candidatesSection.classList.remove('admin-hidden');
   scoresSection.classList.remove('admin-hidden');
@@ -286,6 +308,7 @@ function showAdmin() {
 function hideAdmin() {
   dashboard.classList.add('admin-hidden');
   settingsSection.classList.add('admin-hidden');
+  maintenanceSection?.classList.add('admin-hidden');
   siteContentSection?.classList.add('admin-hidden');
   candidatesSection.classList.add('admin-hidden');
   scoresSection.classList.add('admin-hidden');
@@ -352,6 +375,71 @@ function toggleEliminated(showEliminated) {
     const wrap = candidatesTable.closest('table');
     if (wrap) wrap.style.display = showEliminated ? 'none' : 'table';
   }
+}
+
+function updateSelectionInfo() {
+  if (bulkSelectionInfo) {
+    bulkSelectionInfo.textContent = `${selectedCandidateIds.size} sélectionné${selectedCandidateIds.size > 1 ? 's' : ''}`;
+  }
+  const canBulk = selectedCandidateIds.size > 0 && !archiveLocked;
+  if (bulkApproveBtn) bulkApproveBtn.disabled = !canBulk;
+  if (bulkEliminateBtn) bulkEliminateBtn.disabled = !canBulk;
+  if (bulkCompareBtn) bulkCompareBtn.disabled = selectedCandidateIds.size !== 2;
+  if (bulkClearSelection) bulkClearSelection.disabled = selectedCandidateIds.size === 0;
+  if (selectAllCandidates) {
+    const boxes = Array.from(document.querySelectorAll('input.candidate-select'));
+    selectAllCandidates.checked = boxes.length > 0 && boxes.every((b) => b.checked);
+  }
+}
+
+function getSelectedCandidateIds() {
+  return Array.from(selectedCandidateIds).map((id) => Number(id)).filter(Boolean);
+}
+
+function applyArchiveUI() {
+  const disabled = archiveLocked;
+  if (candidateForm) {
+    Array.from(candidateForm.elements).forEach((el) => {
+      el.disabled = disabled;
+    });
+  }
+  if (candidateModalForm) {
+    Array.from(candidateModalForm.elements).forEach((el) => {
+      if (el.id === 'modalCandidateId') return;
+      el.disabled = disabled;
+    });
+  }
+  if (candidateModalDelete) candidateModalDelete.disabled = disabled;
+  if (scoreForm) {
+    Array.from(scoreForm.elements).forEach((el) => {
+      el.disabled = disabled;
+    });
+  }
+  if (scoreQuickForm) {
+    Array.from(scoreQuickForm.elements).forEach((el) => {
+      el.disabled = disabled;
+    });
+  }
+}
+
+async function loadArchiveStatus() {
+  if (!archiveStatusMsg) return;
+  const res = await authedFetch('/api/admin/archive-status');
+  if (!res.ok) {
+    archiveStatusMsg.textContent = 'Statut saison indisponible.';
+    archiveLocked = false;
+    return;
+  }
+  const data = await res.json();
+  archiveLocked = !!data.archived;
+  if (seasonLabelInput) seasonLabelInput.value = data.label || '';
+  if (archiveLocked) {
+    archiveStatusMsg.textContent = `Saison archivée${data.label ? ` (${data.label})` : ''}. Modifications bloquées.`;
+  } else {
+    archiveStatusMsg.textContent = `Saison active${data.label ? ` (${data.label})` : ''}.`;
+  }
+  applyArchiveUI();
+  updateSelectionInfo();
 }
 
 function parsePipeLines(text, expectedParts) {
@@ -461,7 +549,8 @@ async function loadDashboard() {
   renderCommuneFilter(candidatesCache);
 
   // ranking
-  renderRanking(data.ranking || []);
+  rankingCache = data.ranking || [];
+  renderRanking(rankingCache);
   await loadScoresTable();
   updateLiveScoreValidation();
 
@@ -480,6 +569,7 @@ async function loadDashboard() {
   await loadPollAdmin();
   await loadSiteContentAdmin();
   updateAdminRegistrationStatus();
+  await loadArchiveStatus();
 }
 
 function renderFromCache(data) {
@@ -506,7 +596,8 @@ function renderFromCache(data) {
   renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
   renderCommuneStats(candidatesCache);
   renderCommuneFilter(candidatesCache);
-  renderRanking(data.ranking || []);
+  rankingCache = data.ranking || [];
+  renderRanking(rankingCache);
   renderGlobalSearch();
   updateAdminRegistrationStatus();
 }
@@ -517,6 +608,11 @@ function renderCandidates(list) {
     .map(
       (c) => `
       <tr>
+        <td>
+          <input type="checkbox" class="candidate-select" data-id="${c.id}" ${
+            selectedCandidateIds.has(String(c.id)) ? 'checked' : ''
+          } />
+        </td>
         <td>${c.id}</td>
         <td>${resolveName(c)}</td>
         <td>${c.whatsapp || ''}</td>
@@ -533,6 +629,7 @@ function renderCandidates(list) {
     `,
     )
     .join('');
+  updateSelectionInfo();
 }
 
 function renderEliminated(list) {
@@ -551,6 +648,63 @@ function renderEliminated(list) {
     `,
     )
     .join('');
+}
+
+async function loadScoreSummary(candidateId) {
+  const res = await authedFetch(`/api/admin/candidates/${candidateId}/scores`);
+  if (!res.ok) return { passages: 0, average: 0, total: 0 };
+  const data = await res.json().catch(() => ({}));
+  const rows = Array.isArray(data.items) ? data.items : [];
+  if (!rows.length) return { passages: 0, average: 0, total: 0 };
+  const totals = rows.map((s) => {
+    const theme = Number(s.themeScore || s.themescore || 0);
+    const pont = Number(s.pontAsSiratScore || s.pontassiratscore || 0);
+    const recognition = Number(s.recognitionScore || s.recognitionscore || 0);
+    return theme + pont + recognition;
+  });
+  const sum = totals.reduce((acc, v) => acc + v, 0);
+  return { passages: rows.length, average: sum / totals.length, total: sum };
+}
+
+async function openCompareModal(ids) {
+  if (!compareModal || !compareBody) return;
+  if (!Array.isArray(ids) || ids.length !== 2) return;
+  const [idA, idB] = ids;
+  const candA = candidatesCache.find((c) => String(c.id) === String(idA));
+  const candB = candidatesCache.find((c) => String(c.id) === String(idB));
+  if (!candA || !candB) return;
+  compareBody.textContent = 'Chargement...';
+  const [sumA, sumB] = await Promise.all([loadScoreSummary(idA), loadScoreSummary(idB)]);
+  const nameA = resolveName(candA);
+  const nameB = resolveName(candB);
+  compareBody.innerHTML = `
+    <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0,1fr)); gap:16px;">
+      <div class="card" style="padding:12px;">
+        <h4>${nameA}</h4>
+        <p>ID: <strong>${candA.id}</strong></p>
+        <p>Commune: <strong>${candA.city || '-'}</strong></p>
+        <p>WhatsApp: <strong>${candA.whatsapp || '-'}</strong></p>
+        <p>Statut: <strong>${candA.status || 'pending'}</strong></p>
+        <p>Passages: <strong>${sumA.passages}</strong></p>
+        <p>Moyenne: <strong>${sumA.average.toFixed(2)}</strong></p>
+      </div>
+      <div class="card" style="padding:12px;">
+        <h4>${nameB}</h4>
+        <p>ID: <strong>${candB.id}</strong></p>
+        <p>Commune: <strong>${candB.city || '-'}</strong></p>
+        <p>WhatsApp: <strong>${candB.whatsapp || '-'}</strong></p>
+        <p>Statut: <strong>${candB.status || 'pending'}</strong></p>
+        <p>Passages: <strong>${sumB.passages}</strong></p>
+        <p>Moyenne: <strong>${sumB.average.toFixed(2)}</strong></p>
+      </div>
+    </div>
+  `;
+  compareModal.style.display = 'flex';
+}
+
+function closeCompareModal() {
+  if (!compareModal) return;
+  compareModal.style.display = 'none';
 }
 
 function openCandidateModal(candidate) {
@@ -818,6 +972,75 @@ function renderRanking(list) {
       return `<tr><td>${rank}</td><td>${name || 'Inconnu'}</td><td>${Number(total).toFixed(2)}</td><td>${r.passages}</td></tr>`;
     })
     .join('');
+}
+
+function generateGroupsFromRanking() {
+  const groupCount = Number(settingsCache?.groupsCount || 8);
+  const groupSize = Number(settingsCache?.candidatesPerGroup || 4);
+  const totalNeeded = groupCount * groupSize;
+  const sorted = Array.isArray(rankingCache)
+    ? rankingCache
+        .slice()
+        .sort(
+          (a, b) =>
+            Number(b.totalScore ?? b.totalscore ?? b.averageScore ?? 0) -
+            Number(a.totalScore ?? a.totalscore ?? a.averageScore ?? 0)
+        )
+    : [];
+  if (!sorted.length) return [];
+  const trimmed = sorted.slice(0, totalNeeded);
+  const groups = Array.from({ length: groupCount }, () => []);
+  const heads = trimmed.slice(0, groupCount);
+  heads.forEach((c, idx) => groups[idx].push(c));
+  const remaining = trimmed.slice(groupCount);
+  let forward = true;
+  let gi = 0;
+  remaining.forEach((c) => {
+    groups[gi].push(c);
+    if (forward) {
+      gi += 1;
+      if (gi >= groupCount) {
+        forward = false;
+        gi = groupCount - 1;
+      }
+    } else {
+      gi -= 1;
+      if (gi < 0) {
+        forward = true;
+        gi = 0;
+      }
+    }
+  });
+  return groups;
+}
+
+function renderGroupsPreview() {
+  if (!groupsPreview) return;
+  if (!groupsCache.length) {
+    groupsPreview.textContent = 'Aucun groupe généré.';
+    return;
+  }
+  const html = groupsCache
+    .map((group, idx) => {
+      const rows = group
+        .map((c, i) => {
+          const name = resolveName({ fullName: c.fullName || c.fullname, whatsapp: c.whatsapp });
+          const score = Number(c.totalScore ?? c.totalscore ?? c.averageScore ?? 0).toFixed(2);
+          return `<tr><td>${i + 1}</td><td>${name || 'Inconnu'}</td><td>${score}</td></tr>`;
+        })
+        .join('');
+      return `
+        <div class="card" style="padding:12px; margin-bottom:10px;">
+          <strong>Groupe ${idx + 1}</strong>
+          <table class="table" style="margin-top:8px;">
+            <thead><tr><th>#</th><th>Candidat</th><th>Score</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    })
+    .join('');
+  groupsPreview.innerHTML = html;
 }
 
 function renderScoresTable(list) {
@@ -1371,6 +1594,34 @@ loginForm?.addEventListener('submit', async (e) => {
   await doAdminLogin(payload);
 });
 
+archiveSeasonBtn?.addEventListener('click', async () => {
+  const label = (seasonLabelInput?.value || '').trim() || '2026';
+  const ok = confirm(`Archiver la saison ${label} ? Les modifications seront bloquées.`);
+  if (!ok) return;
+  const res = await authedFetch('/api/admin/archive', {
+    method: 'POST',
+    body: JSON.stringify({ label })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.message || 'Archivage impossible.');
+    return;
+  }
+  await loadArchiveStatus();
+});
+
+unarchiveSeasonBtn?.addEventListener('click', async () => {
+  const ok = confirm('Déverrouiller la saison et réactiver les modifications ?');
+  if (!ok) return;
+  const res = await authedFetch('/api/admin/unarchive', { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.message || 'Action impossible.');
+    return;
+  }
+  await loadArchiveStatus();
+});
+
 adminLogoutBtn?.addEventListener('click', () => {
   authHeader = '';
   localStorage.removeItem('adminAuth');
@@ -1702,6 +1953,74 @@ candidatesTable?.addEventListener('click', async (e) => {
       alert('Suppression impossible.');
     }
   });
+});
+
+candidatesTable?.addEventListener('change', (e) => {
+  const box = e.target.closest('input.candidate-select');
+  if (!box) return;
+  const id = box.dataset.id;
+  if (!id) return;
+  if (box.checked) {
+    selectedCandidateIds.add(String(id));
+  } else {
+    selectedCandidateIds.delete(String(id));
+  }
+  updateSelectionInfo();
+});
+
+selectAllCandidates?.addEventListener('change', () => {
+  if (!selectAllCandidates) return;
+  const rows = Array.from(document.querySelectorAll('input.candidate-select'));
+  rows.forEach((box) => {
+    const id = box.dataset.id;
+    if (!id) return;
+    box.checked = selectAllCandidates.checked;
+    if (selectAllCandidates.checked) {
+      selectedCandidateIds.add(String(id));
+    } else {
+      selectedCandidateIds.delete(String(id));
+    }
+  });
+  updateSelectionInfo();
+});
+
+bulkClearSelection?.addEventListener('click', () => {
+  selectedCandidateIds.clear();
+  const rows = Array.from(document.querySelectorAll('input.candidate-select'));
+  rows.forEach((box) => {
+    box.checked = false;
+  });
+  if (selectAllCandidates) selectAllCandidates.checked = false;
+  updateSelectionInfo();
+});
+
+async function applyBulkStatus(status) {
+  const ids = getSelectedCandidateIds();
+  if (!ids.length) return;
+  const ok = confirm(`Appliquer le statut "${status}" à ${ids.length} candidat(s) ?`);
+  if (!ok) return;
+  const res = await authedFetch('/api/admin/candidates/bulk-status', {
+    method: 'POST',
+    body: JSON.stringify({ ids, status })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.message || 'Opération impossible.');
+    return;
+  }
+  selectedCandidateIds.clear();
+  if (selectAllCandidates) selectAllCandidates.checked = false;
+  updateSelectionInfo();
+  await loadDashboard();
+}
+
+bulkApproveBtn?.addEventListener('click', () => applyBulkStatus('approved'));
+bulkEliminateBtn?.addEventListener('click', () => applyBulkStatus('eliminated'));
+bulkCompareBtn?.addEventListener('click', () => openCompareModal(getSelectedCandidateIds()));
+
+compareModalClose?.addEventListener('click', closeCompareModal);
+compareModal?.addEventListener('click', (e) => {
+  if (e.target === compareModal) closeCompareModal();
 });
 
 memberForm?.addEventListener('submit', async (e) => {
@@ -2430,6 +2749,63 @@ exportCandidatesPdf?.addEventListener('click', () => {
           <thead><tr><th>ID</th><th>Nom</th><th>WhatsApp</th><th>Commune</th><th>Statut</th></tr></thead>
           <tbody>${bodyRows}</tbody>
         </table>
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+});
+
+generateGroupsBtn?.addEventListener('click', () => {
+  groupsCache = generateGroupsFromRanking();
+  if (!groupsCache.length) {
+    if (groupsPreview) groupsPreview.textContent = 'Aucune donnée pour générer les groupes.';
+    return;
+  }
+  renderGroupsPreview();
+});
+
+exportGroupsPdfBtn?.addEventListener('click', () => {
+  if (!groupsCache.length) {
+    alert('Veuillez générer les groupes avant l’export.');
+    return;
+  }
+  const body = groupsCache
+    .map((group, idx) => {
+      const rows = group
+        .map((c, i) => {
+          const name = resolveName({ fullName: c.fullName || c.fullname, whatsapp: c.whatsapp });
+          const score = Number(c.totalScore ?? c.totalscore ?? c.averageScore ?? 0).toFixed(2);
+          return `<tr><td>${i + 1}</td><td>${name || 'Inconnu'}</td><td>${score}</td></tr>`;
+        })
+        .join('');
+      return `
+        <h3>Groupe ${idx + 1}</h3>
+        <table>
+          <thead><tr><th>#</th><th>Candidat</th><th>Score</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    })
+    .join('<div style="height:16px;"></div>');
+  const html = `
+    <html>
+      <head>
+        <title>Groupes — Quiz Islamique 2026</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Groupes — Quiz Islamique 2026</h1>
+        ${body}
       </body>
     </html>`;
   const win = window.open('', '_blank');
