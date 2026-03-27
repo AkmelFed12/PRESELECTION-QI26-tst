@@ -1062,6 +1062,17 @@ async function initDatabase() {
         createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS candidate_status_history (
+        id BIGSERIAL PRIMARY KEY,
+        candidateId BIGINT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+        oldStatus TEXT,
+        newStatus TEXT,
+        ip TEXT,
+        changedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_candidate_status_history_candidate ON candidate_status_history(candidateId);
+
       CREATE TABLE IF NOT EXISTS contact_messages (
         id BIGSERIAL PRIMARY KEY,
         fullName TEXT NOT NULL,
@@ -2283,7 +2294,21 @@ app.post('/api/admin/candidates/bulk-status', verifyAdmin, async (req, res) => {
     const status = req.body?.status;
     const safeStatus = ['approved', 'pending', 'eliminated'].includes(status) ? status : 'approved';
     if (!ids.length) return res.status(400).json({ message: 'Aucun candidat sélectionné.' });
+    const current = await pool.query(
+      'SELECT id, status FROM candidates WHERE id = ANY($1::bigint[])',
+      [ids]
+    );
     await pool.query('UPDATE candidates SET status = $1 WHERE id = ANY($2::bigint[])', [safeStatus, ids]);
+    const ip = getClientIp(req);
+    for (const row of current.rows) {
+      const oldStatus = row.status ?? null;
+      if ((oldStatus || '') === (safeStatus || '')) continue;
+      await pool.query(
+        `INSERT INTO candidate_status_history (candidateId, oldStatus, newStatus, ip)
+         VALUES ($1, $2, $3, $4)`,
+        [row.id, oldStatus, safeStatus, ip]
+      );
+    }
     if (safeStatus === 'eliminated') {
       await pool.query(
         `INSERT INTO eliminated_candidates (candidateId, fullName, whatsapp, city, status)
@@ -2343,6 +2368,9 @@ app.post('/api/admin/candidates', verifyAdmin, async (req, res) => {
         return res.status(409).json({ message: 'WhatsApp déjà utilisé par un autre candidat.' });
       }
 
+      const current = await pool.query('SELECT status FROM candidates WHERE id = $1', [parsedId]);
+      const oldStatus = current.rows[0]?.status ?? null;
+
       await pool.query(
         `UPDATE candidates
          SET fullName = $1,
@@ -2370,6 +2398,14 @@ app.post('/api/admin/candidates', verifyAdmin, async (req, res) => {
           parsedId
         ]
       );
+
+      if ((oldStatus || '') !== (safeStatus || '')) {
+        await pool.query(
+          `INSERT INTO candidate_status_history (candidateId, oldStatus, newStatus, ip)
+           VALUES ($1, $2, $3, $4)`,
+          [parsedId, oldStatus, safeStatus, getClientIp(req)]
+        );
+      }
 
       if (!sanitizedName) {
         await pool.query('UPDATE candidates SET fullName = $1 WHERE id = $2', ['Inconnu', parsedId]);
@@ -2402,6 +2438,12 @@ app.post('/api/admin/candidates', verifyAdmin, async (req, res) => {
     await pool.query(
       'UPDATE candidates SET candidateCode = $1 WHERE id = $2',
       [candidateCode, candidateId]
+    );
+
+    await pool.query(
+      `INSERT INTO candidate_status_history (candidateId, oldStatus, newStatus, ip)
+       VALUES ($1, $2, $3, $4)`,
+      [candidateId, null, safeStatus, getClientIp(req)]
     );
 
     res.status(201).json({ message: 'Candidat ajouté.', candidateId });
@@ -2707,6 +2749,8 @@ app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
     if (conflict.rows.length > 0) {
       return res.status(409).json({ message: 'WhatsApp déjà utilisé par un autre candidat.' });
     }
+    const current = await pool.query('SELECT status FROM candidates WHERE id = $1', [candidateId]);
+    const oldStatus = current.rows[0]?.status ?? null;
     await pool.query(
       `UPDATE candidates
        SET fullName = $1,
@@ -2734,6 +2778,13 @@ app.put('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
         candidateId
       ]
     );
+    if ((oldStatus || '') !== (safeStatus || '')) {
+      await pool.query(
+        `INSERT INTO candidate_status_history (candidateId, oldStatus, newStatus, ip)
+         VALUES ($1, $2, $3, $4)`,
+        [candidateId, oldStatus, safeStatus, getClientIp(req)]
+      );
+    }
     if (safeStatus === 'eliminated') {
       await pool.query(
         `INSERT INTO eliminated_candidates (candidateId, fullName, whatsapp, city, status)
@@ -3288,6 +3339,27 @@ app.get('/api/admin/candidates/:id', verifyAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Candidat introuvable.' });
     }
     res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/candidates/:id/status-history', verifyAdmin, async (req, res) => {
+  try {
+    const candidateId = Number(req.params.id);
+    if (!Number.isFinite(candidateId)) {
+      return res.status(400).json({ error: 'Invalid candidate id' });
+    }
+    const result = await pool.query(
+      `SELECT oldStatus, newStatus, ip, changedAt
+       FROM candidate_status_history
+       WHERE candidateId = $1
+       ORDER BY changedAt DESC
+       LIMIT 50`,
+      [candidateId]
+    );
+    res.json({ items: result.rows || [] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

@@ -60,6 +60,7 @@ const modalCandidateWhatsapp = document.getElementById('modalCandidateWhatsapp')
 const modalCandidatePhone = document.getElementById('modalCandidatePhone');
 const modalCandidateEmail = document.getElementById('modalCandidateEmail');
 const modalCandidateStatus = document.getElementById('modalCandidateStatus');
+const candidateStatusHistory = document.getElementById('candidateStatusHistory');
 const compareModal = document.getElementById('compareModal');
 const compareModalClose = document.getElementById('compareModalClose');
 const compareBody = document.getElementById('compareBody');
@@ -89,6 +90,7 @@ const seasonLabelInput = document.getElementById('seasonLabelInput');
 const archiveSeasonBtn = document.getElementById('archiveSeasonBtn');
 const unarchiveSeasonBtn = document.getElementById('unarchiveSeasonBtn');
 const archiveStatusMsg = document.getElementById('archiveStatusMsg');
+const compactToggleBtn = document.getElementById('compactToggleBtn');
 const newsSection = document.getElementById('newsSection');
 const newsForm = document.getElementById('newsForm');
 const newsMsg = document.getElementById('newsMsg');
@@ -718,6 +720,7 @@ function openCandidateModal(candidate) {
   modalCandidateStatus.value = candidate.status || 'approved';
   if (candidateModalMsg) candidateModalMsg.textContent = '';
   loadCandidateScores(candidate.id);
+  loadCandidateStatusHistory(candidate.id);
   candidateModal.style.display = 'flex';
 }
 
@@ -787,6 +790,40 @@ async function loadCandidateScores(candidateId) {
           })
           .join('')}
       </tbody>
+    </table>
+  `;
+}
+
+async function loadCandidateStatusHistory(candidateId) {
+  if (!candidateStatusHistory) return;
+  if (!candidateId) {
+    candidateStatusHistory.textContent = 'Aucun historique.';
+    return;
+  }
+  candidateStatusHistory.textContent = 'Chargement...';
+  const res = await authedFetch(`/api/admin/candidates/${candidateId}/status-history`);
+  if (!res.ok) {
+    candidateStatusHistory.textContent = 'Aucun historique.';
+    return;
+  }
+  const data = await res.json().catch(() => ({}));
+  const rows = Array.isArray(data.items) ? data.items : [];
+  if (!rows.length) {
+    candidateStatusHistory.textContent = 'Aucun historique.';
+    return;
+  }
+  const body = rows
+    .map((r) => {
+      const date = r.changedAt ? new Date(r.changedAt).toLocaleString('fr-FR') : '';
+      const oldStatus = r.oldStatus || '—';
+      const newStatus = r.newStatus || '—';
+      return `<tr><td>${date}</td><td>${oldStatus}</td><td>${newStatus}</td><td>${r.ip || ''}</td></tr>`;
+    })
+    .join('');
+  candidateStatusHistory.innerHTML = `
+    <table class="table">
+      <thead><tr><th>Date</th><th>Ancien</th><th>Nouveau</th><th>IP</th></tr></thead>
+      <tbody>${body}</tbody>
     </table>
   `;
 }
@@ -1640,6 +1677,22 @@ toggleAdminPassword?.addEventListener('click', () => {
   const isHidden = passwordInput.type === 'password';
   passwordInput.type = isHidden ? 'text' : 'password';
   toggleAdminPassword.textContent = isHidden ? 'Masquer le mot de passe' : 'Afficher le mot de passe';
+});
+
+function setCompactMode(enabled) {
+  document.body.classList.toggle('admin-compact', enabled);
+  if (compactToggleBtn) {
+    compactToggleBtn.textContent = enabled ? 'Mode normal' : 'Mode compact';
+  }
+  localStorage.setItem('adminCompact', enabled ? '1' : '0');
+}
+
+const storedCompact = localStorage.getItem('adminCompact') === '1';
+setCompactMode(storedCompact);
+
+compactToggleBtn?.addEventListener('click', () => {
+  const enabled = !document.body.classList.contains('admin-compact');
+  setCompactMode(enabled);
 });
 
 settingsForm?.addEventListener('submit', async (e) => {

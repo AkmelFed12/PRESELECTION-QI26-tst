@@ -2011,6 +2011,31 @@ body.dark .status.status-error {
   border-color: #7f1d1d;
 }
 
+/* Admin compact mode */
+body.admin-compact .card {
+  padding: 16px;
+}
+body.admin-compact .table th,
+body.admin-compact .table td {
+  padding: 6px 8px;
+  font-size: 0.9rem;
+}
+body.admin-compact .btn,
+body.admin-compact .btn-primary,
+body.admin-compact .btn-danger {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+body.admin-compact .form-grid {
+  gap: 8px;
+}
+body.admin-compact h2 {
+  font-size: 1.25rem;
+}
+body.admin-compact h3 {
+  font-size: 1.05rem;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    📐 TYPOGRAPHIE AMÉLIORÉE
    ═══════════════════════════════════════════════════════════════ */
