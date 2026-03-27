@@ -8,6 +8,7 @@ const loginCard = document.getElementById('loginCard');
 const dashboard = document.getElementById('dashboard');
 const settingsSection = document.getElementById('settingsSection');
 const maintenanceSection = document.getElementById('maintenanceSection');
+const phaseTimelineSection = document.getElementById('phaseTimelineSection');
 const candidatesSection = document.getElementById('candidatesSection');
 const scoresSection = document.getElementById('scoresSection');
 const communeStats = document.getElementById('communeStats');
@@ -15,6 +16,7 @@ const offlineBanner = document.getElementById('offlineBanner');
 const globalSearchSection = document.getElementById('globalSearchSection');
 const globalSearchInput = document.getElementById('globalSearchInput');
 const globalSearchResults = document.getElementById('globalSearchResults');
+const phaseTimelineList = document.getElementById('phaseTimelineList');
 const adminLogoutBtn = document.getElementById('adminLogoutBtn');
 
 const settingsForm = document.getElementById('settingsForm');
@@ -297,6 +299,7 @@ function showAdmin() {
   dashboard.classList.remove('admin-hidden');
   settingsSection.classList.remove('admin-hidden');
   maintenanceSection?.classList.remove('admin-hidden');
+  phaseTimelineSection?.classList.remove('admin-hidden');
   siteContentSection?.classList.remove('admin-hidden');
   candidatesSection.classList.remove('admin-hidden');
   scoresSection.classList.remove('admin-hidden');
@@ -311,6 +314,7 @@ function hideAdmin() {
   dashboard.classList.add('admin-hidden');
   settingsSection.classList.add('admin-hidden');
   maintenanceSection?.classList.add('admin-hidden');
+  phaseTimelineSection?.classList.add('admin-hidden');
   siteContentSection?.classList.add('admin-hidden');
   candidatesSection.classList.add('admin-hidden');
   scoresSection.classList.add('admin-hidden');
@@ -542,6 +546,7 @@ async function loadDashboard() {
     scheduleCache = JSON.parse(settings.scheduleJson || '[]') || [];
   } catch {}
   renderSchedule();
+  renderPhaseTimeline();
 
   // candidates
   candidatesCache = data.candidates || [];
@@ -593,6 +598,7 @@ function renderFromCache(data) {
     scheduleCache = JSON.parse(settings.scheduleJson || '[]') || [];
   } catch {}
   renderSchedule();
+  renderPhaseTimeline();
   candidatesCache = data.candidates || [];
   renderCandidates(candidatesCache);
   renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
@@ -2974,6 +2980,37 @@ function renderSchedule() {
   `;
 }
 
+function formatScheduleDate(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('fr-FR');
+}
+
+function renderPhaseTimeline() {
+  if (!phaseTimelineList) return;
+  if (!scheduleCache.length) {
+    phaseTimelineList.textContent = 'Aucune phase renseignée.';
+    return;
+  }
+  const items = scheduleCache
+    .slice()
+    .sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return String(a.date).localeCompare(String(b.date));
+    })
+    .map((e) => {
+      const date = formatScheduleDate(e.date);
+      const time = e.time ? ` • ${e.time}` : '';
+      const title = e.title || 'Événement';
+      const meta = date ? `${date}${time}` : 'Date à préciser';
+      return `<li class="timeline-item"><div class="timeline-meta">${meta}</div><div class="timeline-title">${title}</div></li>`;
+    })
+    .join('');
+  phaseTimelineList.innerHTML = `<ul class="timeline">${items}</ul>`;
+}
+
 addEventBtn?.addEventListener('click', () => {
   const date = eventDate?.value || '';
   const time = eventTime?.value || '';
@@ -2984,6 +3021,7 @@ addEventBtn?.addEventListener('click', () => {
   if (eventTime) eventTime.value = '';
   if (eventTitle) eventTitle.value = '';
   renderSchedule();
+  renderPhaseTimeline();
 });
 
 eventList?.addEventListener('click', (e) => {
@@ -2992,4 +3030,5 @@ eventList?.addEventListener('click', (e) => {
   const idx = Number(btn.dataset.remove);
   scheduleCache.splice(idx, 1);
   renderSchedule();
+  renderPhaseTimeline();
 });
