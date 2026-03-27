@@ -619,7 +619,7 @@ function renderCandidates(list) {
         <td>${resolveName(c)}</td>
         <td>${c.whatsapp || ''}</td>
         <td>${c.city || ''}</td>
-        <td>${c.status || 'pending'}</td>
+        <td>${renderStatusBadge(c.status || 'pending')}</td>
         <td>
           <button data-edit="${c.id}">Modifier</button>
           <button data-whatsapp="${c.id}">WhatsApp</button>
@@ -644,12 +644,21 @@ function renderEliminated(list) {
         <td>${resolveName(c)}</td>
         <td>${c.whatsapp || ''}</td>
         <td>${c.city || ''}</td>
-        <td>${c.status || 'eliminated'}</td>
+        <td>${renderStatusBadge(c.status || 'eliminated')}</td>
         <td><button data-edit="${c.id}">Modifier</button></td>
       </tr>
     `,
     )
     .join('');
+}
+
+function renderStatusBadge(status) {
+  const key = String(status || '').toLowerCase();
+  const label =
+    key === 'approved' ? 'Validé' : key === 'eliminated' ? 'Éliminé' : key === 'pending' ? 'En attente' : status;
+  const cls =
+    key === 'approved' ? 'status-approved' : key === 'eliminated' ? 'status-eliminated' : 'status-pending';
+  return `<span class="status-pill ${cls}">${label}</span>`;
 }
 
 async function loadScoreSummary(candidateId) {
@@ -1148,6 +1157,20 @@ function renderCommuneFilter(list) {
   candidateCommuneFilter.innerHTML = `<option value="">Toutes les communes</option>${communes
     .map((c) => `<option value="${c}">${c}</option>`)
     .join('')}`;
+}
+
+async function refreshCandidates() {
+  const res = await authedFetch('/api/admin/candidates');
+  if (!res.ok) return;
+  const data = await res.json().catch(() => []);
+  candidatesCache = Array.isArray(data) ? data : [];
+  renderCandidates(candidatesCache);
+  renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
+  renderCommuneStats(candidatesCache);
+  renderCommuneFilter(candidatesCache);
+  renderGlobalSearch();
+  const statCandidatesEl = document.getElementById('statCandidates');
+  if (statCandidatesEl) statCandidatesEl.textContent = candidatesCache.length;
 }
 
 function updateAdminRegistrationStatus() {
@@ -1783,7 +1806,7 @@ candidateForm?.addEventListener('submit', async (e) => {
   });
   const data = await res.json().catch(() => ({}));
   setStatus(candidateMsg, data.message || (res.ok ? 'Sauvegardé.' : 'Erreur.'));
-  await loadDashboard();
+  await refreshCandidates();
 });
 
 candidateSearch?.addEventListener('input', () => {
@@ -1903,7 +1926,7 @@ candidateModalForm?.addEventListener('submit', async (e) => {
   const data = await res.json().catch(() => ({}));
   setStatus(candidateModalMsg, data.message || (res.ok ? 'Mis à jour.' : 'Erreur.'));
   if (res.ok) {
-    await loadDashboard();
+    await refreshCandidates();
     setTimeout(closeCandidateModal, 600);
   }
 });
@@ -2064,7 +2087,7 @@ async function applyBulkStatus(status) {
   selectedCandidateIds.clear();
   if (selectAllCandidates) selectAllCandidates.checked = false;
   updateSelectionInfo();
-  await loadDashboard();
+  await refreshCandidates();
 }
 
 bulkApproveBtn?.addEventListener('click', () => applyBulkStatus('approved'));
