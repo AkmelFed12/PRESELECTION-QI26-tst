@@ -34,21 +34,23 @@
 
       <section class="card" id="loginCard">
         <h2>Connexion administrateur</h2>
-        <form id="loginForm" class="form-grid">
+        <form id="loginForm" class="form-grid" autocomplete="off">
           <div>
             <label for="username">Identifiant</label>
-            <input id="username" name="username" autocomplete="username" required />
+            <input id="username" name="username" autocomplete="off" autocapitalize="none" required />
           </div>
           <div>
             <label for="password">Mot de passe</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required />
+            <input id="password" name="password" type="password" autocomplete="off" required />
+            <button class="btn outline" type="button" id="toggleAdminPassword" style="margin-top:8px;">
+              Afficher le mot de passe
+            </button>
           </div>
           <div class="full">
             <button class="btn-primary" type="submit">Se connecter</button>
           </div>
         </form>
         <p id="loginMsg" class="status"></p>
-        <p class="muted">Identifiant: <strong>asaa2026</strong> · Mot de passe: <strong>ASAALMO2026</strong></p>
       </section>
 
       <section class="card admin-hidden" id="dashboard">

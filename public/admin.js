@@ -1,5 +1,8 @@
 window.__adminLoaded = true;
 const loginForm = document.getElementById('loginForm');
+const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password');
+const toggleAdminPassword = document.getElementById('toggleAdminPassword');
 const loginMsg = document.getElementById('loginMsg');
 const loginCard = document.getElementById('loginCard');
 const dashboard = document.getElementById('dashboard');
@@ -1367,21 +1370,18 @@ loginForm?.addEventListener('submit', async (e) => {
   await doAdminLogin(payload);
 });
 
-// Auto-login when credentials are provided in URL (?username=...&password=...)
+// Hard-stop autofill: always clear credentials on load
 (() => {
-  const params = new URLSearchParams(window.location.search);
-  const username = params.get('username');
-  const password = params.get('password');
-  if (username && password && loginForm) {
-    const userInput = loginForm.querySelector('input[name="username"]');
-    const passInput = loginForm.querySelector('input[name="password"]');
-    if (userInput) userInput.value = username;
-    if (passInput) passInput.value = password;
-    doAdminLogin({ username, password }).then(() => {
-      history.replaceState({}, document.title, window.location.pathname);
-    });
-  }
+  if (usernameInput) usernameInput.value = '';
+  if (passwordInput) passwordInput.value = '';
 })();
+
+toggleAdminPassword?.addEventListener('click', () => {
+  if (!passwordInput) return;
+  const isHidden = passwordInput.type === 'password';
+  passwordInput.type = isHidden ? 'text' : 'password';
+  toggleAdminPassword.textContent = isHidden ? 'Masquer le mot de passe' : 'Afficher le mot de passe';
+});
 
 settingsForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
