@@ -243,7 +243,10 @@ async function upsertManualCandidates(manualCandidates) {
            city = $2,
            country = $3,
            whatsapp = $4,
-           status = 'approved'
+           status = CASE
+             WHEN status IS NULL OR TRIM(status) = '' THEN 'approved'
+             ELSE status
+           END
        WHERE regexp_replace(whatsapp, '\\D', '', 'g') = $5`,
       [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp, digits]
     );
@@ -258,7 +261,10 @@ async function upsertManualCandidates(manualCandidates) {
                city = $2,
                country = $3,
                whatsapp = $4,
-               status = 'approved'
+               status = CASE
+                 WHEN status IS NULL OR TRIM(status) = '' THEN 'approved'
+                 ELSE status
+               END
            WHERE regexp_replace(whatsapp, '\\D', '', 'g') LIKE $5`,
           [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp, `%${last8}`]
         );
@@ -272,7 +278,10 @@ async function upsertManualCandidates(manualCandidates) {
              city = $2,
              country = $3,
              whatsapp = $4,
-             status = 'approved'
+             status = CASE
+               WHEN status IS NULL OR TRIM(status) = '' THEN 'approved'
+               ELSE status
+             END
          WHERE LOWER(fullName) = LOWER($1)
            AND (whatsapp IS NULL OR TRIM(whatsapp) = '')`,
         [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
@@ -288,7 +297,10 @@ async function upsertManualCandidates(manualCandidates) {
          DO UPDATE SET fullName = EXCLUDED.fullName,
                        city = EXCLUDED.city,
                        country = EXCLUDED.country,
-                       status = 'approved'`,
+                       status = CASE
+                         WHEN candidates.status IS NULL OR TRIM(candidates.status) = '' THEN 'approved'
+                         ELSE candidates.status
+                       END`,
         [name, commune, DEFAULT_COUNTRY, normalizedWhatsapp]
       );
     }
@@ -1285,7 +1297,7 @@ async function initDatabase() {
     `);
 
     // Auto-approve existing registrations + normalize country + candidate codes
-    await pool.query(`UPDATE candidates SET status = 'approved' WHERE status IS NULL OR status != 'approved'`);
+    await pool.query(`UPDATE candidates SET status = 'approved' WHERE status IS NULL OR TRIM(status) = ''`);
     await pool.query(`UPDATE candidates SET country = $1 WHERE country IS NULL OR TRIM(country) = ''`, [DEFAULT_COUNTRY]);
     await pool.query(`UPDATE candidates SET city = UPPER(city) WHERE city IS NOT NULL`);
     await pool.query(
