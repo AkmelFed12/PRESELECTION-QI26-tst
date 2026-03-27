@@ -14,6 +14,7 @@ const offlineBanner = document.getElementById('offlineBanner');
 const globalSearchSection = document.getElementById('globalSearchSection');
 const globalSearchInput = document.getElementById('globalSearchInput');
 const globalSearchResults = document.getElementById('globalSearchResults');
+const adminLogoutBtn = document.getElementById('adminLogoutBtn');
 
 const settingsForm = document.getElementById('settingsForm');
 const settingsMsg = document.getElementById('settingsMsg');
@@ -1368,6 +1369,13 @@ loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const payload = Object.fromEntries(new FormData(loginForm).entries());
   await doAdminLogin(payload);
+});
+
+adminLogoutBtn?.addEventListener('click', () => {
+  authHeader = '';
+  localStorage.removeItem('adminAuth');
+  hideAdmin();
+  setStatus(loginMsg, 'Déconnecté.');
 });
 
 // Hard-stop autofill: always clear credentials on load
