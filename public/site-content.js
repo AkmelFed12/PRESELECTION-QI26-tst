@@ -60,6 +60,7 @@ async function loadAnnouncementBanner() {
 }
 
 initThemeToggle();
+document.body.classList.add('loaded');
 
 function renderList(container, items, renderer, emptyText) {
   if (!container) return;
@@ -79,13 +80,24 @@ function applyTheme(theme) {
   if (btn) btn.textContent = label;
 }
 
+function applyPalette(palette) {
+  const premium = palette === 'premium';
+  document.body.classList.toggle('premium', premium);
+  localStorage.setItem('palette', premium ? 'premium' : 'classic');
+  const btn = document.querySelector('#paletteToggleBtn');
+  if (btn) btn.textContent = premium ? 'Palette classique' : 'Palette premium';
+}
+
 function initThemeToggle() {
   if (document.querySelector('.theme-toggle')) return;
   const wrapper = document.createElement('div');
   wrapper.className = 'theme-toggle';
   const btn = document.createElement('button');
   btn.id = 'themeToggleBtn';
+  const paletteBtn = document.createElement('button');
+  paletteBtn.id = 'paletteToggleBtn';
   wrapper.appendChild(btn);
+  wrapper.appendChild(paletteBtn);
   document.body.appendChild(wrapper);
 
   const stored = localStorage.getItem('theme');
@@ -96,9 +108,17 @@ function initThemeToggle() {
     applyTheme(prefersDark ? 'dark' : 'light');
   }
 
+  const storedPalette = localStorage.getItem('palette');
+  applyPalette(storedPalette === 'premium' ? 'premium' : 'classic');
+
   btn.addEventListener('click', () => {
     const next = document.body.classList.contains('dark') ? 'light' : 'dark';
     applyTheme(next);
+  });
+
+  paletteBtn.addEventListener('click', () => {
+    const next = document.body.classList.contains('premium') ? 'classic' : 'premium';
+    applyPalette(next);
   });
 }
 

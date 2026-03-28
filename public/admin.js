@@ -392,17 +392,27 @@ function initThemeToggle() {
   wrapper.className = 'theme-toggle';
   const btn = document.createElement('button');
   btn.id = 'themeToggleBtn';
+  const paletteBtn = document.createElement('button');
+  paletteBtn.id = 'paletteToggleBtn';
   wrapper.appendChild(btn);
+  wrapper.appendChild(paletteBtn);
   document.body.appendChild(wrapper);
 
   const stored = localStorage.getItem('theme');
   const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const initial = stored || (prefersDark ? 'dark' : 'light');
   applyTheme(initial);
+  const storedPalette = localStorage.getItem('palette');
+  applyPalette(storedPalette === 'premium' ? 'premium' : 'classic');
 
   btn.addEventListener('click', () => {
     const next = document.body.classList.contains('dark') ? 'light' : 'dark';
     applyTheme(next);
+  });
+
+  paletteBtn.addEventListener('click', () => {
+    const next = document.body.classList.contains('premium') ? 'classic' : 'premium';
+    applyPalette(next);
   });
 }
 
@@ -412,6 +422,14 @@ function applyTheme(theme) {
   localStorage.setItem('theme', isDark ? 'dark' : 'light');
   const btn = document.querySelector('#themeToggleBtn');
   if (btn) btn.textContent = isDark ? 'Mode clair' : 'Mode sombre';
+}
+
+function applyPalette(palette) {
+  const premium = palette === 'premium';
+  document.body.classList.toggle('premium', premium);
+  localStorage.setItem('palette', premium ? 'premium' : 'classic');
+  const btn = document.querySelector('#paletteToggleBtn');
+  if (btn) btn.textContent = premium ? 'Palette classique' : 'Palette premium';
 }
 
 function markEditing() {
@@ -1942,6 +1960,7 @@ superAdminUnlockBtn?.addEventListener('click', unlockSuperAdmin);
 superAdminLockBtn?.addEventListener('click', lockSuperAdmin);
 
 initThemeToggle();
+document.body.classList.add('loaded');
 
 function setJuryMode(enabled) {
   document.body.classList.toggle('jury-mode', enabled);
