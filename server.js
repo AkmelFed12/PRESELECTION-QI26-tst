@@ -409,7 +409,10 @@ function normalizeSettingsRow(row) {
     competitionClosed: 0,
     certificatesEnabled: 1,
     announcementText: '',
-    scheduleJson: '[]'
+    scheduleJson: '[]',
+    convocationDate: '',
+    convocationTime: '',
+    convocationPlace: ''
   };
   return {
     votingEnabled: row.votingenabled ?? row.votingEnabled ?? 0,
@@ -417,7 +420,10 @@ function normalizeSettingsRow(row) {
     competitionClosed: row.competitionclosed ?? row.competitionClosed ?? 0,
     certificatesEnabled: row.certificatesenabled ?? row.certificatesEnabled ?? 1,
     announcementText: row.announcementtext ?? row.announcementText ?? '',
-    scheduleJson: row.schedulejson ?? row.scheduleJson ?? '[]'
+    scheduleJson: row.schedulejson ?? row.scheduleJson ?? '[]',
+    convocationDate: row.convocationdate ?? row.convocationDate ?? '',
+    convocationTime: row.convocationtime ?? row.convocationTime ?? '',
+    convocationPlace: row.convocationplace ?? row.convocationPlace ?? ''
   };
 }
 
@@ -1051,6 +1057,9 @@ async function initDatabase() {
         certificatesEnabled INTEGER DEFAULT 1,
         announcementText TEXT DEFAULT '',
         scheduleJson TEXT DEFAULT '[]',
+        convocationDate TEXT DEFAULT '',
+        convocationTime TEXT DEFAULT '',
+        convocationPlace TEXT DEFAULT '',
         updatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
@@ -1338,6 +1347,9 @@ async function initDatabase() {
     await pool.query(`ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS publishAt TIMESTAMP WITH TIME ZONE;`);
     await pool.query(`ALTER TABLE sponsors ADD COLUMN IF NOT EXISTS filesJson TEXT;`);
     await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS certificatesEnabled INTEGER DEFAULT 1;`);
+    await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS convocationDate TEXT DEFAULT '';`);
+    await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS convocationTime TEXT DEFAULT '';`);
+    await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS convocationPlace TEXT DEFAULT '';`);
 
     await pool.query(`
       INSERT INTO poll (question, optionsJson, active)
@@ -1487,9 +1499,7 @@ app.get('/api/public-candidates', async (req, res) => {
 // Public settings
 app.get('/api/public-settings', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT votingEnabled, registrationLocked, competitionClosed, certificatesEnabled, announcementText, scheduleJson FROM tournament_settings WHERE id = 1'
-    );
+    const result = await pool.query('SELECT * FROM tournament_settings WHERE id = 1');
     const normalized = normalizeSettingsRow(result.rows[0]);
     res.json(normalized);
   } catch (error) {
@@ -2456,13 +2466,39 @@ app.post('/api/admin/candidates', verifyAdmin, async (req, res) => {
 // Update tournament settings
 app.put('/api/tournament-settings', verifyAdmin, async (req, res) => {
   try {
-    const { votingEnabled, registrationLocked, competitionClosed, certificatesEnabled, announcementText } = req.body;
+    const {
+      votingEnabled,
+      registrationLocked,
+      competitionClosed,
+      certificatesEnabled,
+      announcementText,
+      convocationDate,
+      convocationTime,
+      convocationPlace
+    } = req.body;
 
     await pool.query(
       `UPDATE tournament_settings 
-       SET votingEnabled = $1, registrationLocked = $2, competitionClosed = $3, certificatesEnabled = $4, announcementText = $5, updatedAt = NOW()
+       SET votingEnabled = $1,
+           registrationLocked = $2,
+           competitionClosed = $3,
+           certificatesEnabled = $4,
+           announcementText = $5,
+           convocationDate = $6,
+           convocationTime = $7,
+           convocationPlace = $8,
+           updatedAt = NOW()
        WHERE id = 1`,
-      [votingEnabled || 0, registrationLocked || 0, competitionClosed || 0, certificatesEnabled ?? 1, announcementText || '']
+      [
+        votingEnabled || 0,
+        registrationLocked || 0,
+        competitionClosed || 0,
+        certificatesEnabled ?? 1,
+        announcementText || '',
+        convocationDate || '',
+        convocationTime || '',
+        convocationPlace || ''
+      ]
     );
 
     res.json({ message: 'Paramètres mis à jour.' });

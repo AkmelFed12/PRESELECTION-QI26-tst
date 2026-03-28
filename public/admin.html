@@ -79,6 +79,14 @@
           <div class="card-subtitle">Statistiques par commune</div>
           <div id="communeStats">Aucune donnée.</div>
         </div>
+        <div class="commune-card" style="margin-top:12px;">
+          <div class="card-subtitle">Carte des communes (répartition)</div>
+          <div id="communeMap" class="status">Aucune donnée.</div>
+        </div>
+        <div class="commune-card" style="margin-top:12px;">
+          <div class="card-subtitle">Anomalies détectées</div>
+          <div id="anomaliesList" class="status">Aucune anomalie.</div>
+        </div>
       </section>
 
       <section class="card admin-hidden" id="phaseTimelineSection">
@@ -480,8 +488,35 @@
         </div>
       </div>
 
+      <div class="modal-backdrop" id="convocationModal" style="display:none;">
+        <div class="modal-card" style="max-width:980px;">
+          <div class="modal-header">
+            <h3>Convocations WhatsApp</h3>
+            <button class="btn outline" type="button" id="convocationModalClose">Fermer</button>
+          </div>
+          <div id="convocationBody" class="status">Aucune convocation.</div>
+        </div>
+      </div>
+
       <section class="card admin-hidden" id="scoresSection">
         <h2>Notation des candidats</h2>
+        <div class="nav-links" style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn outline" id="juryModeToggle" type="button">Mode Jury</button>
+        </div>
+        <div class="form-grid" style="margin-bottom:12px;">
+          <div>
+            <label>Date convocation</label>
+            <input id="convocationDate" type="date" />
+          </div>
+          <div>
+            <label>Heure convocation</label>
+            <input id="convocationTime" type="time" />
+          </div>
+          <div class="full">
+            <label>Lieu convocation</label>
+            <input id="convocationPlace" placeholder="Ex: Treichville" />
+          </div>
+        </div>
         <div class="card" style="margin-bottom:14px;">
           <h3>Saisie rapide</h3>
           <form id="scoreQuickForm" class="form-grid">
@@ -557,12 +592,19 @@
           <button class="btn outline" id="exportGroupsPdfBtn" type="button">Exporter groupes (PDF)</button>
         </div>
         <div id="groupsPreview" class="status" style="margin-bottom:12px;">Aucun groupe généré.</div>
+        <div class="nav-links" style="margin-bottom: 12px;">
+          <button class="btn outline" id="exportConvocationsPdfBtn" type="button">Convocations (PDF)</button>
+          <button class="btn outline" id="openConvocationsModalBtn" type="button">Convocations WhatsApp</button>
+        </div>
         <table class="table" id="rankingTable">
           <thead>
             <tr><th>Rang</th><th>Candidat</th><th>Total</th><th>Passages</th></tr>
           </thead>
           <tbody></tbody>
         </table>
+
+        <h3 style="margin-top:16px;">Scoreboard dynamique</h3>
+        <div id="scoreboardList" class="status">Aucune donnée.</div>
       </section>
 
       <section class="card admin-hidden" id="newsSection">

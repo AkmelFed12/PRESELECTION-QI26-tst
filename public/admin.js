@@ -12,11 +12,18 @@ const phaseTimelineSection = document.getElementById('phaseTimelineSection');
 const candidatesSection = document.getElementById('candidatesSection');
 const scoresSection = document.getElementById('scoresSection');
 const communeStats = document.getElementById('communeStats');
+const communeMap = document.getElementById('communeMap');
+const anomaliesList = document.getElementById('anomaliesList');
 const offlineBanner = document.getElementById('offlineBanner');
 const globalSearchSection = document.getElementById('globalSearchSection');
 const globalSearchInput = document.getElementById('globalSearchInput');
 const globalSearchResults = document.getElementById('globalSearchResults');
 const phaseTimelineList = document.getElementById('phaseTimelineList');
+const juryModeToggle = document.getElementById('juryModeToggle');
+const scoreboardList = document.getElementById('scoreboardList');
+const convocationDateInput = document.getElementById('convocationDate');
+const convocationTimeInput = document.getElementById('convocationTime');
+const convocationPlaceInput = document.getElementById('convocationPlace');
 const adminLogoutBtn = document.getElementById('adminLogoutBtn');
 
 const settingsForm = document.getElementById('settingsForm');
@@ -66,6 +73,9 @@ const candidateStatusHistory = document.getElementById('candidateStatusHistory')
 const compareModal = document.getElementById('compareModal');
 const compareModalClose = document.getElementById('compareModalClose');
 const compareBody = document.getElementById('compareBody');
+const convocationModal = document.getElementById('convocationModal');
+const convocationModalClose = document.getElementById('convocationModalClose');
+const convocationBody = document.getElementById('convocationBody');
 
 const scoreForm = document.getElementById('scoreForm');
 const scoreQuickForm = document.getElementById('scoreQuickForm');
@@ -88,6 +98,8 @@ const exportFullPdf = document.getElementById('exportFullPdf');
 const generateGroupsBtn = document.getElementById('generateGroupsBtn');
 const exportGroupsPdfBtn = document.getElementById('exportGroupsPdfBtn');
 const groupsPreview = document.getElementById('groupsPreview');
+const exportConvocationsPdfBtn = document.getElementById('exportConvocationsPdfBtn');
+const openConvocationsModalBtn = document.getElementById('openConvocationsModalBtn');
 const seasonLabelInput = document.getElementById('seasonLabelInput');
 const archiveSeasonBtn = document.getElementById('archiveSeasonBtn');
 const unarchiveSeasonBtn = document.getElementById('unarchiveSeasonBtn');
@@ -279,6 +291,15 @@ function openWhatsappChat(number, name) {
     : "Bonjour, votre inscription au Quiz Islamique 2026 est bien enregistrée.";
   const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank', 'noopener');
+}
+
+function buildConvocationMessage({ name, date, time, place, groupName }) {
+  const safeName = (name || '').trim();
+  const who = safeName ? `Bonjour ${safeName},` : 'Bonjour,';
+  const when = date ? `Date: ${date}${time ? ` à ${time}` : ''}.` : 'Date à préciser.';
+  const where = place ? `Lieu: ${place}.` : '';
+  const group = groupName ? `Groupe: ${groupName}.` : '';
+  return `${who} vous êtes convoqué(e) pour le Quiz Islamique 2026. ${when} ${where} ${group} Merci de vous présenter 30 minutes avant.`;
 }
 
 function resolveName(candidate) {
@@ -541,6 +562,9 @@ async function loadDashboard() {
     if (!el.name) return;
     el.value = settings[el.name] ?? '';
   });
+  if (convocationDateInput) convocationDateInput.value = settings.convocationDate || '';
+  if (convocationTimeInput) convocationTimeInput.value = settings.convocationTime || '';
+  if (convocationPlaceInput) convocationPlaceInput.value = settings.convocationPlace || '';
   scheduleCache = [];
   try {
     scheduleCache = JSON.parse(settings.scheduleJson || '[]') || [];
@@ -553,12 +577,15 @@ async function loadDashboard() {
   renderCandidates(candidatesCache);
   renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
   renderCommuneStats(candidatesCache);
+  renderCommuneMap(candidatesCache);
   renderCommuneFilter(candidatesCache);
 
   // ranking
   rankingCache = data.ranking || [];
   renderRanking(rankingCache);
+  renderScoreboard();
   await loadScoresTable();
+  renderAnomalies();
   updateLiveScoreValidation();
 
   // news
@@ -593,6 +620,9 @@ function renderFromCache(data) {
     if (!el.name) return;
     el.value = settings[el.name] ?? '';
   });
+  if (convocationDateInput) convocationDateInput.value = settings.convocationDate || '';
+  if (convocationTimeInput) convocationTimeInput.value = settings.convocationTime || '';
+  if (convocationPlaceInput) convocationPlaceInput.value = settings.convocationPlace || '';
   scheduleCache = [];
   try {
     scheduleCache = JSON.parse(settings.scheduleJson || '[]') || [];
@@ -603,9 +633,12 @@ function renderFromCache(data) {
   renderCandidates(candidatesCache);
   renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
   renderCommuneStats(candidatesCache);
+  renderCommuneMap(candidatesCache);
   renderCommuneFilter(candidatesCache);
+  renderAnomalies();
   rankingCache = data.ranking || [];
   renderRanking(rankingCache);
+  renderScoreboard();
   renderGlobalSearch();
   updateAdminRegistrationStatus();
 }
@@ -1123,6 +1156,61 @@ function renderScoresTable(list) {
     .join('');
 }
 
+function renderScoreboard() {
+  if (!scoreboardList) return;
+  if (!scoresCache.length) {
+    scoreboardList.textContent = 'Aucune donnée.';
+    return;
+  }
+  const byCandidate = new Map();
+  scoresCache.forEach((s) => {
+    const id = Number(s.candidateId || s.candidateid);
+    if (!id) return;
+    const theme = Number(s.themeScore || s.themescore || 0);
+    const pont = Number(s.pontAsSiratScore || s.pontassiratscore || 0);
+    const rec = Number(s.recognitionScore || s.recognitionscore || 0);
+    const total = theme + pont + rec;
+    const created = new Date(s.createdAt || s.createdat || 0);
+    if (!byCandidate.has(id)) byCandidate.set(id, []);
+    byCandidate.get(id).push({ total, created, name: s.fullName || s.fullname || '' });
+  });
+
+  const rows = [];
+  byCandidate.forEach((items, id) => {
+    items.sort((a, b) => b.created - a.created);
+    const last = items[0];
+    const prev = items[1];
+    const trend = prev ? last.total - prev.total : 0;
+    rows.push({
+      id,
+      name: last?.name || resolveName({ id }),
+      lastScore: last?.total ?? 0,
+      trend
+    });
+  });
+  rows.sort((a, b) => b.lastScore - a.lastScore);
+  const html = rows
+    .slice(0, 20)
+    .map((r) => {
+      const arrow = r.trend > 0 ? '↑' : r.trend < 0 ? '↓' : '→';
+      const cls = r.trend > 0 ? 'trend-up' : r.trend < 0 ? 'trend-down' : 'trend-flat';
+      return `
+        <tr>
+          <td>${r.name || `ID ${r.id}`}</td>
+          <td>${Number(r.lastScore).toFixed(2)}</td>
+          <td class="${cls}">${arrow} ${r.trend.toFixed(2)}</td>
+        </tr>
+      `;
+    })
+    .join('');
+  scoreboardList.innerHTML = `
+    <table class="table">
+      <thead><tr><th>Candidat</th><th>Dernier score</th><th>Tendance</th></tr></thead>
+      <tbody>${html}</tbody>
+    </table>
+  `;
+}
+
 function renderCommuneStats(list) {
   if (!communeStats) return;
   if (!list.length) {
@@ -1155,6 +1243,65 @@ function renderCommuneStats(list) {
   `;
 }
 
+function renderCommuneMap(list) {
+  if (!communeMap) return;
+  if (!list.length) {
+    communeMap.textContent = 'Aucune donnée.';
+    return;
+  }
+  const counts = list.reduce((acc, c) => {
+    const key = (c.city || 'INCONNU').toUpperCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(...entries.map(([, v]) => v));
+  const tiles = entries
+    .map(([name, value]) => {
+      const intensity = Math.max(0.2, value / max);
+      return `
+        <div class="commune-tile" style="--tile-intensity:${intensity}">
+          <div class="commune-tile-name">${name}</div>
+          <div class="commune-tile-value">${value}</div>
+        </div>
+      `;
+    })
+    .join('');
+  communeMap.innerHTML = `<div class="commune-map">${tiles}</div>`;
+}
+
+function renderAnomalies() {
+  if (!anomaliesList) return;
+  const issues = [];
+  const seen = new Map();
+  candidatesCache.forEach((c) => {
+    const digits = digitsOnly(c.whatsapp);
+    if (!digits) {
+      issues.push(`WhatsApp manquant — ${resolveName(c)} (ID ${c.id})`);
+      return;
+    }
+    if (seen.has(digits)) {
+      issues.push(`Doublon WhatsApp — ${resolveName(c)} (ID ${c.id}) et ID ${seen.get(digits)}`);
+    } else {
+      seen.set(digits, c.id);
+    }
+  });
+  scoresCache.forEach((s) => {
+    const theme = Number(s.themeScore || s.themescore || 0);
+    const pont = Number(s.pontAsSiratScore || s.pontassiratscore || 0);
+    const rec = Number(s.recognitionScore || s.recognitionscore || 0);
+    const total = theme + pont + rec;
+    if (total > 60 || total < 0) {
+      issues.push(`Score anormal (${total}) — ${s.fullName || 'Inconnu'} (note ${s.id})`);
+    }
+  });
+  if (!issues.length) {
+    anomaliesList.textContent = 'Aucune anomalie.';
+    return;
+  }
+  anomaliesList.innerHTML = `<ul class="anomaly-list">${issues.map((i) => `<li>${i}</li>`).join('')}</ul>`;
+}
+
 function renderCommuneFilter(list) {
   if (!candidateCommuneFilter) return;
   const communes = Array.from(
@@ -1173,8 +1320,10 @@ async function refreshCandidates() {
   renderCandidates(candidatesCache);
   renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
   renderCommuneStats(candidatesCache);
+  renderCommuneMap(candidatesCache);
   renderCommuneFilter(candidatesCache);
   renderGlobalSearch();
+  renderAnomalies();
   const statCandidatesEl = document.getElementById('statCandidates');
   if (statCandidatesEl) statCandidatesEl.textContent = candidatesCache.length;
 }
@@ -1724,6 +1873,22 @@ compactToggleBtn?.addEventListener('click', () => {
   setCompactMode(enabled);
 });
 
+function setJuryMode(enabled) {
+  document.body.classList.toggle('jury-mode', enabled);
+  if (juryModeToggle) {
+    juryModeToggle.textContent = enabled ? 'Quitter mode Jury' : 'Mode Jury';
+  }
+  localStorage.setItem('juryMode', enabled ? '1' : '0');
+}
+
+const storedJuryMode = localStorage.getItem('juryMode') === '1';
+setJuryMode(storedJuryMode);
+
+juryModeToggle?.addEventListener('click', () => {
+  const enabled = !document.body.classList.contains('jury-mode');
+  setJuryMode(enabled);
+});
+
 settingsForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus(settingsMsg, 'Enregistrement...');
@@ -1732,6 +1897,9 @@ settingsForm?.addEventListener('submit', async (e) => {
     if (k === 'announcementText') return;
     payload[k] = Number(payload[k]);
   });
+  payload.convocationDate = convocationDateInput?.value || '';
+  payload.convocationTime = convocationTimeInput?.value || '';
+  payload.convocationPlace = convocationPlaceInput?.value || '';
   payload.scheduleJson = JSON.stringify(scheduleCache);
   const res = await authedFetch('/api/tournament-settings', {
     method: 'PUT',
@@ -2247,6 +2415,8 @@ async function loadScoresTable() {
       ? data
       : [];
   applyScoresFilters();
+  renderScoreboard();
+  renderAnomalies();
 }
 
 async function deleteScore(scoreId) {
@@ -2896,6 +3066,125 @@ exportGroupsPdfBtn?.addEventListener('click', () => {
   win.document.close();
   win.focus();
   win.print();
+});
+
+exportConvocationsPdfBtn?.addEventListener('click', () => {
+  if (!groupsCache.length) {
+    alert('Veuillez générer les groupes avant l’export.');
+    return;
+  }
+  const body = groupsCache
+    .map((group, idx) => {
+      const groupName = `Groupe ${idx + 1}`;
+      const rows = group
+        .map((c) => {
+          const name = resolveName({ fullName: c.fullName || c.fullname, whatsapp: c.whatsapp });
+          const msg = buildConvocationMessage({
+            name,
+            date: formatScheduleDate(settingsCache?.convocationDate || ''),
+            time: settingsCache?.convocationTime || '',
+            place: settingsCache?.convocationPlace || '',
+            groupName
+          });
+          return `<tr><td>${name}</td><td>${c.whatsapp || ''}</td><td>${msg}</td></tr>`;
+        })
+        .join('');
+      return `
+        <h3>${groupName}</h3>
+        <table>
+          <thead><tr><th>Candidat</th><th>WhatsApp</th><th>Message</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    })
+    .join('<div style="height:16px;"></div>');
+  const html = `
+    <html>
+      <head>
+        <title>Convocations — Quiz Islamique 2026</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Convocations — Quiz Islamique 2026</h1>
+        ${body}
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+});
+
+openConvocationsModalBtn?.addEventListener('click', () => {
+  if (!convocationModal || !convocationBody) return;
+  if (!groupsCache.length) {
+    alert('Veuillez générer les groupes avant la diffusion.');
+    return;
+  }
+  const html = groupsCache
+    .map((group, idx) => {
+      const groupName = `Groupe ${idx + 1}`;
+      const rows = group
+        .map((c) => {
+          const name = resolveName({ fullName: c.fullName || c.fullname, whatsapp: c.whatsapp });
+          const msg = buildConvocationMessage({
+            name,
+            date: formatScheduleDate(settingsCache?.convocationDate || ''),
+            time: settingsCache?.convocationTime || '',
+            place: settingsCache?.convocationPlace || '',
+            groupName
+          });
+          const digits = digitsOnly(c.whatsapp);
+          const link = digits
+            ? `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`
+            : '';
+          return `
+            <tr>
+              <td>${name}</td>
+              <td>${c.whatsapp || ''}</td>
+              <td><button data-whats-link="${link}">Envoyer</button></td>
+            </tr>
+          `;
+        })
+        .join('');
+      return `
+        <h4>${groupName}</h4>
+        <table class="table">
+          <thead><tr><th>Candidat</th><th>WhatsApp</th><th>Action</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    })
+    .join('<div style="height:16px;"></div>');
+  convocationBody.innerHTML = html;
+  convocationModal.style.display = 'flex';
+});
+
+convocationModalClose?.addEventListener('click', () => {
+  if (convocationModal) convocationModal.style.display = 'none';
+});
+
+convocationModal?.addEventListener('click', (e) => {
+  if (e.target === convocationModal) convocationModal.style.display = 'none';
+});
+
+convocationBody?.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-whats-link]');
+  if (!btn) return;
+  const link = btn.getAttribute('data-whats-link');
+  if (!link) {
+    alert('WhatsApp indisponible.');
+    return;
+  }
+  window.open(link, '_blank', 'noopener');
 });
 
 exportFullPdf?.addEventListener('click', () => {
