@@ -14,6 +14,9 @@ const scoresSection = document.getElementById('scoresSection');
 const communeStats = document.getElementById('communeStats');
 const communeMap = document.getElementById('communeMap');
 const anomaliesList = document.getElementById('anomaliesList');
+const superAdminStatus = document.getElementById('superAdminStatus');
+const superAdminUnlockBtn = document.getElementById('superAdminUnlockBtn');
+const superAdminLockBtn = document.getElementById('superAdminLockBtn');
 const offlineBanner = document.getElementById('offlineBanner');
 const globalSearchSection = document.getElementById('globalSearchSection');
 const globalSearchInput = document.getElementById('globalSearchInput');
@@ -210,6 +213,7 @@ let rankingCache = [];
 let groupsCache = [];
 let archiveLocked = false;
 const selectedCandidateIds = new Set();
+let superAdminUnlocked = false;
 let scoresCache = [];
 let settingsCache = {};
 let newsCache = [];
@@ -345,6 +349,37 @@ function hideAdmin() {
   financeSection?.classList.add('admin-hidden');
   pollSection?.classList.add('admin-hidden');
   loginCard.classList.remove('admin-hidden');
+}
+
+function applySuperAdminUI() {
+  document.body.classList.toggle('super-admin-locked', !superAdminUnlocked);
+  if (superAdminStatus) {
+    superAdminStatus.textContent = superAdminUnlocked ? 'Accès complet.' : 'Accès limité.';
+  }
+  if (superAdminUnlockBtn) superAdminUnlockBtn.disabled = superAdminUnlocked;
+  if (superAdminLockBtn) superAdminLockBtn.disabled = !superAdminUnlocked;
+}
+
+async function unlockSuperAdmin() {
+  const pwd = prompt('Mot de passe administrateur :');
+  if (!pwd) return;
+  const res = await authedFetch('/api/admin/verify-password', {
+    method: 'POST',
+    body: JSON.stringify({ password: pwd })
+  });
+  if (!res.ok) {
+    alert('Mot de passe incorrect.');
+    return;
+  }
+  superAdminUnlocked = true;
+  localStorage.setItem('superAdminUnlocked', '1');
+  applySuperAdminUI();
+}
+
+function lockSuperAdmin() {
+  superAdminUnlocked = false;
+  localStorage.removeItem('superAdminUnlocked');
+  applySuperAdminUI();
 }
 
 function setStatus(el, text) {
@@ -1872,6 +1907,11 @@ compactToggleBtn?.addEventListener('click', () => {
   const enabled = !document.body.classList.contains('admin-compact');
   setCompactMode(enabled);
 });
+
+superAdminUnlocked = localStorage.getItem('superAdminUnlocked') === '1';
+applySuperAdminUI();
+superAdminUnlockBtn?.addEventListener('click', unlockSuperAdmin);
+superAdminLockBtn?.addEventListener('click', lockSuperAdmin);
 
 function setJuryMode(enabled) {
   document.body.classList.toggle('jury-mode', enabled);

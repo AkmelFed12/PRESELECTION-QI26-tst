@@ -622,6 +622,20 @@ body.jury-mode #scoresSection {
   display: block !important;
 }
 
+body.super-admin-locked #settingsSection,
+body.super-admin-locked #maintenanceSection,
+body.super-admin-locked #siteContentSection,
+body.super-admin-locked #newsSection,
+body.super-admin-locked #sponsorsSection,
+body.super-admin-locked #financeSection,
+body.super-admin-locked #pollSection,
+body.super-admin-locked #memberAccountsSection,
+body.super-admin-locked #memberToolsSection,
+body.super-admin-locked #dailyQuizSection,
+body.super-admin-locked #memberAuditSection {
+  display: none !important;
+}
+
 .stats-bar {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

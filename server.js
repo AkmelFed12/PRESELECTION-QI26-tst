@@ -4363,6 +4363,25 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
+app.post('/api/admin/verify-password', verifyAdmin, async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!password) return res.status(400).json({ message: 'Mot de passe requis.' });
+    const [primary, alt] = await Promise.all([
+      pool.query("SELECT value FROM admin_config WHERE key = 'admin_password_hash' LIMIT 1"),
+      pool.query("SELECT value FROM admin_config WHERE key = 'admin_password_hash_alt' LIMIT 1")
+    ]);
+    const adminHash = primary.rows[0]?.value || await hashPassword(ADMIN_PASSWORD);
+    const altHash = alt.rows[0]?.value || await hashPassword(ADMIN_PASSWORD_ALT);
+    const valid = (await checkPassword(password, adminHash)) || (await checkPassword(password, altHash));
+    if (!valid) return res.status(401).json({ message: 'Mot de passe incorrect.' });
+    res.json({ valid: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
 // Member login
 app.post('/api/members/login', async (req, res) => {
   try {
