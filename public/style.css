@@ -6,7 +6,7 @@
   --gold: #c9a24b;
   --sand: #f8f4ee;
   --ink: #1b1b1b;
-  --muted: #5b6472;
+  --muted: #4a5565;
   --border: #e3d8c6;
   --white: #ffffff;
   --bg-1: #f9f6ef;
@@ -66,7 +66,7 @@ body::after {
 
 body.dark {
   --ink: #f1f3f5;
-  --muted: #b0b7c0;
+  --muted: #c1c7ce;
   --border: #2a2f35;
   --card: #171a1d;
   --card-accent: #1b1f24;
@@ -258,6 +258,10 @@ main.layout {
   font-family: "Playfair Display", serif;
 }
 
+.card h2, .card h3, .card h4 {
+  color: var(--ink);
+}
+
 .card.highlight {
   border-left: 6px solid var(--gold);
   background: var(--card-accent);
@@ -327,6 +331,27 @@ body.loaded .card {
 
 .muted {
   color: var(--muted);
+}
+
+.status {
+  color: var(--ink);
+}
+
+.table th {
+  color: var(--ink);
+}
+
+.table td {
+  color: var(--ink);
+}
+
+body.dark .table th,
+body.dark .table td {
+  color: var(--ink);
+}
+
+body.dark .announcement-banner {
+  background: linear-gradient(90deg, #0a5a45, #0b6f4f);
 }
 
 .grid-two {
