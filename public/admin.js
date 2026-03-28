@@ -386,6 +386,34 @@ function setStatus(el, text) {
   if (el) el.textContent = text || '';
 }
 
+function initThemeToggle() {
+  if (document.querySelector('.theme-toggle')) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'theme-toggle';
+  const btn = document.createElement('button');
+  btn.id = 'themeToggleBtn';
+  wrapper.appendChild(btn);
+  document.body.appendChild(wrapper);
+
+  const stored = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initial = stored || (prefersDark ? 'dark' : 'light');
+  applyTheme(initial);
+
+  btn.addEventListener('click', () => {
+    const next = document.body.classList.contains('dark') ? 'light' : 'dark';
+    applyTheme(next);
+  });
+}
+
+function applyTheme(theme) {
+  const isDark = theme === 'dark';
+  document.body.classList.toggle('dark', isDark);
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  const btn = document.querySelector('#themeToggleBtn');
+  if (btn) btn.textContent = isDark ? 'Mode clair' : 'Mode sombre';
+}
+
 function markEditing() {
   isEditing = true;
   lastEditAt = Date.now();
@@ -1912,6 +1940,8 @@ superAdminUnlocked = localStorage.getItem('superAdminUnlocked') === '1';
 applySuperAdminUI();
 superAdminUnlockBtn?.addEventListener('click', unlockSuperAdmin);
 superAdminLockBtn?.addEventListener('click', lockSuperAdmin);
+
+initThemeToggle();
 
 function setJuryMode(enabled) {
   document.body.classList.toggle('jury-mode', enabled);

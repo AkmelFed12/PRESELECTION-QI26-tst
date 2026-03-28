@@ -59,6 +59,8 @@ async function loadAnnouncementBanner() {
   }
 }
 
+initThemeToggle();
+
 function renderList(container, items, renderer, emptyText) {
   if (!container) return;
   if (!items || !items.length) {
@@ -66,6 +68,38 @@ function renderList(container, items, renderer, emptyText) {
     return;
   }
   container.innerHTML = items.map(renderer).join('');
+}
+
+function applyTheme(theme) {
+  const isDark = theme === 'dark';
+  document.body.classList.toggle('dark', isDark);
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  const label = isDark ? 'Mode clair' : 'Mode sombre';
+  const btn = document.querySelector('#themeToggleBtn');
+  if (btn) btn.textContent = label;
+}
+
+function initThemeToggle() {
+  if (document.querySelector('.theme-toggle')) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'theme-toggle';
+  const btn = document.createElement('button');
+  btn.id = 'themeToggleBtn';
+  wrapper.appendChild(btn);
+  document.body.appendChild(wrapper);
+
+  const stored = localStorage.getItem('theme');
+  if (stored) {
+    applyTheme(stored);
+  } else {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(prefersDark ? 'dark' : 'light');
+  }
+
+  btn.addEventListener('click', () => {
+    const next = document.body.classList.contains('dark') ? 'light' : 'dark';
+    applyTheme(next);
+  });
 }
 
 function normalizeRole(role) {

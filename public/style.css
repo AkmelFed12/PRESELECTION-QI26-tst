@@ -3,12 +3,16 @@
 :root {
   --emerald: #0b6f4f;
   --emerald-dark: #08533b;
-  --gold: #c59b3f;
-  --sand: #f7f2e8;
-  --ink: #1c1c1c;
-  --muted: #6b6b6b;
-  --border: #e6ddcd;
+  --gold: #c7a24a;
+  --sand: #f8f4ee;
+  --ink: #1b1b1b;
+  --muted: #667085;
+  --border: #e3d8c6;
   --white: #ffffff;
+  --bg-1: #f9f6ef;
+  --bg-2: #efe7da;
+  --card: #ffffff;
+  --card-accent: #fff7ea;
   --danger: #b12b2b;
 }
 
@@ -26,8 +30,8 @@ body {
   font-family: "Source Sans 3", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(247, 242, 232, 0.95) 65%),
-    linear-gradient(120deg, #f7f2e8, #f1e7d6);
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(249, 246, 239, 0.95) 65%),
+    linear-gradient(120deg, var(--bg-1), var(--bg-2));
   padding-top: 28px;
   position: relative;
 }
@@ -61,8 +65,15 @@ body::after {
 }
 
 body.dark {
-  background: radial-gradient(circle at top, #1b1b1b, #0f0f0f 70%);
-  color: #f0f0f0;
+  --ink: #f1f3f5;
+  --muted: #a6adb5;
+  --border: #2a2f35;
+  --card: #171a1d;
+  --card-accent: #1b1f24;
+  --bg-1: #121416;
+  --bg-2: #0b0c0d;
+  background: radial-gradient(circle at top, var(--bg-1), var(--bg-2) 70%);
+  color: var(--ink);
 }
 
 body.dark .card {
@@ -219,7 +230,7 @@ main.layout {
 }
 
 .card {
-  background: var(--white);
+  background: var(--card);
   border-radius: 16px;
   padding: 24px;
   border: 1px solid var(--border);
@@ -233,15 +244,37 @@ main.layout {
 
 .card.highlight {
   border-left: 6px solid var(--gold);
-  background: #fffbf3;
+  background: var(--card-accent);
 }
 
 .announcement-banner {
-  background: #1a7f5a;
+  background: linear-gradient(90deg, #0b6f4f, #0f7c5a);
   color: #fff;
   padding: 12px 20px;
   font-weight: 700;
   text-align: center;
+}
+
+.theme-toggle {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1000;
+}
+
+.theme-toggle button {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+}
+
+.theme-toggle button:hover {
+  border-color: var(--gold);
 }
 
 .announcement-banner span {
