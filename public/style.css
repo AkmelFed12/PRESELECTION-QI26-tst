@@ -103,12 +103,22 @@ body.dark .btn.outline {
 }
 
 body.dark .table th {
-  background: #262626;
+  background: #1f2327;
+  color: var(--ink);
 }
 
 body.dark .table td,
 body.dark .table th {
   border-bottom-color: #333;
+  color: var(--ink);
+}
+
+body.dark .table tbody tr:nth-child(even) {
+  background: #171a1d;
+}
+
+body.dark .table tbody tr:hover {
+  background: #23282e;
 }
 
 .dark-toggle {
@@ -566,11 +576,16 @@ button.outline:hover {
 }
 
 .table th {
-  background: #faf7f0;
+  background: #f3ede3;
+  font-weight: 700;
 }
 
 .table tbody tr:nth-child(even) {
-  background: #fcfaf6;
+  background: #fdfbf7;
+}
+
+.table tbody tr:hover {
+  background: #efe7da;
 }
 
 .status-pill {
