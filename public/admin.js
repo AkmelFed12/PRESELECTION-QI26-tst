@@ -29,6 +29,12 @@ const convocationTimeInput = document.getElementById('convocationTime');
 const convocationPlaceInput = document.getElementById('convocationPlace');
 const adminLogoutBtn = document.getElementById('adminLogoutBtn');
 
+const DEFAULT_ADMIN_USERNAME = 'asaa2026';
+
+if (usernameInput && !usernameInput.value) {
+  usernameInput.value = DEFAULT_ADMIN_USERNAME;
+}
+
 const settingsForm = document.getElementById('settingsForm');
 const settingsMsg = document.getElementById('settingsMsg');
 const eventDate = document.getElementById('eventDate');
@@ -1869,7 +1875,14 @@ async function doAdminLogin(payload) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setStatus(loginMsg, data.message || 'Identifiants incorrects.');
+      setStatus(loginMsg, 'Identifiant incorrect.');
+      if (usernameInput) {
+        usernameInput.value = DEFAULT_ADMIN_USERNAME;
+      }
+      if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
       return;
     }
     authHeader = `Bearer ${data.token}`;
