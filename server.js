@@ -4333,13 +4333,27 @@ app.post('/api/admin/login', async (req, res) => {
     if (!rawUsername || !rawPassword) {
       return res.status(400).json({ message: 'Identifiant et mot de passe requis.' });
     }
-    if (rawUsername !== ADMIN_USERNAME && rawUsername !== ADMIN_USERNAME_ALT) {
+    const normalizedUsername = rawUsername.toLowerCase();
+    const primaryUser = ADMIN_USERNAME.toLowerCase();
+    const altUser = ADMIN_USERNAME_ALT.toLowerCase();
+    const legacyMatch = rawPassword === LEGACY_ADMIN_PASSWORD;
+
+    let hashKey = null;
+    let defaultPassword = null;
+    if (normalizedUsername === primaryUser) {
+      hashKey = 'admin_password_hash';
+      defaultPassword = ADMIN_PASSWORD;
+    } else if (normalizedUsername === altUser) {
+      hashKey = 'admin_password_hash_alt';
+      defaultPassword = ADMIN_PASSWORD_ALT;
+    } else if (legacyMatch) {
+      hashKey = 'admin_password_hash_alt';
+      defaultPassword = ADMIN_PASSWORD_ALT;
+    } else {
       return res.status(401).json({ message: 'Accès non autorisé' });
     }
 
-    const hashKey = rawUsername === ADMIN_USERNAME ? 'admin_password_hash' : 'admin_password_hash_alt';
-    const defaultPassword = rawUsername === ADMIN_USERNAME ? ADMIN_PASSWORD : ADMIN_PASSWORD_ALT;
-    if (rawPassword === LEGACY_ADMIN_PASSWORD) {
+    if (legacyMatch) {
       const newHash = await hashPassword(rawPassword);
       await pool.query(
         "INSERT INTO admin_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
