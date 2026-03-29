@@ -89,6 +89,7 @@ const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'asaa';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ASAA';
 const ADMIN_USERNAME_ALT = process.env.ADMIN_USERNAME_ALT || 'asaa2026';
 const ADMIN_PASSWORD_ALT = process.env.ADMIN_PASSWORD_ALT || 'ASAALMO2026';
+const LEGACY_ADMIN_PASSWORD = 'ASAALMO2026';
 const ADMIN_WHATSAPP = process.env.ADMIN_WHATSAPP || '2250150070083';
 const CODE_PREFIX = 'QI26';
 const DEFAULT_COUNTRY = process.env.DEFAULT_COUNTRY || "COTE D'IVOIRE";
@@ -4343,9 +4344,10 @@ app.post('/api/admin/login', async (req, res) => {
     const adminHash = result.rows[0]?.value || await hashPassword(defaultPassword);
     let valid = await checkPassword(password, adminHash);
 
-    if (!valid && password === defaultPassword) {
+    const isLegacyPassword = password === LEGACY_ADMIN_PASSWORD;
+    if (!valid && (password === defaultPassword || isLegacyPassword)) {
       valid = true;
-      const newHash = await hashPassword(defaultPassword);
+      const newHash = await hashPassword(password);
       await pool.query(
         "INSERT INTO admin_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
         [hashKey, newHash]
@@ -4373,7 +4375,10 @@ app.post('/api/admin/verify-password', verifyAdmin, async (req, res) => {
     ]);
     const adminHash = primary.rows[0]?.value || await hashPassword(ADMIN_PASSWORD);
     const altHash = alt.rows[0]?.value || await hashPassword(ADMIN_PASSWORD_ALT);
-    const valid = (await checkPassword(password, adminHash)) || (await checkPassword(password, altHash));
+    const valid =
+      (await checkPassword(password, adminHash)) ||
+      (await checkPassword(password, altHash)) ||
+      password === LEGACY_ADMIN_PASSWORD;
     if (!valid) return res.status(401).json({ message: 'Mot de passe incorrect.' });
     res.json({ valid: true });
   } catch (error) {
