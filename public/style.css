@@ -216,12 +216,13 @@ header.hero {
   padding: 10px 16px;
   border-radius: 8px;
   text-decoration: none;
-  font-weight: 600;
-  border: 2px solid transparent;
+  font-weight: 700;
+  border: 2px solid rgba(12, 12, 12, 0.08);
   background: var(--gold);
-  color: #1f1f1f;
+  color: #1b1b1b;
   text-align: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 8px 18px rgba(15, 10, 2, 0.12);
 }
 
 .btn.outline {
@@ -238,7 +239,7 @@ header.hero {
 
 .btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(10, 5, 0, 0.15);
+  box-shadow: 0 10px 20px rgba(10, 5, 0, 0.18);
 }
 
 main.layout {
@@ -388,8 +389,9 @@ body.dark .announcement-banner {
 }
 
 .form-grid label {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
+  color: #2f2f2f;
 }
 
 .form-grid input,
@@ -400,7 +402,8 @@ body.dark .announcement-banner {
   border-radius: 8px;
   border: 1px solid var(--border);
   font-family: inherit;
-  background: #fffdf9;
+  background: #fffefb;
+  color: var(--ink);
 }
 
 .form-grid textarea {
@@ -414,11 +417,12 @@ body.dark .announcement-banner {
 .btn-primary {
   background: var(--emerald);
   color: white;
-  border: none;
+  border: 2px solid rgba(5, 70, 50, 0.2);
   padding: 12px 18px;
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 10px 22px rgba(9, 74, 53, 0.18);
 }
 
 .btn-primary:hover {
@@ -444,7 +448,7 @@ button.outline {
 
 .btn.outline:hover,
 button.outline:hover {
-  background: rgba(11, 111, 79, 0.1);
+  background: rgba(11, 111, 79, 0.12);
 }
 
 .status {
@@ -460,8 +464,8 @@ button.outline:hover {
   gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(11, 111, 79, 0.12);
-  color: var(--emerald);
+  background: #e8f4ef;
+  color: #0b5b42;
   font-weight: 700;
   font-size: 12px;
 }
@@ -470,8 +474,8 @@ button.outline:hover {
   display: inline-block;
   padding: 6px 12px;
   border-radius: 999px;
-  background: var(--sand);
-  color: var(--emerald);
+  background: #f2eadb;
+  color: #0b5b42;
   font-weight: 700;
   font-size: 12px;
 }
@@ -597,24 +601,25 @@ button.outline:hover {
   font-weight: 700;
   text-transform: capitalize;
   border: 1px solid transparent;
+  letter-spacing: 0.02em;
 }
 
 .status-pill.status-approved {
-  background: rgba(34, 197, 94, 0.15);
-  color: #0f5f3e;
-  border-color: rgba(34, 197, 94, 0.4);
+  background: #e7f7ee;
+  color: #0b5b42;
+  border-color: #9ed9bb;
 }
 
 .status-pill.status-pending {
-  background: rgba(245, 158, 11, 0.15);
+  background: #fff1d6;
   color: #7a4f00;
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: #f4c67b;
 }
 
 .status-pill.status-eliminated {
-  background: rgba(239, 68, 68, 0.15);
+  background: #ffe6e6;
   color: #7f1d1d;
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: #f4a3a3;
 }
 
 .admin-actions {
@@ -2065,13 +2070,20 @@ body.dark .modal-card {
 
 /* Meilleur contraste pour les liens */
 a {
-  color: var(--emerald);
+  color: var(--emerald-dark);
   text-decoration: underline;
-  transition: opacity 0.2s ease;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
-a:hover* {
-  opacity: 0.8;
+a:hover {
+  color: var(--emerald);
+  opacity: 0.9;
+}
+
+a:visited {
+  color: #6b4f1e;
 }
 
 /* Labels associés aux inputs */
@@ -2274,6 +2286,11 @@ body.dark .btn-primary {
   color: #fff;
 }
 
+body.dark .btn {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+
 body.dark .btn-primary:hover {
   background: #0a7d56;
 }
@@ -2293,6 +2310,46 @@ body.dark .status.status-error {
   background: rgba(177, 43, 43, 0.15);
   color: #fca5a5;
   border-color: #7f1d1d;
+}
+
+body.dark .tag {
+  background: rgba(11, 157, 106, 0.2);
+  color: #b8f0d8;
+}
+
+body.dark .pill {
+  background: rgba(245, 203, 120, 0.15);
+  color: #ffe4b3;
+}
+
+body.dark .status-pill.status-approved {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+body.dark .status-pill.status-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+body.dark .status-pill.status-eliminated {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+body.dark a {
+  color: #7fe3b1;
+}
+
+body.dark a:hover {
+  color: #9ef2c7;
+}
+
+body.dark a:visited {
+  color: #f5d48d;
 }
 
 /* Admin compact mode */
