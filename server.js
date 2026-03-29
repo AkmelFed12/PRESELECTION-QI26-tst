@@ -4328,26 +4328,35 @@ async function listMediaFilesFromDisk() {
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { username, password } = req.body || {};
-    if (!username || !password) {
+    const rawUsername = typeof username === 'string' ? username.trim() : '';
+    const rawPassword = typeof password === 'string' ? password.trim() : '';
+    if (!rawUsername || !rawPassword) {
       return res.status(400).json({ message: 'Identifiant et mot de passe requis.' });
     }
-    if (username !== ADMIN_USERNAME && username !== ADMIN_USERNAME_ALT) {
+    if (rawUsername !== ADMIN_USERNAME && rawUsername !== ADMIN_USERNAME_ALT) {
       return res.status(401).json({ message: 'Accès non autorisé' });
     }
 
-    const hashKey = username === ADMIN_USERNAME ? 'admin_password_hash' : 'admin_password_hash_alt';
-    const defaultPassword = username === ADMIN_USERNAME ? ADMIN_PASSWORD : ADMIN_PASSWORD_ALT;
+    const hashKey = rawUsername === ADMIN_USERNAME ? 'admin_password_hash' : 'admin_password_hash_alt';
+    const defaultPassword = rawUsername === ADMIN_USERNAME ? ADMIN_PASSWORD : ADMIN_PASSWORD_ALT;
+    if (rawPassword === LEGACY_ADMIN_PASSWORD) {
+      const newHash = await hashPassword(rawPassword);
+      await pool.query(
+        "INSERT INTO admin_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+        [hashKey, newHash]
+      );
+      return res.json({ token: defaultPassword });
+    }
     const result = await pool.query(
       "SELECT value FROM admin_config WHERE key = $1 LIMIT 1",
       [hashKey]
     );
     const adminHash = result.rows[0]?.value || await hashPassword(defaultPassword);
-    let valid = await checkPassword(password, adminHash);
+    let valid = await checkPassword(rawPassword, adminHash);
 
-    const isLegacyPassword = password === LEGACY_ADMIN_PASSWORD;
-    if (!valid && (password === defaultPassword || isLegacyPassword)) {
+    if (!valid && rawPassword === defaultPassword) {
       valid = true;
-      const newHash = await hashPassword(password);
+      const newHash = await hashPassword(rawPassword);
       await pool.query(
         "INSERT INTO admin_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
         [hashKey, newHash]
