@@ -894,17 +894,19 @@ async function getMemberToolsConfig() {
   );
   const raw = result.rows[0]?.value;
   if (!raw) {
-    return { messages: [], tasks: [], documents: [] };
+    return { messages: [], tasks: [], documents: [], whatsappRecipients: [], whatsappTemplate: '' };
   }
   try {
     const parsed = JSON.parse(raw);
     return {
       messages: Array.isArray(parsed.messages) ? parsed.messages : [],
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
-      documents: Array.isArray(parsed.documents) ? parsed.documents : []
+      documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+      whatsappRecipients: Array.isArray(parsed.whatsappRecipients) ? parsed.whatsappRecipients : [],
+      whatsappTemplate: typeof parsed.whatsappTemplate === 'string' ? parsed.whatsappTemplate : ''
     };
   } catch {
-    return { messages: [], tasks: [], documents: [] };
+    return { messages: [], tasks: [], documents: [], whatsappRecipients: [], whatsappTemplate: '' };
   }
 }
 
@@ -940,7 +942,19 @@ function sanitizeMemberTools(payload = {}) {
         .filter((d) => d.title && d.url)
     : [];
 
-  return { messages, tasks, documents };
+  const whatsappRecipients = Array.isArray(payload.whatsappRecipients)
+    ? payload.whatsappRecipients
+        .map((r) => ({
+          name: sanitizeString(r.name, 160),
+          role: sanitizeString(r.role, 160),
+          phone: sanitizeString(r.phone, 40)
+        }))
+        .filter((r) => r.name && r.phone)
+    : [];
+
+  const whatsappTemplate = sanitizeString(payload.whatsappTemplate, 800);
+
+  return { messages, tasks, documents, whatsappRecipients, whatsappTemplate };
 }
 
 // ==================== SECURITY HEADERS ====================

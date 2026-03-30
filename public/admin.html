@@ -348,6 +348,18 @@
             <textarea id="memberDocsInput" rows="4" placeholder="Règlement 2026 | assets/reglement.pdf"></textarea>
           </div>
           <div class="full">
+            <label>Rappels WhatsApp — Liste (1 ligne = NOM | POSTE | NUMERO)</label>
+            <textarea id="memberWhatsappList" rows="6" placeholder="DIARRA SIDI | PRESIDENT | 225079382233"></textarea>
+          </div>
+          <div class="full">
+            <label>Rappels WhatsApp — Modèle (variables: {name}, {role})</label>
+            <textarea id="memberWhatsappTemplate" rows="3" placeholder="Bonjour {name} ({role}), rappel ASAA : ..."></textarea>
+          </div>
+          <div class="full" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn outline" type="button" id="memberWhatsappSend">Envoyer rappels WhatsApp</button>
+            <button class="btn outline" type="button" id="memberWhatsappCopy">Copier messages</button>
+          </div>
+          <div class="full">
             <button class="btn-primary" type="submit">Enregistrer</button>
           </div>
         </form>

@@ -213,6 +213,32 @@ const memberMessagesInput = document.getElementById('memberMessagesInput');
 const memberTasksInput = document.getElementById('memberTasksInput');
 const memberDocsInput = document.getElementById('memberDocsInput');
 const memberToolsMsg = document.getElementById('memberToolsMsg');
+const memberWhatsappList = document.getElementById('memberWhatsappList');
+const memberWhatsappTemplate = document.getElementById('memberWhatsappTemplate');
+const memberWhatsappSend = document.getElementById('memberWhatsappSend');
+const memberWhatsappCopy = document.getElementById('memberWhatsappCopy');
+
+const DEFAULT_WHATSAPP_RECIPIENTS = `DIARRA SIDI | PRESIDENT | 0779382233
+BAH ALI MOHAMED | VICE PRESIDENT | 0151495971
+OUATTARA LADJI MOUSSA | SECRETAIRE GENERAL | 0574724233
+DIALLO MARIAMA | SECRETAIRE ADJOINTE 1 | 0556570839
+FOFANA NAWA | SECRETAIRE ADJOINTE 2 | 0151473002
+ADIANGO OUMAR | DELEGUE CULTUREL | 0556742119
+OUEDRAOGO ABDOUL RAHIM | DELEGUE CULTUREL ADJOINT 1 | 0574044371
+BAH ZAYNAB | DELEGUE CULTUREL ADJOINTE 2 | 0749527280
+GBANE KARAMOKO | DELEGUE SOCIAL | 0789036052
+ADIANGO OUMAR | DELEGUE SOCIAL ADJOINT 1 | 0143577046
+TRAORE TALBI | DELEGUE SOCIAL ADJOINT 2 | 0778923992
+MARIAMA BOUBACAR | DELEGUE SOCIAL ADJOINTE 3 | 0768604304
+DIARRASSOUBA BINTA | DELEGUE SOCIAL ADJOINTE 4 | 0103109771
+ZEYNABOU SIDIBE | DELEGUE SOCIAL ADJOINTE 5 | 0584031423
+KONATE NOURA | DELEGUE DE MOBILISATION | 0574641065
+SOW MARIAMA | DELEGUE DE MOBILISATION 1 | 0787108698
+COULIBALY MADOUSSOU | DELEGUE DE MOBILISATION ADJOINTE 2 | 0171389479
+SANA ABDOUL JALIL | DELEGUE DE MOBILISATION ADJOINT 3 | 0596796476
+FATIM DIALLO | DELEGUE DE MOBILISATION ADJOINTE 4 | 0103699431
+BELLO AMINATA | TRESORIERE | 0769834455
+DIARRA FOUNE | TRESORIERE ADJOINT | 0797818327`;
 const dailyQuizSection = document.getElementById('dailyQuizSection');
 const dailyQuizForm = document.getElementById('dailyQuizForm');
 const dailyQuizTitle = document.getElementById('dailyQuizTitle');
@@ -629,6 +655,19 @@ async function loadMemberTools() {
   }
   if (memberDocsInput) {
     memberDocsInput.value = joinPipeLines(data.documents || [], ['title', 'url']);
+  }
+  if (memberWhatsappList) {
+    memberWhatsappList.value = joinPipeLines(data.whatsappRecipients || [], ['name', 'role', 'phone']);
+    if (!memberWhatsappList.value.trim()) {
+      memberWhatsappList.value = DEFAULT_WHATSAPP_RECIPIENTS;
+    }
+  }
+  if (memberWhatsappTemplate) {
+    memberWhatsappTemplate.value = data.whatsappTemplate || '';
+    if (!memberWhatsappTemplate.value.trim()) {
+      memberWhatsappTemplate.value =
+        'Bonjour {name} ({role}), rappel ASAA : merci de consulter vos tâches et le calendrier.';
+    }
   }
 }
 
@@ -3594,14 +3633,83 @@ memberToolsForm?.addEventListener('submit', async (e) => {
   const messages = parsePipeLines(memberMessagesInput?.value || '', ['scope', 'title', 'body']);
   const tasks = parsePipeLines(memberTasksInput?.value || '', ['assignee', 'title', 'dueDate', 'status']);
   const documents = parsePipeLines(memberDocsInput?.value || '', ['title', 'url']);
+  const whatsappRecipients = parsePipeLines(memberWhatsappList?.value || '', ['name', 'role', 'phone']);
+  const whatsappTemplate = (memberWhatsappTemplate?.value || '').trim();
   const res = await authedFetch('/api/admin/member-tools', {
     method: 'PUT',
-    body: JSON.stringify({ messages, tasks, documents })
+    body: JSON.stringify({ messages, tasks, documents, whatsappRecipients, whatsappTemplate })
   });
   const data = await res.json().catch(() => ({}));
   setStatus(memberToolsMsg, data.message || (res.ok ? 'Sauvegardé.' : 'Erreur.'));
   if (res.ok) {
     await loadMemberTools();
+  }
+});
+
+function normalizePhone(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('225')) return digits;
+  if (digits.length === 10 && digits.startsWith('0')) return `225${digits.slice(1)}`;
+  if (digits.length === 10) return `225${digits}`;
+  return digits;
+}
+
+function buildWhatsappMessage(template, recipient) {
+  const name = recipient.name || '';
+  const role = recipient.role || '';
+  return template.replace(/\{name\}/gi, name).replace(/\{role\}/gi, role);
+}
+
+memberWhatsappSend?.addEventListener('click', () => {
+  const list = parsePipeLines(memberWhatsappList?.value || '', ['name', 'role', 'phone']);
+  const template =
+    (memberWhatsappTemplate?.value || '').trim() ||
+    'Bonjour {name} ({role}), rappel ASAA : merci de consulter vos tâches et le calendrier.';
+  if (!list.length) {
+    alert('Aucun destinataire.');
+    return;
+  }
+  const links = list
+    .map((r) => {
+      const phone = normalizePhone(r.phone);
+      if (!phone) return null;
+      const msg = buildWhatsappMessage(template, r);
+      return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    })
+    .filter(Boolean);
+  if (!links.length) {
+    alert('Aucun numéro valide.');
+    return;
+  }
+  links.forEach((link, idx) => {
+    setTimeout(() => window.open(link, '_blank'), idx * 300);
+  });
+});
+
+memberWhatsappCopy?.addEventListener('click', async () => {
+  const list = parsePipeLines(memberWhatsappList?.value || '', ['name', 'role', 'phone']);
+  const template =
+    (memberWhatsappTemplate?.value || '').trim() ||
+    'Bonjour {name} ({role}), rappel ASAA : merci de consulter vos tâches et le calendrier.';
+  if (!list.length) {
+    alert('Aucun destinataire.');
+    return;
+  }
+  const lines = list
+    .map((r) => {
+      const phone = normalizePhone(r.phone);
+      if (!phone) return null;
+      const msg = buildWhatsappMessage(template, r);
+      return `${phone} | ${msg}`;
+    })
+    .filter(Boolean);
+  const text = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Messages copiés.');
+  } catch {
+    alert(text);
   }
 });
 
