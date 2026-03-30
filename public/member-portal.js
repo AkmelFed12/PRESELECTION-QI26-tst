@@ -282,6 +282,17 @@ function checkReminders() {
     alert(`Rappel: ${first}`);
     localStorage.setItem('memberReminderShown', '1');
   }
+  if (nextEventText) {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const last = localStorage.getItem('memberWhatsappReminder');
+    if (last !== todayKey) {
+      const ok = confirm(`Envoyer automatiquement le rappel WhatsApp ?\n${nextEventText}`);
+      if (ok) {
+        window.open(`https://wa.me/?text=${encodeURIComponent(`Rappel ASAA: ${nextEventText}`)}`, '_blank');
+        localStorage.setItem('memberWhatsappReminder', todayKey);
+      }
+    }
+  }
 }
 
 async function logMemberEvent(action, details) {
