@@ -56,6 +56,7 @@ const printAbidjanNord = document.getElementById('printAbidjanNord');
 const printAbidjanSud = document.getElementById('printAbidjanSud');
 const printAbidjanNordOnline = document.getElementById('printAbidjanNordOnline');
 const printAbidjanSudOnline = document.getElementById('printAbidjanSudOnline');
+const printOnlineCandidates = document.getElementById('printOnlineCandidates');
 const showAllCandidates = document.getElementById('showAllCandidates');
 const showOnlineCandidates = document.getElementById('showOnlineCandidates');
 const showEliminatedCandidates = document.getElementById('showEliminatedCandidates');
@@ -1034,6 +1035,70 @@ function printAttendanceList() {
       <th>Notes phase</th>
       <th>Présent</th>
       <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+}
+
+function printOnlineList() {
+  const list = Array.isArray(candidatesCache)
+    ? candidatesCache.filter((c) => String(c.status || '') === 'approved')
+    : [];
+  if (!list.length) {
+    alert('Aucun candidat en ligne.');
+    return;
+  }
+  const today = new Date().toLocaleDateString('fr-FR');
+  const sorted = list.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  const rows = sorted
+    .map(
+      (c, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${c.id || ''}</td>
+          <td>${resolveName(c)}</td>
+          <td>${c.whatsapp || ''}</td>
+          <td>${c.city || ''}</td>
+          <td style="height:26px;"></td>
+          <td style="height:26px;"></td>
+        </tr>
+      `,
+    )
+    .join('');
+  const html = `
+    <html>
+      <head>
+        <title>Candidats en ligne — Quiz Islamique 2026</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Liste d'appel — Candidats en ligne</h1>
+        <p>Date : ${today}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>WhatsApp</th>
+              <th>Commune</th>
+              <th>Présent</th>
+              <th>Signature</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -2168,6 +2233,8 @@ printAbidjanSudOnline?.addEventListener('click', () => {
     'PORT-BOUET'
   ], 'approved');
 });
+
+printOnlineCandidates?.addEventListener('click', printOnlineList);
 downloadAttendanceDoc?.addEventListener('click', () => {
   const list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
   if (!list.length) {
