@@ -43,6 +43,10 @@ const registerToast = document.getElementById('registerToast');
 const scrollTopBtn = document.getElementById('scrollTopBtn');
 const publicPrintNordSheet = document.getElementById('publicPrintNordSheet');
 const publicPrintSudSheet = document.getElementById('publicPrintSudSheet');
+const notationPhase = document.getElementById('notationPhase');
+const phaseTitle = document.getElementById('phaseTitle');
+const phaseBody = document.getElementById('phaseBody');
+const phaseDates = document.getElementById('phaseDates');
 
 let publicCandidatesCache = [];
 let publicCount = 0;
@@ -782,6 +786,27 @@ async function loadPublicSettings() {
   }
 }
 
+async function loadPublicSiteContent() {
+  try {
+    const res = await fetch('/api/public/site-content?ts=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (notationPhase) {
+      const phase = data.phase || {};
+      const enabled = phase.enabled !== false;
+      notationPhase.style.display = enabled ? 'block' : 'none';
+      if (phaseTitle) phaseTitle.textContent = phase.title || 'Phase de notation';
+      if (phaseBody) phaseBody.textContent = phase.body || '';
+      if (phaseDates) {
+        const north = phase.northDate || '';
+        const south = phase.southDate || '';
+        phaseDates.textContent =
+          north || south ? `Abidjan Nord : ${north} — Abidjan Sud : ${south}` : '';
+      }
+    }
+  } catch {}
+}
+
 async function loadLatestCommunique() {
   if (!latestCommunique) return;
   latestCommunique.textContent = 'Chargement...';
@@ -818,11 +843,13 @@ async function loadLatestCommunique() {
 }
 
 loadPublicSettings();
+loadPublicSiteContent();
 loadLatestCommunique();
 loadPublicResults();
 setInterval(() => {
   loadCandidates();
   loadPublicSettings();
+  loadPublicSiteContent();
   loadLatestCommunique();
   loadPublicResults();
 }, 60000);

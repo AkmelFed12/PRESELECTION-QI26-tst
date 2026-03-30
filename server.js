@@ -624,6 +624,14 @@ const DEFAULT_SITE_CONTENT = {
     open: false,
     info: "Le formulaire d’adhésion est fermé pour le moment."
   },
+  phase: {
+    enabled: true,
+    title: 'Phase de notation',
+    body:
+      'La phase précédente est terminée. La notation se fait désormais sur trois épreuves techniques : Questions‑Réponses /30, Pont As Sirat /25, Reconnaissance de Verset /5.',
+    northDate: 'DIMANCHE 19 AVRIL 2026',
+    southDate: 'DIMANCHE 12 AVRIL 2026'
+  },
   footer: {
     address: '',
     phone: '',
@@ -775,6 +783,13 @@ function sanitizeSiteContent(payload = {}) {
       open: Boolean(membership.open),
       info: safeText(membership.info, 500)
     },
+    phase: {
+      enabled: typeof phase.enabled === 'boolean' ? phase.enabled : true,
+      title: safeText(phase.title, 120),
+      body: safeText(phase.body, 1200),
+      northDate: safeText(phase.northDate, 80),
+      southDate: safeText(phase.southDate, 80)
+    },
     footer: {
       address: safeText(footer.address, 200),
       phone: safeText(footer.phone, 60),
@@ -855,6 +870,16 @@ async function getSiteContent() {
             ? parsed.membership.open
             : DEFAULT_SITE_CONTENT.membership.open,
         info: parsed.membership?.info || DEFAULT_SITE_CONTENT.membership.info
+      },
+      phase: {
+        enabled:
+          typeof parsed.phase?.enabled === 'boolean'
+            ? parsed.phase.enabled
+            : DEFAULT_SITE_CONTENT.phase.enabled,
+        title: parsed.phase?.title || DEFAULT_SITE_CONTENT.phase.title,
+        body: parsed.phase?.body || DEFAULT_SITE_CONTENT.phase.body,
+        northDate: parsed.phase?.northDate || DEFAULT_SITE_CONTENT.phase.northDate,
+        southDate: parsed.phase?.southDate || DEFAULT_SITE_CONTENT.phase.southDate
       },
       footer: { ...DEFAULT_SITE_CONTENT.footer, ...(parsed.footer || {}) }
     };

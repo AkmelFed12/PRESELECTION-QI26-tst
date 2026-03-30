@@ -221,6 +221,11 @@ const transparencyStatsInput = document.getElementById('transparencyStatsInput')
 const transparencyReportsInput = document.getElementById('transparencyReportsInput');
 const membershipOpenInput = document.getElementById('membershipOpenInput');
 const membershipInfoInput = document.getElementById('membershipInfoInput');
+const phaseEnabledInput = document.getElementById('phaseEnabledInput');
+const phaseTitleInput = document.getElementById('phaseTitleInput');
+const phaseBodyInput = document.getElementById('phaseBodyInput');
+const phaseNorthDateInput = document.getElementById('phaseNorthDateInput');
+const phaseSouthDateInput = document.getElementById('phaseSouthDateInput');
 const footerAddressInput = document.getElementById('footerAddressInput');
 const footerPhoneInput = document.getElementById('footerPhoneInput');
 const footerEmailInput = document.getElementById('footerEmailInput');
@@ -2035,6 +2040,11 @@ async function loadSiteContentAdmin() {
   if (transparencyReportsInput) transparencyReportsInput.value = joinPipeLines(data.transparency?.reports, ['title', 'url']);
   if (membershipOpenInput) membershipOpenInput.value = data.membership?.open ? '1' : '0';
   if (membershipInfoInput) membershipInfoInput.value = data.membership?.info || '';
+  if (phaseEnabledInput) phaseEnabledInput.value = data.phase?.enabled === false ? '0' : '1';
+  if (phaseTitleInput) phaseTitleInput.value = data.phase?.title || '';
+  if (phaseBodyInput) phaseBodyInput.value = data.phase?.body || '';
+  if (phaseNorthDateInput) phaseNorthDateInput.value = data.phase?.northDate || '';
+  if (phaseSouthDateInput) phaseSouthDateInput.value = data.phase?.southDate || '';
   if (footerAddressInput) footerAddressInput.value = data.footer?.address || '';
   if (footerPhoneInput) footerPhoneInput.value = data.footer?.phone || '';
   if (footerEmailInput) footerEmailInput.value = data.footer?.email || '';
@@ -2259,6 +2269,13 @@ siteContentForm?.addEventListener('submit', async (e) => {
     membership: {
       open: membershipOpenInput?.value === '1',
       info: membershipInfoInput?.value || ''
+    },
+    phase: {
+      enabled: phaseEnabledInput?.value === '1',
+      title: phaseTitleInput?.value || '',
+      body: phaseBodyInput?.value || '',
+      northDate: phaseNorthDateInput?.value || '',
+      southDate: phaseSouthDateInput?.value || ''
     },
     footer: {
       address: footerAddressInput?.value || '',
