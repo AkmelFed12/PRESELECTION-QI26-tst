@@ -217,6 +217,7 @@ const memberWhatsappList = document.getElementById('memberWhatsappList');
 const memberWhatsappTemplate = document.getElementById('memberWhatsappTemplate');
 const memberWhatsappSend = document.getElementById('memberWhatsappSend');
 const memberWhatsappCopy = document.getElementById('memberWhatsappCopy');
+const memberWhatsappLog = document.getElementById('memberWhatsappLog');
 
 const DEFAULT_WHATSAPP_RECIPIENTS = `DIARRA SIDI | PRESIDENT | 0779382233
 BAH ALI MOHAMED | VICE PRESIDENT | 0151495971
@@ -668,6 +669,17 @@ async function loadMemberTools() {
       memberWhatsappTemplate.value =
         'Bonjour {name} ({role}), rappel ASAA : merci de consulter vos tâches et le calendrier.';
     }
+  }
+  if (memberWhatsappLog) {
+    const logs = Array.isArray(data.whatsappLogs) ? data.whatsappLogs : [];
+    memberWhatsappLog.innerHTML = logs.length
+      ? `<ul>${logs
+          .map(
+            (l) =>
+              `<li>${new Date(l.sentAt).toLocaleString('fr-FR')} — ${l.count || 0} envoi(s) — ${l.template || ''}</li>`
+          )
+          .join('')}</ul>`
+      : 'Aucun envoi enregistré.';
   }
 }
 
@@ -3684,6 +3696,16 @@ memberWhatsappSend?.addEventListener('click', () => {
   }
   links.forEach((link, idx) => {
     setTimeout(() => window.open(link, '_blank'), idx * 300);
+  });
+
+  authedFetch('/api/admin/member-tools/whatsapp-log', {
+    method: 'POST',
+    body: JSON.stringify({
+      template,
+      count: links.length
+    })
+  }).then(() => {
+    loadMemberTools();
   });
 });
 

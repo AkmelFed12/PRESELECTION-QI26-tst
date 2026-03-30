@@ -894,7 +894,7 @@ async function getMemberToolsConfig() {
   );
   const raw = result.rows[0]?.value;
   if (!raw) {
-    return { messages: [], tasks: [], documents: [], whatsappRecipients: [], whatsappTemplate: '' };
+    return { messages: [], tasks: [], documents: [], whatsappRecipients: [], whatsappTemplate: '', whatsappLogs: [] };
   }
   try {
     const parsed = JSON.parse(raw);
@@ -903,10 +903,11 @@ async function getMemberToolsConfig() {
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
       documents: Array.isArray(parsed.documents) ? parsed.documents : [],
       whatsappRecipients: Array.isArray(parsed.whatsappRecipients) ? parsed.whatsappRecipients : [],
-      whatsappTemplate: typeof parsed.whatsappTemplate === 'string' ? parsed.whatsappTemplate : ''
+      whatsappTemplate: typeof parsed.whatsappTemplate === 'string' ? parsed.whatsappTemplate : '',
+      whatsappLogs: Array.isArray(parsed.whatsappLogs) ? parsed.whatsappLogs : []
     };
   } catch {
-    return { messages: [], tasks: [], documents: [], whatsappRecipients: [], whatsappTemplate: '' };
+    return { messages: [], tasks: [], documents: [], whatsappRecipients: [], whatsappTemplate: '', whatsappLogs: [] };
   }
 }
 
@@ -954,7 +955,17 @@ function sanitizeMemberTools(payload = {}) {
 
   const whatsappTemplate = sanitizeString(payload.whatsappTemplate, 800);
 
-  return { messages, tasks, documents, whatsappRecipients, whatsappTemplate };
+  const whatsappLogs = Array.isArray(payload.whatsappLogs)
+    ? payload.whatsappLogs
+        .map((l) => ({
+          sentAt: sanitizeString(l.sentAt, 60),
+          template: sanitizeString(l.template, 800),
+          count: Number(l.count || 0)
+        }))
+        .filter((l) => l.sentAt)
+    : [];
+
+  return { messages, tasks, documents, whatsappRecipients, whatsappTemplate, whatsappLogs };
 }
 
 // ==================== SECURITY HEADERS ====================
@@ -4783,6 +4794,30 @@ app.put('/api/admin/member-tools', verifyAdmin, async (req, res) => {
       [JSON.stringify(sanitized)]
     );
     res.json({ message: 'Outils membres mis à jour.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/member-tools/whatsapp-log', verifyAdmin, async (req, res) => {
+  try {
+    const tools = await getMemberToolsConfig();
+    const entry = {
+      sentAt: new Date().toISOString(),
+      template: sanitizeString(req.body?.template, 800),
+      count: Number(req.body?.count || 0)
+    };
+    const updated = {
+      ...tools,
+      whatsappLogs: [entry, ...(tools.whatsappLogs || [])].slice(0, 20)
+    };
+    const sanitized = sanitizeMemberTools(updated);
+    await pool.query(
+      "INSERT INTO admin_config (key, value) VALUES ('member_tools', $1)\n       ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
+      [JSON.stringify(sanitized)]
+    );
+    res.json({ message: 'Log enregistré.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
