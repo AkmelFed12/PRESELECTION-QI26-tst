@@ -9,6 +9,13 @@ const memberMessages = document.getElementById('memberMessages');
 const memberTasks = document.getElementById('memberTasks');
 const memberDocuments = document.getElementById('memberDocuments');
 const memberActions = document.getElementById('memberActions');
+const memberStatsMessages = document.getElementById('memberStatsMessages');
+const memberStatsTasks = document.getElementById('memberStatsTasks');
+const memberStatsDocs = document.getElementById('memberStatsDocs');
+const memberStatsActions = document.getElementById('memberStatsActions');
+const memberQuickDownloads = document.getElementById('memberQuickDownloads');
+
+let toolsCache = { messages: [], tasks: [], documents: [] };
 
 function setMsg(text, ok = false) {
   if (!msg) return;
@@ -78,6 +85,10 @@ async function loadTools() {
   const messages = data.messages || [];
   const tasks = data.tasks || [];
   const documents = data.documents || [];
+  toolsCache = { messages, tasks, documents };
+  if (memberStatsMessages) memberStatsMessages.textContent = String(messages.length);
+  if (memberStatsTasks) memberStatsTasks.textContent = String(tasks.length);
+  if (memberStatsDocs) memberStatsDocs.textContent = String(documents.length);
   if (memberMessages) {
     memberMessages.innerHTML = messages.length
       ? messages
@@ -110,6 +121,19 @@ async function loadTools() {
           .join('')}</ul>`
       : 'Aucun document.';
   }
+  if (memberQuickDownloads) {
+    if (!documents.length) {
+      memberQuickDownloads.innerHTML = '<span class="muted">Aucun document.</span>';
+    } else {
+      memberQuickDownloads.innerHTML = documents
+        .slice(0, 4)
+        .map(
+          (d) =>
+            `<a class="btn outline" href="${d.url}" target="_blank" rel="noopener">${d.title}</a>`
+        )
+        .join('');
+    }
+  }
 }
 
 async function loadActions() {
@@ -119,6 +143,7 @@ async function loadActions() {
   if (!res.ok) return;
   const data = await res.json();
   const actions = data.actions || [];
+  if (memberStatsActions) memberStatsActions.textContent = String(actions.length);
   if (memberActions) {
     memberActions.innerHTML = actions.length
       ? `<ul>${actions

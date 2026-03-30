@@ -23,6 +23,30 @@
 
     <main class="layout">
       <section class="card">
+        <h2>Tableau de bord rapide</h2>
+        <div class="stats-bar admin-stats" style="margin-bottom:12px;">
+          <div class="stat-card">
+            <div class="stat-label">Notifications</div>
+            <div class="stat-value" id="memberStatsMessages">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Tâches</div>
+            <div class="stat-value" id="memberStatsTasks">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Documents</div>
+            <div class="stat-value" id="memberStatsDocs">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Actions récentes</div>
+            <div class="stat-value" id="memberStatsActions">0</div>
+          </div>
+        </div>
+        <div class="card-subtitle">Téléchargements utiles</div>
+        <div id="memberQuickDownloads" class="admin-actions"></div>
+      </section>
+
+      <section class="card">
         <h2>Mon profil</h2>
         <form id="memberProfileForm" class="form-grid">
           <div>
@@ -50,7 +74,7 @@
       </section>
 
       <section class="card">
-        <h2>Messages officiels</h2>
+        <h2>Notifications</h2>
         <div id="memberMessages" class="status">Aucun message.</div>
       </section>
 
