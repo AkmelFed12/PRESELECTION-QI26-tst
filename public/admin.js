@@ -35,6 +35,8 @@ if (usernameInput && !usernameInput.value) {
   usernameInput.value = DEFAULT_ADMIN_USERNAME;
 }
 
+let candidateView = 'all';
+
 const settingsForm = document.getElementById('settingsForm');
 const settingsMsg = document.getElementById('settingsMsg');
 const eventDate = document.getElementById('eventDate');
@@ -52,7 +54,10 @@ const candidateCommuneFilter = document.getElementById('candidateCommuneFilter')
 const downloadAttendanceDoc = document.getElementById('downloadAttendanceDoc');
 const printAbidjanNord = document.getElementById('printAbidjanNord');
 const printAbidjanSud = document.getElementById('printAbidjanSud');
+const printAbidjanNordOnline = document.getElementById('printAbidjanNordOnline');
+const printAbidjanSudOnline = document.getElementById('printAbidjanSudOnline');
 const showAllCandidates = document.getElementById('showAllCandidates');
+const showOnlineCandidates = document.getElementById('showOnlineCandidates');
 const showEliminatedCandidates = document.getElementById('showEliminatedCandidates');
 const bulkSelectionInfo = document.getElementById('bulkSelectionInfo');
 const bulkApproveBtn = document.getElementById('bulkApproveBtn');
@@ -491,6 +496,18 @@ function toggleEliminated(showEliminated) {
   }
 }
 
+function getBaseCandidatesList() {
+  const list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
+  if (candidateView === 'eliminated') {
+    return list.filter((c) => String(c.status || '') === 'eliminated');
+  }
+  let filtered = list.filter((c) => String(c.status || '') !== 'eliminated');
+  if (candidateView === 'online') {
+    filtered = filtered.filter((c) => String(c.status || '') === 'approved');
+  }
+  return filtered;
+}
+
 function updateSelectionInfo() {
   if (bulkSelectionInfo) {
     bulkSelectionInfo.textContent = `${selectedCandidateIds.size} sélectionné${selectedCandidateIds.size > 1 ? 's' : ''}`;
@@ -661,7 +678,9 @@ async function loadDashboard() {
 
   // candidates
   candidatesCache = data.candidates || [];
-  renderCandidates(candidatesCache);
+  candidateView = candidateView || 'all';
+  toggleEliminated(candidateView === 'eliminated');
+  filterCandidates();
   renderEliminated(candidatesCache.filter((c) => String(c.status || '') === 'eliminated'));
   renderCommuneStats(candidatesCache);
   renderCommuneMap(candidatesCache);
@@ -964,7 +983,7 @@ async function loadCandidateStatusHistory(candidateId) {
 }
 
 function printAttendanceList() {
-  const list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
+  const list = Array.isArray(candidatesCache) ? candidatesCache.filter((c) => String(c.status || '') !== 'eliminated') : [];
   if (!list.length) {
     alert('Aucun candidat à imprimer.');
     return;
@@ -1029,8 +1048,13 @@ function printAttendanceList() {
   win.print();
 }
 
-function printAttendanceListForCommunes(title, communes) {
-  const list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
+function printAttendanceListForCommunes(title, communes, statusFilter = '') {
+  let list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
+  if (statusFilter) {
+    list = list.filter((c) => String(c.status || '') === statusFilter);
+  } else {
+    list = list.filter((c) => String(c.status || '') !== 'eliminated');
+  }
   const communeSet = new Set(communes.map((c) => c.toUpperCase()));
   const filtered = list.filter((c) => communeSet.has((c.city || '').toUpperCase()));
   if (!filtered.length) {
@@ -1097,11 +1121,16 @@ function printAttendanceListForCommunes(title, communes) {
 function filterCandidates() {
   const query = (candidateSearch?.value || '').trim().toLowerCase();
   const commune = (candidateCommuneFilter?.value || '').toLowerCase().trim();
-  if (!query && !commune) {
-    renderCandidates(candidatesCache);
+  if (candidateView === 'eliminated') {
+    renderEliminated(getBaseCandidatesList());
     return;
   }
-  const filtered = candidatesCache.filter((c) => {
+  const base = getBaseCandidatesList();
+  if (!query && !commune) {
+    renderCandidates(base);
+    return;
+  }
+  const filtered = base.filter((c) => {
     const name = resolveName(c).toLowerCase();
     const city = (c.city || '').toLowerCase();
     const phone = (c.whatsapp || '').toLowerCase();
@@ -2116,6 +2145,29 @@ printAbidjanSud?.addEventListener('click', () => {
     'PORT-BOUET'
   ]);
 });
+
+printAbidjanNordOnline?.addEventListener('click', () => {
+  printAttendanceListForCommunes('Abidjan Nord (en ligne)', [
+    'COCODY',
+    'ADJAME',
+    'ADJAMÉ',
+    'ABOBO',
+    'ANYAMA',
+    'YOPOUGON',
+    'BINGERVILLE',
+    'ATTECOUBE'
+  ], 'approved');
+});
+
+printAbidjanSudOnline?.addEventListener('click', () => {
+  printAttendanceListForCommunes('Abidjan Sud (en ligne)', [
+    'PLATEAU',
+    'TREICHVILLE',
+    'MARCORY',
+    'KOUMASSI',
+    'PORT-BOUET'
+  ], 'approved');
+});
 downloadAttendanceDoc?.addEventListener('click', () => {
   const list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
   if (!list.length) {
@@ -2639,11 +2691,21 @@ closeRegistrationBtn?.addEventListener('click', async () => {
 });
 
 showAllCandidates?.addEventListener('click', () => {
+  candidateView = 'all';
   toggleEliminated(false);
+  filterCandidates();
 });
 
 showEliminatedCandidates?.addEventListener('click', () => {
+  candidateView = 'eliminated';
   toggleEliminated(true);
+  filterCandidates();
+});
+
+showOnlineCandidates?.addEventListener('click', () => {
+  candidateView = 'online';
+  toggleEliminated(false);
+  filterCandidates();
 });
 
 newsForm?.addEventListener('submit', async (e) => {
