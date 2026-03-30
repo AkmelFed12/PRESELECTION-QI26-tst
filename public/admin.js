@@ -62,6 +62,8 @@ const printAbidjanNordOnline = document.getElementById('printAbidjanNordOnline')
 const printAbidjanSudOnline = document.getElementById('printAbidjanSudOnline');
 const printOnlineCandidates = document.getElementById('printOnlineCandidates');
 const printCommuneCandidates = document.getElementById('printCommuneCandidates');
+const printAbidjanNordSheet = document.getElementById('printAbidjanNordSheet');
+const printAbidjanSudSheet = document.getElementById('printAbidjanSudSheet');
 const showAllCandidates = document.getElementById('showAllCandidates');
 const showOnlineCandidates = document.getElementById('showOnlineCandidates');
 const showEliminatedCandidates = document.getElementById('showEliminatedCandidates');
@@ -1125,6 +1127,78 @@ function printCommuneList(commune) {
     return;
   }
   printAttendanceListForCommunes(`Commune ${target}`, [target]);
+}
+
+function printTechnicalSheetByZone(title, communes, dateLabel) {
+  const list = Array.isArray(candidatesCache)
+    ? candidatesCache.filter((c) => String(c.status || '') !== 'eliminated')
+    : [];
+  const communeSet = new Set(communes.map((c) => c.toUpperCase()));
+  const filtered = list.filter((c) => communeSet.has((c.city || '').toUpperCase()));
+  if (!filtered.length) {
+    alert('Aucun candidat dans cette zone.');
+    return;
+  }
+  const sorted = filtered.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  const rows = sorted
+    .map(
+      (c, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${c.id || ''}</td>
+          <td>${resolveName(c)}</td>
+          <td>${c.city || ''}</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      `,
+    )
+    .join('');
+  const html = `
+    <html>
+      <head>
+        <title>${title} — Fiche technique</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 6px; }
+          h2 { text-align: center; margin: 0; font-size: 16px; font-weight: 600; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+          .small { font-size: 12px; color: #444; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <h1>${title} — Fiche technique</h1>
+        <h2>Date : ${dateLabel}</h2>
+        <p class="small">Épreuves techniques : Questions-Réponses, Pont As Sirat, Reconnaissance de Verset</p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Commune</th>
+              <th>Questions-Réponses</th>
+              <th>Pont As Sirat</th>
+              <th>Reconnaissance de Verset</th>
+              <th>TOTAL</th>
+              <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 function printAttendanceListForCommunes(title, communes, statusFilter = '') {
@@ -2252,6 +2326,20 @@ printOnlineCandidates?.addEventListener('click', printOnlineList);
 printCommuneCandidates?.addEventListener('click', () => {
   const commune = candidateCommuneFilter?.value || '';
   printCommuneList(commune);
+});
+printAbidjanNordSheet?.addEventListener('click', () => {
+  printTechnicalSheetByZone(
+    'Abidjan Nord',
+    ['COCODY', 'ADJAME', 'ADJAMÉ', 'ABOBO', 'ANYAMA', 'YOPOUGON', 'BINGERVILLE', 'ATTECOUBE'],
+    'DIMANCHE 19 AVRIL 2026'
+  );
+});
+printAbidjanSudSheet?.addEventListener('click', () => {
+  printTechnicalSheetByZone(
+    'Abidjan Sud',
+    ['PLATEAU', 'TREICHVILLE', 'MARCORY', 'KOUMASSI', 'PORT-BOUET'],
+    'DIMANCHE 12 AVRIL 2026'
+  );
 });
 downloadAttendanceDoc?.addEventListener('click', () => {
   const list = Array.isArray(candidatesCache) ? candidatesCache.slice() : [];
