@@ -1710,11 +1710,13 @@ async function loadMembers() {
 
 function renderMembers() {
   if (!membersTableBody) return;
+  const pwd = (memberDefaultPasswordInput?.value || memberDefaultPassword || '').trim();
   membersTableBody.innerHTML = membersCache
     .map((m) => `
       <tr>
         <td>${m.id}</td>
         <td>${m.username || ''}</td>
+        <td>${pwd || '-'}</td>
         <td>${m.fullname || m.fullName || ''}</td>
         <td>${m.role || ''}</td>
         <td>${Number(m.active) === 1 ? 'Actif' : 'Inactif'}</td>
