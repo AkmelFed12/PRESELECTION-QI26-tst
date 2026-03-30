@@ -792,6 +792,16 @@
 
     <script src="admin.js?v=20260319"></script>
     <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          registrations.forEach((registration) => registration.unregister());
+        }).catch(() => {});
+        if (window.caches && caches.keys) {
+          caches.keys().then((keys) => keys.forEach((key) => caches.delete(key))).catch(() => {});
+        }
+      }
+    </script>
+    <script>
       setTimeout(function () {
         if (!window.__adminLoaded) {
           var s = document.createElement('script');
