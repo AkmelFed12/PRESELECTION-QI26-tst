@@ -47,7 +47,15 @@
         <div class="admin-actions" style="margin-top:10px;">
           <input id="memberSearchInput" placeholder="Rechercher messages, tâches, documents..." style="min-width:220px;" />
           <button class="btn outline" type="button" id="memberQuickMode">Mode lecture rapide</button>
+          <button class="btn outline" type="button" id="memberDownloadAll">Télécharger tout</button>
+          <button class="btn outline" type="button" id="memberDarkToggle">Mode sombre</button>
+          <button class="btn outline" type="button" id="memberReminderToggle">Rappels auto</button>
         </div>
+      </section>
+
+      <section class="card">
+        <h2>Mes priorités du jour</h2>
+        <div id="memberPriorities" class="status">Aucune priorité.</div>
       </section>
 
       <section class="card quick-hide">
@@ -75,6 +83,7 @@
       <section class="card quick-hide">
         <h2>Mon rôle & statut</h2>
         <div id="memberRoleBadge" class="status">Chargement...</div>
+        <div id="memberPerformance" class="status" style="margin-top:8px;">Performance: ...</div>
       </section>
 
       <section class="card">
@@ -108,6 +117,19 @@
       </section>
 
       <section class="card quick-hide">
+        <h2>Historique des connexions</h2>
+        <div id="memberLoginHistory" class="status">Aucune connexion récente.</div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Suivi de présence</h2>
+        <div class="status">
+          <button class="btn outline" type="button" id="memberPresenceBtn">Je confirme ma présence</button>
+          <div id="memberPresenceStatus" class="muted" style="margin-top:8px;">Aucune présence confirmée.</div>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
         <h2>FAQ interne</h2>
         <div class="status">
           <strong>Comment télécharger les documents ?</strong><br />
@@ -116,6 +138,17 @@
           Utilise la rubrique Contact ou WhatsApp officiel.<br /><br />
           <strong>Mot de passe oublié ?</strong><br />
           Demande la réinitialisation à l’admin.
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Centre d’aide</h2>
+        <div class="status">
+          Besoin d’aide rapide ? Contacte le support via WhatsApp ou par email.
+          <div style="margin-top:8px;">
+            <a class="btn outline" href="https://wa.me/2250150070083" target="_blank" rel="noopener">WhatsApp support</a>
+            <a class="btn outline" href="mailto:asaar@support.org">Email support</a>
+          </div>
         </div>
       </section>
     </main>

@@ -102,6 +102,32 @@ body.dark .btn.outline {
   border-color: #777;
 }
 
+body.member-dark {
+  background: radial-gradient(circle at top, #161a1d, #0f1113 70%);
+  color: #f1f3f5;
+}
+
+body.member-dark .card {
+  background: #1c2126;
+  border-color: #2b333b;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+}
+
+body.member-dark .status {
+  background: #20262c;
+  color: #f1f3f5;
+}
+
+body.member-dark .btn.outline {
+  color: #e6f6ef;
+  border-color: rgba(230, 246, 239, 0.6);
+  background: rgba(230, 246, 239, 0.08);
+}
+
+body.member-dark a {
+  color: #9ef2c7;
+}
+
 body.dark .table th {
   background: #20252a;
   color: #f3f4f6;

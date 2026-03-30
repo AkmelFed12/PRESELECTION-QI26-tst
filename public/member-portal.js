@@ -18,10 +18,19 @@ const memberSearchInput = document.getElementById('memberSearchInput');
 const memberQuickMode = document.getElementById('memberQuickMode');
 const memberCalendar = document.getElementById('memberCalendar');
 const memberDownloadHistory = document.getElementById('memberDownloadHistory');
+const memberPriorities = document.getElementById('memberPriorities');
+const memberDownloadAll = document.getElementById('memberDownloadAll');
+const memberDarkToggle = document.getElementById('memberDarkToggle');
+const memberReminderToggle = document.getElementById('memberReminderToggle');
+const memberPerformance = document.getElementById('memberPerformance');
+const memberLoginHistory = document.getElementById('memberLoginHistory');
+const memberPresenceBtn = document.getElementById('memberPresenceBtn');
+const memberPresenceStatus = document.getElementById('memberPresenceStatus');
 
 let toolsCache = { messages: [], tasks: [], documents: [] };
 let actionsCache = [];
 let quickMode = false;
+let remindersEnabled = localStorage.getItem('memberReminders') === '1';
 
 function setMsg(text, ok = false) {
   if (!msg) return;
@@ -85,6 +94,56 @@ function renderDocuments(list) {
         )
         .join('')}</ul>`
     : 'Aucun document.';
+}
+
+function updatePriorities(tasks) {
+  if (!memberPriorities) return;
+  if (!tasks.length) {
+    memberPriorities.textContent = 'Aucune priorité.';
+    return;
+  }
+  const now = new Date();
+  const soon = tasks.filter((t) => {
+    const status = normalizeText(t.status || '');
+    if (status.includes('urgent')) return true;
+    if (t.dueDate) {
+      const d = new Date(t.dueDate);
+      if (!Number.isNaN(d.getTime())) {
+        const diff = (d - now) / (1000 * 60 * 60 * 24);
+        return diff <= 3;
+      }
+    }
+    return false;
+  });
+  const list = soon.length ? soon : tasks.slice(0, 5);
+  memberPriorities.innerHTML = `<ul>${list
+    .map(
+      (t) =>
+        `<li><strong>${t.title}</strong> — ${t.status || 'En cours'} ${
+          t.dueDate ? `· Échéance: ${t.dueDate}` : ''
+        }</li>`
+    )
+    .join('')}</ul>`;
+}
+
+function updatePerformanceBadge() {
+  if (!memberPerformance) return;
+  const actions = actionsCache.length;
+  let label = 'Actif';
+  if (actions >= 15) label = 'Très actif';
+  if (actions >= 30) label = 'Excellent';
+  if (actions === 0) label = 'Inactif';
+  memberPerformance.textContent = `Performance: ${label}`;
+}
+
+function updateLoginHistory() {
+  if (!memberLoginHistory) return;
+  const logins = actionsCache.filter((a) => a.action === 'login');
+  memberLoginHistory.innerHTML = logins.length
+    ? `<ul>${logins
+        .map((a) => `<li>${new Date(a.createdat || a.createdAt).toLocaleString('fr-FR')}</li>`)
+        .join('')}</ul>`
+    : 'Aucune connexion récente.';
 }
 
 function getAuth() {
@@ -151,6 +210,69 @@ memberQuickMode?.addEventListener('click', () => {
   memberQuickMode.textContent = quickMode ? 'Mode complet' : 'Mode lecture rapide';
 });
 
+memberDownloadAll?.addEventListener('click', () => {
+  const docs = toolsCache.documents || [];
+  if (!docs.length) {
+    alert('Aucun document.');
+    return;
+  }
+  const html = `
+    <html>
+      <head><meta charset="utf-8" /><title>Pack documents</title></head>
+      <body>
+        <h2>Documents disponibles</h2>
+        <ul>${docs.map((d) => `<li><a href="${d.url}">${d.title}</a></li>`).join('')}</ul>
+      </body>
+    </html>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'documents-pack.html';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
+
+memberDarkToggle?.addEventListener('click', () => {
+  document.body.classList.toggle('member-dark');
+  localStorage.setItem('memberTheme', document.body.classList.contains('member-dark') ? 'dark' : 'light');
+});
+
+memberReminderToggle?.addEventListener('click', () => {
+  remindersEnabled = !remindersEnabled;
+  localStorage.setItem('memberReminders', remindersEnabled ? '1' : '0');
+  memberReminderToggle.textContent = remindersEnabled ? 'Rappels activés' : 'Rappels auto';
+  if (remindersEnabled) checkReminders();
+});
+
+memberPresenceBtn?.addEventListener('click', () => {
+  const now = new Date().toISOString();
+  localStorage.setItem('memberPresence', now);
+  if (memberPresenceStatus) {
+    memberPresenceStatus.textContent = `Présence confirmée le ${new Date(now).toLocaleString('fr-FR')}`;
+  }
+});
+
+function syncPresence() {
+  if (!memberPresenceStatus) return;
+  const last = localStorage.getItem('memberPresence');
+  memberPresenceStatus.textContent = last
+    ? `Présence confirmée le ${new Date(last).toLocaleString('fr-FR')}`
+    : 'Aucune présence confirmée.';
+}
+
+function checkReminders() {
+  if (!remindersEnabled) return;
+  if (!memberCalendar) return;
+  const items = memberCalendar.querySelectorAll('li');
+  if (!items.length) return;
+  const first = items[0].textContent || '';
+  if (first && !localStorage.getItem('memberReminderShown')) {
+    alert(`Rappel: ${first}`);
+    localStorage.setItem('memberReminderShown', '1');
+  }
+}
+
 async function logMemberEvent(action, details) {
   const auth = getAuth();
   if (!auth) return;
@@ -191,10 +313,18 @@ async function loadCalendar() {
     memberCalendar.innerHTML = `<ul>${schedule
       .map((s) => `<li><strong>${s.date || ''}</strong> ${s.time ? `(${s.time})` : ''} — ${s.title || ''}</li>`)
       .join('')}</ul>`;
+    checkReminders();
   } catch {
     memberCalendar.textContent = 'Calendrier indisponible.';
   }
 }
+
+const storedTheme = localStorage.getItem('memberTheme');
+if (storedTheme === 'dark') document.body.classList.add('member-dark');
+if (memberReminderToggle) {
+  memberReminderToggle.textContent = remindersEnabled ? 'Rappels activés' : 'Rappels auto';
+}
+syncPresence();
 
 async function loadTools() {
   const auth = getAuth();
@@ -213,6 +343,7 @@ async function loadTools() {
   renderMessages(filterByQuery(messages, query, ['title', 'body']));
   renderTasks(filterByQuery(tasks, query, ['title', 'status', 'dueDate']));
   renderDocuments(filterByQuery(documents, query, ['title', 'url']));
+  updatePriorities(tasks);
   if (memberQuickDownloads) {
     if (!documents.length) {
       memberQuickDownloads.innerHTML = '<span class="muted">Aucun document.</span>';
@@ -263,4 +394,6 @@ async function loadActions() {
           .join('')}</ul>`
       : 'Aucun téléchargement.';
   }
+  updatePerformanceBadge();
+  updateLoginHistory();
 }
