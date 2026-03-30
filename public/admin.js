@@ -222,6 +222,7 @@ const whTemplateMeeting = document.getElementById('whTemplateMeeting');
 const whTemplateConvocation = document.getElementById('whTemplateConvocation');
 const whTemplateReminder = document.getElementById('whTemplateReminder');
 const memberWhatsappTest = document.getElementById('memberWhatsappTest');
+const memberWhatsappTestIndex = document.getElementById('memberWhatsappTestIndex');
 
 const DEFAULT_WHATSAPP_RECIPIENTS = `DIARRA SIDI | PRESIDENT | 0779382233
 BAH ALI MOHAMED | VICE PRESIDENT | 0151495971
@@ -3740,7 +3741,8 @@ memberWhatsappTest?.addEventListener('click', () => {
     alert('Aucun destinataire.');
     return;
   }
-  const first = list[0];
+  const idx = Math.max(1, Number(memberWhatsappTestIndex?.value || 1)) - 1;
+  const first = list[idx] || list[0];
   const phone = normalizePhone(first.phone);
   if (!phone) {
     alert('Numéro invalide.');
