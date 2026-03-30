@@ -41,6 +41,8 @@ const shareFacebook = document.getElementById('shareFacebook');
 const shareCopy = document.getElementById('shareCopy');
 const registerToast = document.getElementById('registerToast');
 const scrollTopBtn = document.getElementById('scrollTopBtn');
+const publicPrintNordSheet = document.getElementById('publicPrintNordSheet');
+const publicPrintSudSheet = document.getElementById('publicPrintSudSheet');
 
 let publicCandidatesCache = [];
 let publicCount = 0;
@@ -505,6 +507,102 @@ function showToast(text) {
   registerToast.classList.add('show');
   setTimeout(() => registerToast.classList.remove('show'), 2000);
 }
+
+async function fetchPublicCandidates() {
+  const res = await fetch('/api/public-candidates');
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => []);
+  return Array.isArray(data) ? data : [];
+}
+
+function buildPublicSheetHtml(title, dateLabel, list) {
+  const rows = list
+    .map(
+      (c, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${c.id || ''}</td>
+          <td>${c.fullName || ''}</td>
+          <td>${c.city || ''}</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      `,
+    )
+    .join('');
+  return `
+    <html>
+      <head>
+        <title>${title} — Fiche notation</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 6px; }
+          h2 { text-align: center; margin: 0; font-size: 16px; font-weight: 600; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+          .small { font-size: 12px; color: #444; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <h1>${title} — Fiche notation</h1>
+        <h2>Date : ${dateLabel}</h2>
+        <p class="small">Notation : Questions‑Réponses /30 • Pont As Sirat /25 • Reconnaissance de Verset /5</p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Commune</th>
+              <th>Questions‑Réponses /30</th>
+              <th>Pont As Sirat /25</th>
+              <th>Reconnaissance de Verset /5</th>
+              <th>TOTAL /60</th>
+              <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>`;
+}
+
+async function printPublicSheetByZone(title, dateLabel, communes) {
+  const list = await fetchPublicCandidates();
+  const communeSet = new Set(communes.map((c) => c.toUpperCase()));
+  const filtered = list.filter((c) => communeSet.has(String(c.city || '').toUpperCase()));
+  if (!filtered.length) {
+    alert('Aucun candidat dans cette zone.');
+    return;
+  }
+  const html = buildPublicSheetHtml(title, dateLabel, filtered);
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+}
+
+publicPrintNordSheet?.addEventListener('click', () => {
+  printPublicSheetByZone(
+    'Abidjan Nord',
+    'DIMANCHE 19 AVRIL 2026',
+    ['COCODY', 'ADJAME', 'ADJAMÉ', 'ABOBO', 'ANYAMA', 'YOPOUGON', 'BINGERVILLE', 'ATTECOUBE']
+  );
+});
+
+publicPrintSudSheet?.addEventListener('click', () => {
+  printPublicSheetByZone(
+    'Abidjan Sud',
+    'DIMANCHE 12 AVRIL 2026',
+    ['PLATEAU', 'TREICHVILLE', 'MARCORY', 'KOUMASSI', 'PORT-BOUET']
+  );
+});
 
 window.addEventListener('scroll', () => {
   if (!scrollTopBtn) return;
