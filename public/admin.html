@@ -355,8 +355,17 @@
             <label>Rappels WhatsApp — Modèle (variables: {name}, {role})</label>
             <textarea id="memberWhatsappTemplate" rows="3" placeholder="Bonjour {name} ({role}), rappel ASAA : ..."></textarea>
           </div>
+          <div class="full">
+            <label>Modèles rapides</label>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn outline" type="button" id="whTemplateMeeting">Modèle réunion</button>
+              <button class="btn outline" type="button" id="whTemplateConvocation">Modèle convocation</button>
+              <button class="btn outline" type="button" id="whTemplateReminder">Modèle rappel</button>
+            </div>
+          </div>
           <div class="full" style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn outline" type="button" id="memberWhatsappSend">Envoyer rappels WhatsApp</button>
+            <button class="btn outline" type="button" id="memberWhatsappTest">Test d’envoi</button>
             <button class="btn outline" type="button" id="memberWhatsappCopy">Copier messages</button>
           </div>
           <div class="full">

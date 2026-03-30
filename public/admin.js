@@ -218,6 +218,10 @@ const memberWhatsappTemplate = document.getElementById('memberWhatsappTemplate')
 const memberWhatsappSend = document.getElementById('memberWhatsappSend');
 const memberWhatsappCopy = document.getElementById('memberWhatsappCopy');
 const memberWhatsappLog = document.getElementById('memberWhatsappLog');
+const whTemplateMeeting = document.getElementById('whTemplateMeeting');
+const whTemplateConvocation = document.getElementById('whTemplateConvocation');
+const whTemplateReminder = document.getElementById('whTemplateReminder');
+const memberWhatsappTest = document.getElementById('memberWhatsappTest');
 
 const DEFAULT_WHATSAPP_RECIPIENTS = `DIARRA SIDI | PRESIDENT | 0779382233
 BAH ALI MOHAMED | VICE PRESIDENT | 0151495971
@@ -3707,6 +3711,43 @@ memberWhatsappSend?.addEventListener('click', () => {
   }).then(() => {
     loadMemberTools();
   });
+});
+
+whTemplateMeeting?.addEventListener('click', () => {
+  if (!memberWhatsappTemplate) return;
+  memberWhatsappTemplate.value =
+    'Bonjour {name} ({role}), réunion ASAA prévue ce dimanche à 16h. Merci de confirmer votre présence.';
+});
+
+whTemplateConvocation?.addEventListener('click', () => {
+  if (!memberWhatsappTemplate) return;
+  memberWhatsappTemplate.value =
+    'Bonjour {name} ({role}), convocation ASAA : merci d’être présent(e) à la réunion officielle. Détails à suivre.';
+});
+
+whTemplateReminder?.addEventListener('click', () => {
+  if (!memberWhatsappTemplate) return;
+  memberWhatsappTemplate.value =
+    'Bonjour {name} ({role}), rappel ASAA : consultez vos tâches et le calendrier.';
+});
+
+memberWhatsappTest?.addEventListener('click', () => {
+  const list = parsePipeLines(memberWhatsappList?.value || '', ['name', 'role', 'phone']);
+  const template =
+    (memberWhatsappTemplate?.value || '').trim() ||
+    'Bonjour {name} ({role}), rappel ASAA : merci de consulter vos tâches et le calendrier.';
+  if (!list.length) {
+    alert('Aucun destinataire.');
+    return;
+  }
+  const first = list[0];
+  const phone = normalizePhone(first.phone);
+  if (!phone) {
+    alert('Numéro invalide.');
+    return;
+  }
+  const msg = buildWhatsappMessage(template, first);
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 });
 
 memberWhatsappCopy?.addEventListener('click', async () => {
