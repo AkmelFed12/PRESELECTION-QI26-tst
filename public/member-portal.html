@@ -44,9 +44,13 @@
         </div>
         <div class="card-subtitle">Téléchargements utiles</div>
         <div id="memberQuickDownloads" class="admin-actions"></div>
+        <div class="admin-actions" style="margin-top:10px;">
+          <input id="memberSearchInput" placeholder="Rechercher messages, tâches, documents..." style="min-width:220px;" />
+          <button class="btn outline" type="button" id="memberQuickMode">Mode lecture rapide</button>
+        </div>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Mon profil</h2>
         <form id="memberProfileForm" class="form-grid">
           <div>
@@ -68,7 +72,7 @@
         <p id="memberProfileMsg" class="status"></p>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Mon rôle & statut</h2>
         <div id="memberRoleBadge" class="status">Chargement...</div>
       </section>
@@ -78,7 +82,7 @@
         <div id="memberMessages" class="status">Aucun message.</div>
       </section>
 
-      <section class="card">
+      <section class="card quick-hide">
         <h2>Mes tâches</h2>
         <div id="memberTasks" class="status">Aucune tâche.</div>
       </section>
@@ -88,9 +92,31 @@
         <div id="memberDocuments" class="status">Aucun document.</div>
       </section>
 
+      <section class="card quick-hide">
+        <h2>Calendrier personnel</h2>
+        <div id="memberCalendar" class="status">Chargement...</div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Historique des téléchargements</h2>
+        <div id="memberDownloadHistory" class="status">Aucun téléchargement.</div>
+      </section>
+
       <section class="card">
         <h2>Historique des actions</h2>
         <div id="memberActions" class="status">Aucune activité récente.</div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>FAQ interne</h2>
+        <div class="status">
+          <strong>Comment télécharger les documents ?</strong><br />
+          Clique sur un bouton dans “Téléchargements utiles”.<br /><br />
+          <strong>Qui contacter en cas de problème ?</strong><br />
+          Utilise la rubrique Contact ou WhatsApp officiel.<br /><br />
+          <strong>Mot de passe oublié ?</strong><br />
+          Demande la réinitialisation à l’admin.
+        </div>
       </section>
     </main>
 

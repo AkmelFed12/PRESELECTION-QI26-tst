@@ -4788,6 +4788,20 @@ app.get('/api/members/actions', verifyMember, async (req, res) => {
   }
 });
 
+// Member: log custom actions (downloads, etc.)
+app.post('/api/members/log', verifyMember, async (req, res) => {
+  try {
+    const action = sanitizeString(req.body?.action, 80);
+    const details = req.body?.details || {};
+    if (!action) return res.status(400).json({ message: 'Action requise.' });
+    await logMemberAction(req.member.id, action, details, req);
+    res.json({ message: 'Enregistré.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Admin: reset all member passwords to default
 app.post('/api/admin/members/reset-passwords', verifyAdmin, async (req, res) => {
   try {
