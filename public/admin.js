@@ -54,6 +54,8 @@ const candidateCommuneFilter = document.getElementById('candidateCommuneFilter')
 const downloadAttendanceDoc = document.getElementById('downloadAttendanceDoc');
 const downloadOnlineDoc = document.getElementById('downloadOnlineDoc');
 const downloadOnlinePdf = document.getElementById('downloadOnlinePdf');
+const downloadCommuneDoc = document.getElementById('downloadCommuneDoc');
+const downloadCommunePdf = document.getElementById('downloadCommunePdf');
 const printAbidjanNord = document.getElementById('printAbidjanNord');
 const printAbidjanSud = document.getElementById('printAbidjanSud');
 const printAbidjanNordOnline = document.getElementById('printAbidjanNordOnline');
@@ -2432,6 +2434,156 @@ downloadOnlinePdf?.addEventListener('click', () => {
       </head>
       <body>
         <h1>Liste d'appel — Candidats en ligne</h1>
+        <p>Date : ${today}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>WhatsApp</th>
+              <th>Commune</th>
+              <th>Phase</th>
+              <th>Notes phase</th>
+              <th>Présent</th>
+              <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>`;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+});
+
+downloadCommuneDoc?.addEventListener('click', () => {
+  const commune = (candidateCommuneFilter?.value || '').trim();
+  if (!commune) {
+    alert('Sélectionne une commune.');
+    return;
+  }
+  const list = Array.isArray(candidatesCache)
+    ? candidatesCache.filter((c) => (c.city || '').toUpperCase() === commune.toUpperCase())
+    : [];
+  if (!list.length) {
+    alert('Aucun candidat dans cette commune.');
+    return;
+  }
+  const today = new Date().toLocaleDateString('fr-FR');
+  const sorted = list.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  const rows = sorted
+    .map(
+      (c, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${c.id || ''}</td>
+          <td>${resolveName(c)}</td>
+          <td>${c.whatsapp || ''}</td>
+          <td>${c.city || ''}</td>
+          <td style="height:24px;"></td>
+          <td style="height:24px;"></td>
+          <td style="height:24px;"></td>
+          <td style="height:24px;"></td>
+        </tr>
+      `,
+    )
+    .join('');
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Liste par commune — ${commune}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Liste d'appel — Commune ${commune}</h1>
+        <p>Date : ${today}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>WhatsApp</th>
+              <th>Commune</th>
+              <th>Phase</th>
+              <th>Notes phase</th>
+              <th>Présent</th>
+              <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>`;
+
+  const blob = new Blob([html], { type: 'application/msword' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Liste-commune-${commune}-${today.replace(/\//g, '-')}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
+
+downloadCommunePdf?.addEventListener('click', () => {
+  const commune = (candidateCommuneFilter?.value || '').trim();
+  if (!commune) {
+    alert('Sélectionne une commune.');
+    return;
+  }
+  const list = Array.isArray(candidatesCache)
+    ? candidatesCache.filter((c) => (c.city || '').toUpperCase() === commune.toUpperCase())
+    : [];
+  if (!list.length) {
+    alert('Aucun candidat dans cette commune.');
+    return;
+  }
+  const today = new Date().toLocaleDateString('fr-FR');
+  const sorted = list.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  const rows = sorted
+    .map(
+      (c, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${c.id || ''}</td>
+          <td>${resolveName(c)}</td>
+          <td>${c.whatsapp || ''}</td>
+          <td>${c.city || ''}</td>
+          <td style="height:24px;"></td>
+          <td style="height:24px;"></td>
+          <td style="height:24px;"></td>
+          <td style="height:24px;"></td>
+        </tr>
+      `,
+    )
+    .join('');
+  const html = `
+    <html>
+      <head>
+        <title>Liste par commune — ${commune}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Liste d'appel — Commune ${commune}</h1>
         <p>Date : ${today}</p>
         <table>
           <thead>
