@@ -26,11 +26,13 @@ const memberPerformance = document.getElementById('memberPerformance');
 const memberLoginHistory = document.getElementById('memberLoginHistory');
 const memberPresenceBtn = document.getElementById('memberPresenceBtn');
 const memberPresenceStatus = document.getElementById('memberPresenceStatus');
+const memberWhatsappReminder = document.getElementById('memberWhatsappReminder');
 
 let toolsCache = { messages: [], tasks: [], documents: [] };
 let actionsCache = [];
 let quickMode = false;
 let remindersEnabled = localStorage.getItem('memberReminders') === '1';
+let nextEventText = '';
 
 function setMsg(text, ok = false) {
   if (!msg) return;
@@ -245,6 +247,15 @@ memberReminderToggle?.addEventListener('click', () => {
   if (remindersEnabled) checkReminders();
 });
 
+memberWhatsappReminder?.addEventListener('click', () => {
+  if (!nextEventText) {
+    alert('Aucun événement à rappeler.');
+    return;
+  }
+  const msg = `Rappel ASAA: ${nextEventText}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+});
+
 memberPresenceBtn?.addEventListener('click', () => {
   const now = new Date().toISOString();
   localStorage.setItem('memberPresence', now);
@@ -310,9 +321,23 @@ async function loadCalendar() {
       memberCalendar.textContent = 'Aucun événement à venir.';
       return;
     }
-    memberCalendar.innerHTML = `<ul>${schedule
+    const itemsHtml = schedule
       .map((s) => `<li><strong>${s.date || ''}</strong> ${s.time ? `(${s.time})` : ''} — ${s.title || ''}</li>`)
-      .join('')}</ul>`;
+      .join('');
+    memberCalendar.innerHTML = `<ul>${itemsHtml}</ul>`;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    const upcoming = schedule
+      .map((s) => ({ ...s, date: s.date || '', time: s.time || '00:00' }))
+      .filter((s) => s.date)
+      .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
+      .find((s) => s.date >= todayStr);
+    nextEventText = upcoming
+      ? `${upcoming.date}${upcoming.time ? ` (${upcoming.time})` : ''} — ${upcoming.title || 'Événement ASAA'}`
+      : '';
     checkReminders();
   } catch {
     memberCalendar.textContent = 'Calendrier indisponible.';

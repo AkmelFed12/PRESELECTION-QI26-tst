@@ -4691,6 +4691,30 @@ app.get('/api/admin/member-audit', verifyAdmin, async (req, res) => {
   }
 });
 
+// Admin: member performance summary
+app.get('/api/admin/member-performance', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT memberId, COUNT(*)::int as count
+       FROM member_audit
+       GROUP BY memberId`
+    );
+    const items = {};
+    result.rows.forEach((row) => {
+      const count = Number(row.count || 0);
+      let label = 'Actif';
+      if (count >= 30) label = 'Excellent';
+      else if (count >= 15) label = 'Très actif';
+      else if (count === 0) label = 'Inactif';
+      items[String(row.memberid || row.memberId)] = label;
+    });
+    res.json({ items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Admin: daily quiz config
 app.get('/api/admin/daily-quiz', verifyAdmin, async (req, res) => {
   try {

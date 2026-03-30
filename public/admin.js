@@ -237,6 +237,7 @@ let authHeader = '';
 let scheduleCache = [];
 let membersCache = [];
 let memberDefaultPassword = '';
+let memberPerformanceMap = {};
 let candidatesCache = [];
 let rankingCache = [];
 let groupsCache = [];
@@ -1705,6 +1706,13 @@ async function loadMembers() {
   if (memberDefaultPasswordInput && memberDefaultPassword) {
     memberDefaultPasswordInput.value = memberDefaultPassword;
   }
+  try {
+    const perfRes = await authedFetch('/api/admin/member-performance');
+    if (perfRes.ok) {
+      const perfData = await perfRes.json().catch(() => ({}));
+      memberPerformanceMap = perfData.items || {};
+    }
+  } catch {}
   renderMembers();
 }
 
@@ -1719,6 +1727,7 @@ function renderMembers() {
         <td>${pwd || '-'}</td>
         <td>${m.fullname || m.fullName || ''}</td>
         <td>${m.role || ''}</td>
+        <td>${memberPerformanceMap[String(m.id)] || 'Actif'}</td>
         <td>${Number(m.active) === 1 ? 'Actif' : 'Inactif'}</td>
         <td>
           <button data-member-edit="${m.id}">Modifier</button>
