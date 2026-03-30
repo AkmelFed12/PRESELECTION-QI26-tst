@@ -212,6 +212,16 @@ header.hero {
   padding-right: 4px;
 }
 
+header.hero .hero-actions .btn.outline {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+header.hero .hero-actions .btn.outline:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .btn {
   padding: 10px 16px;
   border-radius: 8px;
