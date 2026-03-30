@@ -4598,7 +4598,11 @@ app.get('/api/admin/members', verifyAdmin, async (req, res) => {
     const result = await pool.query(
       'SELECT id, username, fullName, role, email, phone, active, createdAt, updatedAt FROM member_accounts ORDER BY id ASC'
     );
-    res.json({ members: result.rows });
+    const pwdRes = await pool.query(
+      "SELECT value FROM admin_config WHERE key = 'member_default_password' LIMIT 1"
+    );
+    const defaultPassword = pwdRes.rows[0]?.value || defaultMemberPassword();
+    res.json({ members: result.rows, defaultPassword });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Database error' });

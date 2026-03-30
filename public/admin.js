@@ -205,6 +205,8 @@ const memberAuditList = document.getElementById('memberAuditList');
 const resetAllMembersPwd = document.getElementById('resetAllMembersPwd');
 const memberDefaultPasswordInput = document.getElementById('memberDefaultPassword');
 const updateDefaultMemberPwd = document.getElementById('updateDefaultMemberPwd');
+const toggleMemberPassword = document.getElementById('toggleMemberPassword');
+const copyMemberCredentials = document.getElementById('copyMemberCredentials');
 const memberToolsSection = document.getElementById('memberToolsSection');
 const memberToolsForm = document.getElementById('memberToolsForm');
 const memberMessagesInput = document.getElementById('memberMessagesInput');
@@ -234,6 +236,7 @@ const footerHoursInput = document.getElementById('footerHoursInput');
 let authHeader = '';
 let scheduleCache = [];
 let membersCache = [];
+let memberDefaultPassword = '';
 let candidatesCache = [];
 let rankingCache = [];
 let groupsCache = [];
@@ -1698,6 +1701,10 @@ async function loadMembers() {
   if (!res.ok) return;
   const data = await res.json();
   membersCache = data.members || [];
+  memberDefaultPassword = data.defaultPassword || '';
+  if (memberDefaultPasswordInput && memberDefaultPassword) {
+    memberDefaultPasswordInput.value = memberDefaultPassword;
+  }
   renderMembers();
 }
 
@@ -2994,6 +3001,33 @@ membersTableBody?.addEventListener('click', (e) => {
         alert('Suppression impossible.');
       }
     });
+  }
+});
+
+toggleMemberPassword?.addEventListener('click', () => {
+  if (!memberDefaultPasswordInput) return;
+  const isHidden = memberDefaultPasswordInput.type === 'password';
+  memberDefaultPasswordInput.type = isHidden ? 'text' : 'password';
+  toggleMemberPassword.textContent = isHidden ? 'Masquer le mot de passe' : 'Afficher le mot de passe';
+});
+
+copyMemberCredentials?.addEventListener('click', async () => {
+  if (!membersCache.length) {
+    alert('Aucun membre.');
+    return;
+  }
+  const pwd = (memberDefaultPasswordInput?.value || memberDefaultPassword || '').trim();
+  if (!pwd) {
+    alert('Mot de passe par défaut vide.');
+    return;
+  }
+  const lines = membersCache.map((m) => `${m.username || ''} | ${pwd}`);
+  const text = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Identifiants copiés.');
+  } catch {
+    alert(text);
   }
 });
 
