@@ -64,6 +64,8 @@ const printOnlineCandidates = document.getElementById('printOnlineCandidates');
 const printCommuneCandidates = document.getElementById('printCommuneCandidates');
 const printAbidjanNordSheet = document.getElementById('printAbidjanNordSheet');
 const printAbidjanSudSheet = document.getElementById('printAbidjanSudSheet');
+const downloadAbidjanNordSheet = document.getElementById('downloadAbidjanNordSheet');
+const downloadAbidjanSudSheet = document.getElementById('downloadAbidjanSudSheet');
 const showAllCandidates = document.getElementById('showAllCandidates');
 const showOnlineCandidates = document.getElementById('showOnlineCandidates');
 const showEliminatedCandidates = document.getElementById('showEliminatedCandidates');
@@ -1129,15 +1131,14 @@ function printCommuneList(commune) {
   printAttendanceListForCommunes(`Commune ${target}`, [target]);
 }
 
-function printTechnicalSheetByZone(title, communes, dateLabel) {
+function buildTechnicalSheetHtml(title, communes, dateLabel) {
   const list = Array.isArray(candidatesCache)
     ? candidatesCache.filter((c) => String(c.status || '') !== 'eliminated')
     : [];
   const communeSet = new Set(communes.map((c) => c.toUpperCase()));
   const filtered = list.filter((c) => communeSet.has((c.city || '').toUpperCase()));
   if (!filtered.length) {
-    alert('Aucun candidat dans cette zone.');
-    return;
+    return null;
   }
   const sorted = filtered.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
   const rows = sorted
@@ -1157,7 +1158,7 @@ function printTechnicalSheetByZone(title, communes, dateLabel) {
       `,
     )
     .join('');
-  const html = `
+  return `
     <html>
       <head>
         <title>${title} — Fiche technique</title>
@@ -1174,7 +1175,7 @@ function printTechnicalSheetByZone(title, communes, dateLabel) {
       <body>
         <h1>${title} — Fiche technique</h1>
         <h2>Date : ${dateLabel}</h2>
-        <p class="small">Épreuves techniques : Questions-Réponses, Pont As Sirat, Reconnaissance de Verset</p>
+        <p class="small">Notation : Questions‑Réponses /30 • Pont As Sirat /25 • Reconnaissance de Verset /5</p>
         <table>
           <thead>
             <tr>
@@ -1182,10 +1183,10 @@ function printTechnicalSheetByZone(title, communes, dateLabel) {
               <th>ID</th>
               <th>Nom</th>
               <th>Commune</th>
-              <th>Questions-Réponses</th>
-              <th>Pont As Sirat</th>
-              <th>Reconnaissance de Verset</th>
-              <th>TOTAL</th>
+              <th>Questions‑Réponses /30</th>
+              <th>Pont As Sirat /25</th>
+              <th>Reconnaissance de Verset /5</th>
+              <th>TOTAL /60</th>
               <th>Signature</th>
             </tr>
           </thead>
@@ -1193,12 +1194,35 @@ function printTechnicalSheetByZone(title, communes, dateLabel) {
         </table>
       </body>
     </html>`;
+}
+
+function printTechnicalSheetByZone(title, communes, dateLabel) {
+  const html = buildTechnicalSheetHtml(title, communes, dateLabel);
+  if (!html) {
+    alert('Aucun candidat dans cette zone.');
+    return;
+  }
   const win = window.open('', '_blank');
   if (!win) return;
   win.document.write(html);
   win.document.close();
   win.focus();
   win.print();
+}
+
+function downloadTechnicalSheetByZone(title, communes, dateLabel) {
+  const html = buildTechnicalSheetHtml(title, communes, dateLabel);
+  if (!html) {
+    alert('Aucun candidat dans cette zone.');
+    return;
+  }
+  const blob = new Blob([html], { type: 'application/msword' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${title.replace(/\s+/g, '-')}-Fiche-technique.doc`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function printAttendanceListForCommunes(title, communes, statusFilter = '') {
@@ -2336,6 +2360,20 @@ printAbidjanNordSheet?.addEventListener('click', () => {
 });
 printAbidjanSudSheet?.addEventListener('click', () => {
   printTechnicalSheetByZone(
+    'Abidjan Sud',
+    ['PLATEAU', 'TREICHVILLE', 'MARCORY', 'KOUMASSI', 'PORT-BOUET'],
+    'DIMANCHE 12 AVRIL 2026'
+  );
+});
+downloadAbidjanNordSheet?.addEventListener('click', () => {
+  downloadTechnicalSheetByZone(
+    'Abidjan Nord',
+    ['COCODY', 'ADJAME', 'ADJAMÉ', 'ABOBO', 'ANYAMA', 'YOPOUGON', 'BINGERVILLE', 'ATTECOUBE'],
+    'DIMANCHE 19 AVRIL 2026'
+  );
+});
+downloadAbidjanSudSheet?.addEventListener('click', () => {
+  downloadTechnicalSheetByZone(
     'Abidjan Sud',
     ['PLATEAU', 'TREICHVILLE', 'MARCORY', 'KOUMASSI', 'PORT-BOUET'],
     'DIMANCHE 12 AVRIL 2026'
