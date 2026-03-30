@@ -223,6 +223,7 @@ const whTemplateConvocation = document.getElementById('whTemplateConvocation');
 const whTemplateReminder = document.getElementById('whTemplateReminder');
 const memberWhatsappTest = document.getElementById('memberWhatsappTest');
 const memberWhatsappTestIndex = document.getElementById('memberWhatsappTestIndex');
+const memberWhatsappTestSelect = document.getElementById('memberWhatsappTestSelect');
 
 const DEFAULT_WHATSAPP_RECIPIENTS = `DIARRA SIDI | PRESIDENT | 0779382233
 BAH ALI MOHAMED | VICE PRESIDENT | 0151495971
@@ -674,6 +675,17 @@ async function loadMemberTools() {
       memberWhatsappTemplate.value =
         'Bonjour {name} ({role}), rappel ASAA : merci de consulter vos tâches et le calendrier.';
     }
+  }
+  if (memberWhatsappTestSelect) {
+    const list = parsePipeLines(memberWhatsappList?.value || '', ['name', 'role', 'phone']);
+    memberWhatsappTestSelect.innerHTML = '<option value="">Sélectionner un membre</option>';
+    list.forEach((r, idx) => {
+      const label = `${idx + 1}. ${r.name || ''} — ${r.role || ''} (${r.phone || ''})`;
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = label;
+      memberWhatsappTestSelect.appendChild(opt);
+    });
   }
   if (memberWhatsappLog) {
     const logs = Array.isArray(data.whatsappLogs) ? data.whatsappLogs : [];
@@ -3741,7 +3753,10 @@ memberWhatsappTest?.addEventListener('click', () => {
     alert('Aucun destinataire.');
     return;
   }
-  const idx = Math.max(1, Number(memberWhatsappTestIndex?.value || 1)) - 1;
+  const selectIdx = memberWhatsappTestSelect?.value ? Number(memberWhatsappTestSelect.value) : null;
+  const idx = selectIdx !== null && !Number.isNaN(selectIdx)
+    ? selectIdx
+    : Math.max(1, Number(memberWhatsappTestIndex?.value || 1)) - 1;
   const first = list[idx] || list[0];
   const phone = normalizePhone(first.phone);
   if (!phone) {
