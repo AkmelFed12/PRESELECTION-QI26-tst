@@ -24,6 +24,16 @@ const __dirname = dirname(__filename);
 // ==================== CONFIGURATION ====================
 const app = express();
 const PORT = process.env.PORT || 10000;
+const SITE_URL = (process.env.SITE_URL || '').trim().replace(/\/+$/, '');
+const GOOGLE_SITE_VERIFICATION_FILE = 'googleca617fc6537967d0.html';
+const GOOGLE_SITE_VERIFICATION_CONTENT = `google-site-verification: ${GOOGLE_SITE_VERIFICATION_FILE}`;
+const SITEMAP_EXCLUDED_PAGES = new Set([
+  'admin.html',
+  'member-login.html',
+  'member-portal.html',
+  'verify-certificate.html',
+  'programme-print.html'
+]);
 
 // Database pool
 const pool = new Pool({
@@ -42,6 +52,74 @@ pool.on('error', (error) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(join(__dirname, 'public')));
 app.use('/galerie-2025', express.static(join(__dirname, 'public', 'galerie-2025')));
+
+function getPublicBaseUrl(req) {
+  if (SITE_URL) return SITE_URL;
+  const protoHeader = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0].trim();
+  const protocol = protoHeader || req.protocol || 'https';
+  const host = req.headers.host || 'localhost';
+  return `${protocol}://${host}`;
+}
+
+async function buildSitemapEntries(baseUrl) {
+  const publicDir = join(__dirname, 'public');
+  const files = await readdir(publicDir);
+  const htmlFiles = files.filter((name) => name.endsWith('.html') && !SITEMAP_EXCLUDED_PAGES.has(name));
+  const entries = [];
+
+  for (const file of htmlFiles) {
+    const pagePath = file === 'index.html' ? '/' : `/${file}`;
+    const filePath = join(publicDir, file);
+    const stats = await stat(filePath);
+    const lastmod = stats.mtime.toISOString().slice(0, 10);
+    const priority = file === 'index.html' ? '1.0' : '0.7';
+    entries.push({
+      loc: `${baseUrl}${pagePath}`,
+      lastmod,
+      changefreq: 'weekly',
+      priority
+    });
+  }
+
+  entries.sort((a, b) => (a.loc > b.loc ? 1 : -1));
+  return entries;
+}
+
+app.get('/robots.txt', (req, res) => {
+  const baseUrl = getPublicBaseUrl(req);
+  const content = [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /admin.html',
+    'Disallow: /member-login.html',
+    'Disallow: /member-portal.html',
+    `Sitemap: ${baseUrl}/sitemap.xml`,
+    ''
+  ].join('\n');
+  res.type('text/plain; charset=utf-8').send(content);
+});
+
+app.get(`/${GOOGLE_SITE_VERIFICATION_FILE}`, (req, res) => {
+  res.type('text/plain; charset=utf-8').send(GOOGLE_SITE_VERIFICATION_CONTENT);
+});
+
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const baseUrl = getPublicBaseUrl(req);
+    const entries = await buildSitemapEntries(baseUrl);
+    const body = entries
+      .map(
+        (entry) =>
+          `  <url>\n    <loc>${entry.loc}</loc>\n    <lastmod>${entry.lastmod}</lastmod>\n    <changefreq>${entry.changefreq}</changefreq>\n    <priority>${entry.priority}</priority>\n  </url>`
+      )
+      .join('\n');
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+    res.type('application/xml; charset=utf-8').send(xml);
+  } catch (error) {
+    console.error('Failed to generate sitemap:', error);
+    res.status(500).type('application/xml; charset=utf-8').send('<error>Unable to generate sitemap</error>');
+  }
+});
 
 app.get('/api/gallery/2025/:file', (req, res) => {
   const { file } = req.params;
