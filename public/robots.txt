@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /member-login.html
+Disallow: /member-portal.html
+Sitemap: https://asaaofficiel.vercel.app/sitemap.xml
+
