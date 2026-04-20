@@ -580,6 +580,57 @@
         <div class="nav-links" style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn outline" id="juryModeToggle" type="button">Mode Jury</button>
         </div>
+        <div class="card" id="finalPhaseSection" style="margin-bottom:14px;">
+          <h3>PHASE FINALE DES PRÉSÉLECTIONS DU QUIZ ISLAMIQUE 2026</h3>
+          <div class="status" style="margin-bottom:10px;">
+            Mode Jury actif pour les candidats qualifiés de la phase finale.
+          </div>
+          <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px;">
+            <div class="commune-card" style="margin-top:0;">
+              <strong>Composition sur table</strong>
+              <div class="muted">Barème: /40</div>
+            </div>
+            <div class="commune-card" style="margin-top:0;">
+              <strong>Questions-réponses</strong>
+              <div class="muted">Barème: /30</div>
+            </div>
+            <div class="commune-card" style="margin-top:0;">
+              <strong>Pont As Sirat</strong>
+              <div class="muted">Barème: /25</div>
+            </div>
+            <div class="commune-card" style="margin-top:0;">
+              <strong>Reconnaissances de verset</strong>
+              <div class="muted">Barème: /10</div>
+            </div>
+          </div>
+          <div class="nav-links" style="margin-bottom: 12px;">
+            <button class="btn-primary" id="downloadFinalCandidatesBtn" type="button">Télécharger la liste des candidats (PDF)</button>
+            <button class="btn-primary" id="downloadFinalRankingBtn" type="button">Télécharger le classement (PDF)</button>
+            <button class="btn-primary" id="downloadFinalScoresheetBtn" type="button">Télécharger la feuille de notation (PDF)</button>
+          </div>
+          <div id="finalPhaseRankingPreview" class="status" style="margin-bottom: 12px;">Classement en attente.</div>
+          <table class="table" id="finalPhaseCandidatesTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>WhatsApp</th>
+                <th>Commune</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="commune-card" style="margin-top:12px;">
+            <div class="card-subtitle">Suggestions pour le jury</div>
+            <ul id="finalPhaseSuggestions" class="anomaly-list" style="color:#1f2937;">
+              <li>Prévoir 2 jurys tournants pour limiter la fatigue et homogénéiser les notes.</li>
+              <li>Vérifier les identités et la présence 30 minutes avant le début des épreuves.</li>
+              <li>Utiliser une double signature (juge + superviseur) sur chaque feuille de notation.</li>
+              <li>Publier un récapitulatif provisoire en fin de journée puis valider le classement final.</li>
+            </ul>
+          </div>
+        </div>
         <div class="form-grid" style="margin-bottom:12px;">
           <div>
             <label>Date convocation</label>

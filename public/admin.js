@@ -24,6 +24,11 @@ const globalSearchResults = document.getElementById('globalSearchResults');
 const phaseTimelineList = document.getElementById('phaseTimelineList');
 const juryModeToggle = document.getElementById('juryModeToggle');
 const scoreboardList = document.getElementById('scoreboardList');
+const finalPhaseCandidatesTable = document.querySelector('#finalPhaseCandidatesTable tbody');
+const finalPhaseRankingPreview = document.getElementById('finalPhaseRankingPreview');
+const downloadFinalCandidatesBtn = document.getElementById('downloadFinalCandidatesBtn');
+const downloadFinalRankingBtn = document.getElementById('downloadFinalRankingBtn');
+const downloadFinalScoresheetBtn = document.getElementById('downloadFinalScoresheetBtn');
 const convocationDateInput = document.getElementById('convocationDate');
 const convocationTimeInput = document.getElementById('convocationTime');
 const convocationPlaceInput = document.getElementById('convocationPlace');
@@ -284,6 +289,36 @@ let sponsorsCache = [];
 let newsImages = [];
 let isEditing = false;
 let lastEditAt = 0;
+
+const FINAL_PHASE_QUALIFIED = [
+  { id: 4, fullName: 'KAGONE FATIMA AIDA DJAMELLA', whatsapp: '+2250152606015', city: 'YOPOUGON' },
+  { id: 5, fullName: 'DIALLO IBRAHIM KHALIL', whatsapp: '+224612694187', city: 'TREICHVILLE' },
+  { id: 7, fullName: 'MOHAMED AWWAL', whatsapp: '+2250171715400', city: 'TREICHVILLE' },
+  { id: 8, fullName: 'KAMAGATE MATENIN', whatsapp: '+22676035015', city: 'ABOBO' },
+  { id: 9, fullName: 'SAYORE NASSIRATOU', whatsapp: '+2250778762501', city: 'PLATEAU' },
+  { id: 10, fullName: 'KOKORA MOHAMED OUATTARA', whatsapp: '+2250140719281', city: 'KOUMASSI' },
+  { id: 11, fullName: 'FOFANA SANY', whatsapp: '+2250143513550', city: 'TREICHVILLE' },
+  { id: 13, fullName: 'DIAKHITE IBRAHIM', whatsapp: '+2250140443333', city: 'PORT-BOUET' },
+  { id: 14, fullName: 'SIDIBE MOHAMED', whatsapp: '+2250575933452', city: 'YOPOUGON' },
+  { id: 15, fullName: 'DIALLO RAMATOULAYE WALIYA', whatsapp: '+2250502118573', city: 'MARCORY' },
+  { id: 16, fullName: 'BALLO KASSIM', whatsapp: '+2250787898322', city: 'ADJAME' },
+  { id: 21, fullName: 'KABA MARIAM', whatsapp: '+2250720710513', city: 'KOUMASSI' },
+  { id: 22, fullName: 'TRAORE MOUHAMMAD ABOUBAKR', whatsapp: '+2250101664229', city: 'ABOBO' },
+  { id: 23, fullName: 'BAMBA VASSI SOULEYMANE', whatsapp: '+2250546051686', city: 'ADJAME' },
+  { id: 24, fullName: 'SYLLA ABOUBAKAR SIDIK ABDOUL AZIZ', whatsapp: '+2250503525546', city: 'TREICHVILLE' },
+  { id: 25, fullName: 'KONE MAIMOUNA', whatsapp: '+2250102138333', city: 'BINGERVILLE' },
+  { id: 27, fullName: 'OYEWO FATIATOU OLAMIDE', whatsapp: '+2250586403819', city: 'KOUMASSI' },
+  { id: 29, fullName: 'KOUYATE AMARA', whatsapp: '+2250564292128', city: 'PORT-BOUET' },
+  { id: 31, fullName: 'COULIBALY ROKIA', whatsapp: '+2250502203868', city: 'ADJAME' },
+  { id: 32, fullName: 'KONDA AMSETOU', whatsapp: '+2250170703125', city: 'ADJAME' },
+  { id: 39, fullName: 'DIABATE OUMAR', whatsapp: '+2250566584580', city: 'ADJAME' },
+  { id: 41, fullName: 'ZEBA SAMIRA', whatsapp: '+2250150612819', city: 'MARCORY' },
+  { id: 43, fullName: 'KOUYATE FATOUMATA RAMADAN', whatsapp: '+2250718906238', city: 'ADJAME' },
+  { id: 46, fullName: 'DOSSO MOHAMED LAMINE', whatsapp: '+2250748309772', city: 'YOPOUGON' },
+  { id: 47, fullName: 'MEITE IBRAHIM SORY', whatsapp: '+2250172323549', city: 'YOPOUGON' },
+  { id: 48, fullName: 'SERE ABOUBACAR SIDIK', whatsapp: '+2250574958887', city: 'PORT-BOUET' },
+  { id: 53, fullName: 'SIB ABDOULAYE', whatsapp: '+2250787627184', city: 'COCODY' }
+];
 
 const manualNameMap = {
   "2250564108763": "OUATTARA FATOUMATA",
@@ -776,6 +811,7 @@ async function loadDashboard() {
   // ranking
   rankingCache = data.ranking || [];
   renderRanking(rankingCache);
+  renderFinalPhaseSection();
   renderScoreboard();
   await loadScoresTable();
   renderAnomalies();
@@ -831,6 +867,7 @@ function renderFromCache(data) {
   renderAnomalies();
   rankingCache = data.ranking || [];
   renderRanking(rankingCache);
+  renderFinalPhaseSection();
   renderScoreboard();
   renderGlobalSearch();
   updateAdminRegistrationStatus();
@@ -1429,6 +1466,78 @@ function renderRanking(list) {
     .join('');
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+}
+
+function getFinalPhaseQualifiedRows() {
+  return FINAL_PHASE_QUALIFIED.map((item) => {
+    const fromCandidates = candidatesCache.find((c) => Number(c.id) === Number(item.id));
+    const fromRanking = rankingCache.find((r) => {
+      const rankingName = normalizeText(r.fullName || r.fullname);
+      const itemName = normalizeText(item.fullName);
+      const candidateName = normalizeText(fromCandidates?.fullName || fromCandidates?.fullname);
+      return (
+        Number(r.candidateId || r.candidateid || 0) === Number(item.id) ||
+        (rankingName && rankingName === itemName) ||
+        (rankingName && candidateName && rankingName === candidateName)
+      );
+    });
+
+    const fullName = resolveName({
+      id: item.id,
+      fullName: fromCandidates?.fullName || fromCandidates?.fullname || item.fullName,
+      whatsapp: fromCandidates?.whatsapp || item.whatsapp
+    });
+
+    return {
+      id: item.id,
+      fullName: fullName || item.fullName,
+      whatsapp: fromCandidates?.whatsapp || item.whatsapp || '',
+      city: (fromCandidates?.city || item.city || '').toUpperCase(),
+      totalScore: Number(
+        fromRanking?.totalScore ?? fromRanking?.totalscore ?? fromRanking?.averageScore ?? 0
+      ),
+      passages: Number(fromRanking?.passages || 0)
+    };
+  });
+}
+
+function renderFinalPhaseSection() {
+  if (!finalPhaseCandidatesTable) return;
+  const rows = getFinalPhaseQualifiedRows();
+  finalPhaseCandidatesTable.innerHTML = rows
+    .map(
+      (r, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${r.id}</td>
+          <td>${r.fullName}</td>
+          <td>${r.whatsapp}</td>
+          <td>${r.city}</td>
+        </tr>
+      `,
+    )
+    .join('');
+
+  const sorted = rows.slice().sort((a, b) => b.totalScore - a.totalScore);
+  const ranks = computeRanks(sorted, (r) => r.totalScore);
+  const topRows = sorted
+    .slice(0, 5)
+    .map((r, idx) => `${formatRank(ranks[idx]) || `${idx + 1}e`} - ${r.fullName}: ${r.totalScore.toFixed(2)}`)
+    .join('<br>');
+
+  if (finalPhaseRankingPreview) {
+    finalPhaseRankingPreview.innerHTML = sorted.some((r) => r.totalScore > 0)
+      ? `<strong>Top 5 provisoire:</strong><br>${topRows}`
+      : 'Classement en attente des notes de la phase finale.';
+  }
+}
+
 function generateGroupsFromRanking() {
   const groupCount = Number(settingsCache?.groupsCount || 8);
   const groupSize = Number(settingsCache?.candidatesPerGroup || 4);
@@ -1692,6 +1801,7 @@ async function refreshCandidates() {
   renderCommuneStats(candidatesCache);
   renderCommuneMap(candidatesCache);
   renderCommuneFilter(candidatesCache);
+  renderFinalPhaseSection();
   renderGlobalSearch();
   renderAnomalies();
   const statCandidatesEl = document.getElementById('statCandidates');
@@ -2155,6 +2265,38 @@ function downloadBlob(filename, blob) {
   link.click();
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function openPdfPrintWindow(title, subtitle, headerCells, bodyRowsHtml) {
+  const html = `
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1 { text-align: center; margin-bottom: 8px; }
+          .subtitle { text-align:center; margin-bottom: 16px; color: #555; font-size: 14px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+          th { background: #f3f3f3; }
+        </style>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <div class="subtitle">${subtitle}</div>
+        <table>
+          <thead><tr>${headerCells.map((h) => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${bodyRowsHtml}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 async function downloadCertificate(candidateId) {
@@ -3836,6 +3978,67 @@ exportRankingXls.addEventListener('click', async () => {
   if (!res.ok) return;
   const text = await res.text();
   downloadFile('classement.xls', text);
+});
+
+downloadFinalCandidatesBtn?.addEventListener('click', () => {
+  const rows = getFinalPhaseQualifiedRows();
+  const bodyRows = rows
+    .map(
+      (r, idx) =>
+        `<tr><td>${idx + 1}</td><td>${r.id}</td><td>${r.fullName}</td><td>${r.whatsapp}</td><td>${r.city}</td></tr>`,
+    )
+    .join('');
+  openPdfPrintWindow(
+    'Liste des candidats qualifiés',
+    'Phase finale des présélections du Quiz Islamique 2026',
+    ['#', 'ID', 'Nom', 'WhatsApp', 'Commune'],
+    bodyRows,
+  );
+});
+
+downloadFinalRankingBtn?.addEventListener('click', () => {
+  const rows = getFinalPhaseQualifiedRows()
+    .slice()
+    .sort((a, b) => b.totalScore - a.totalScore);
+  const ranks = computeRanks(rows, (r) => r.totalScore);
+  const bodyRows = rows
+    .map(
+      (r, idx) =>
+        `<tr><td>${formatRank(ranks[idx]) || `${idx + 1}e`}</td><td>${r.id}</td><td>${r.fullName}</td><td>${r.totalScore.toFixed(2)}</td><td>${r.passages}</td></tr>`,
+    )
+    .join('');
+  openPdfPrintWindow(
+    'Classement provisoire',
+    'Phase finale des présélections du Quiz Islamique 2026',
+    ['Rang', 'ID', 'Nom', 'Total', 'Passages'],
+    bodyRows,
+  );
+});
+
+downloadFinalScoresheetBtn?.addEventListener('click', () => {
+  const rows = getFinalPhaseQualifiedRows();
+  const bodyRows = rows
+    .map(
+      (r, idx) =>
+        `<tr><td>${idx + 1}</td><td>${r.id}</td><td>${r.fullName}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`,
+    )
+    .join('');
+  openPdfPrintWindow(
+    'Feuille de notation',
+    'Barème: Composition /40, Questions-réponses /30, Pont As Sirat /25, Reconnaissances /10',
+    [
+      '#',
+      'ID',
+      'Nom',
+      'Composition /40',
+      'Questions-réponses /30',
+      'Pont As Sirat /25',
+      'Reconnaissances /10',
+      'Total /105',
+      'Observations',
+    ],
+    bodyRows,
+  );
 });
 
 exportRankingPdf?.addEventListener('click', () => {
