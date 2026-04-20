@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Profil - Quiz Islamique 2026</title>
+    <meta name="description" content="Gérez votre profil de candidat">
+    <meta property="og:title" content="Mon Profil">
+    <meta property="og:description" content="Profil du candidat">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .profile-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: white;
+            object-fit: cover;
+            border: 4px solid white;
+        }
+        .profile-info h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .profile-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .profile-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .section {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 25px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 15px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #764ba2;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .followers-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .follower-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .follower-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .follower-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .badge {
+            display: inline-block;
+            background: #ffc107;
+            color: #333;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .no-data {
+            color: #999;
+            text-align: center;
+            padding: 20px;
+        }
+        @media (max-width: 768px) {
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .profile-content {
+                grid-template-columns: 1fr;
+            }
+            .profile-avatar {
+                width: 100px;
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">ASAA Quiz</a>
+            <ul class="nav-menu">
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="leaderboard.html">Classement</a></li>
+                <li><a href="achievements.html">Badges</a></li>
+                <li><a href="messaging.html">Messages</a></li>
+                <li><a href="profile.html" class="active">Mon Profil</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="profile-container">
+        <div class="profile-header">
+            <img id="profileAvatar" class="profile-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23667eea'/%3E%3Ccircle cx='12' cy='8' r='4' fill='white'/%3E%3Cpath d='M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6' fill='white'/%3E%3C/svg%3E" alt="Avatar">
+            <div class="profile-info">
+                <h1 id="profileName">Chargement...</h1>
+                <p id="profileLocation">📍 Localisation</p>
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="followersCount">0</div>
+                        <div class="stat-label">Abonnés</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="followingCount">0</div>
+                        <div class="stat-label">Abonnements</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-content">
+            <!-- Edit Profile Section -->
+            <div class="section">
+                <h2>📝 Mon Profil</h2>
+                <form id="profileForm">
+                    <div class="form-group">
+                        <label>Avatar (URL)</label>
+                        <input type="url" id="avatarUrl" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label>Bio (max 500 caractères)</label>
+                        <textarea id="bio" placeholder="Parlez-nous de vous..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Site web</label>
+                        <input type="url" id="website" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label>Localisation</label>
+                        <input type="text" id="location" placeholder="Ville, Pays">
+                    </div>
+                    <button type="submit" class="btn">💾 Enregistrer</button>
+                </form>
+            </div>
+
+            <!-- Followers Section -->
+            <div class="section">
+                <h2>👥 Mes Abonnés</h2>
+                <div id="followersList" class="followers-list">
+                    <div class="no-data">Aucun abonné pour l'instant</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievements Section -->
+        <div class="section" style="margin-top: 30px;">
+            <h2>🏆 Mes Badges</h2>
+            <div id="achievementsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;">
+                <div class="no-data">Chargement des badges...</div>
+            </div>
+        </div>
+    </div>
+
+    <footer style="margin-top: 60px; padding: 40px 20px; text-align: center; color: #999; border-top: 1px solid #eee;">
+        <p>&copy; 2026 ASAA - Quiz Islamique. Tous droits réservés.</p>
+    </footer>
+
+    <script src="utils.js"></script>
+    <script>
+        let currentCandidateId = localStorage.getItem('candidateId');
+
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                bio: document.getElementById('bio').value,
+                avatar_url: document.getElementById('avatarUrl').value,
+                website: document.getElementById('website').value,
+                location: document.getElementById('location').value
+            };
+
+            try {
+                const response = await fetch(`/api/social/profile/${currentCandidateId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    showToast('Profil mis à jour!', 'success');
+                    loadProfile();
+                } else {
+                    showToast('Erreur lors de la mise à jour', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Erreur réseau', 'error');
+            }
+        });
+
+        async function loadProfile() {
+            try {
+                const response = await fetch(`/api/social/profile/${currentCandidateId}`);
+                const profile = await response.json();
+
+                document.getElementById('profileName').textContent = profile.fullName;
+                document.getElementById('profileLocation').textContent = `📍 ${profile.location || profile.location}`;
+                document.getElementById('followersCount').textContent = profile.followers;
+                document.getElementById('followingCount').textContent = profile.following;
+                document.getElementById('bio').value = profile.bio || '';
+                document.getElementById('website').value = profile.website || '';
+                document.getElementById('location').value = profile.location || '';
+                document.getElementById('avatarUrl').value = profile.avatar || '';
+
+                if (profile.avatar) {
+                    document.getElementById('profileAvatar').src = profile.avatar;
+                }
+
+                loadAchievements();
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function loadAchievements() {
+            try {
+                const response = await fetch(`/api/social/achievements/${currentCandidateId}`);
+                const achievements = await response.json();
+
+                const html = achievements.map(a => `
+                    <div style="text-align: center; padding: 15px;">
+                        <div style="font-size: 40px; margin-bottom: 10px;">${a.icon_emoji || '🏅'}</div>
+                        <div style="font-weight: bold; font-size: 14px;">${a.name}</div>
+                        <div style="font-size: 12px; color: #999;">
+                            ${a.unlocked_at ? '✓ Débloqué' : 'Verrouillé'}
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('achievementsList').innerHTML = html || '<div class="no-data">Aucun badge</div>';
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        if (currentCandidateId) {
+            loadProfile();
+        } else {
+            showToast('Veuillez d\'abord vous inscrire', 'warning');
+        }
+    </script>
+</body>
+</html>

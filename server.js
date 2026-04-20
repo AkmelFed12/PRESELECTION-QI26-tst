@@ -1511,6 +1511,94 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_member_sessions_token ON member_sessions(token);
       CREATE INDEX IF NOT EXISTS idx_member_audit_member ON member_audit(memberId);
       CREATE INDEX IF NOT EXISTS idx_daily_quiz_date ON daily_quiz_attempts(quizDate);
+
+      -- SOCIAL FEATURES TABLES
+      CREATE TABLE IF NOT EXISTS user_profiles (
+        id BIGSERIAL PRIMARY KEY,
+        candidate_id BIGINT NOT NULL UNIQUE,
+        bio TEXT,
+        avatar_url TEXT,
+        website TEXT,
+        location TEXT,
+        followers_count INTEGER DEFAULT 0,
+        following_count INTEGER DEFAULT 0,
+        joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS user_followers (
+        id BIGSERIAL PRIMARY KEY,
+        follower_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        following_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(follower_id, following_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS direct_messages (
+        id BIGSERIAL PRIMARY KEY,
+        sender_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        recipient_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        read_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS leaderboard_entries (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT REFERENCES user_profiles(id) ON DELETE CASCADE,
+        candidate_id BIGINT,
+        score INTEGER DEFAULT 0,
+        votes_count INTEGER DEFAULT 0,
+        profile_views INTEGER DEFAULT 0,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS achievements (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        icon_emoji TEXT,
+        category TEXT,
+        criteria_type TEXT,
+        criteria_value INTEGER
+      );
+
+      CREATE TABLE IF NOT EXISTS user_achievements (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        achievement_id BIGINT NOT NULL REFERENCES achievements(id) ON DELETE CASCADE,
+        unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_id, achievement_id)
+      );
+
+      -- Create indexes for social features
+      CREATE INDEX IF NOT EXISTS idx_user_profiles_candidate ON user_profiles(candidate_id);
+      CREATE INDEX IF NOT EXISTS idx_user_followers_follower ON user_followers(follower_id);
+      CREATE INDEX IF NOT EXISTS idx_user_followers_following ON user_followers(following_id);
+      CREATE INDEX IF NOT EXISTS idx_direct_messages_sender ON direct_messages(sender_id);
+      CREATE INDEX IF NOT EXISTS idx_direct_messages_recipient ON direct_messages(recipient_id);
+      CREATE INDEX IF NOT EXISTS idx_direct_messages_read ON direct_messages(read_at);
+      CREATE INDEX IF NOT EXISTS idx_leaderboard_candidate ON leaderboard_entries(candidate_id);
+      CREATE INDEX IF NOT EXISTS idx_leaderboard_score ON leaderboard_entries(score DESC);
+      CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_achievements_achievement ON user_achievements(achievement_id);
+
+      -- Insert pre-seeded achievements
+      INSERT INTO achievements (name, description, icon_emoji, category, criteria_type, criteria_value)
+      VALUES
+        ('Nouvel Arrivant', 'Rejoignez le réseau social', '👋', 'milestone', 'joined', 1),
+        ('Social Butterfly', 'Atteindrez 10 abonnés', '🦋', 'social', 'followers', 10),
+        ('Communicateur', 'Envoyez 5 messages', '💬', 'engagement', 'messages', 5),
+        ('Vedette', 'Atteindrez 50 abonnés', '⭐', 'social', 'followers', 50),
+        ('Influenceur', 'Atteindrez 100 abonnés', '🔥', 'social', 'followers', 100),
+        ('Bien Connecté', 'Suivrez 20 personnes', '🔗', 'engagement', 'following', 20),
+        ('Animateur de Réseau', 'Recevrez 100 votes', '📊', 'engagement', 'votes', 100),
+        ('Vedette du Quiz', 'Classement Top 10', '🏆', 'special', 'ranking', 10),
+        ('Champion', 'Classement Top 5', '🥇', 'special', 'ranking', 5),
+        ('Légende', 'Classement #1', '👑', 'special', 'ranking', 1),
+        ('Maître Réseau', 'Atteindrez 500 abonnés', '🌟', 'social', 'followers', 500)
+      ON CONFLICT DO NOTHING;
     `);
 
     await pool.query(`ALTER TABLE media_events ADD COLUMN IF NOT EXISTS favorites BIGINT DEFAULT 0;`);
@@ -5598,6 +5686,303 @@ app.get('/api/public-media/stats', async (req, res) => {
       totalViews: Number(events.rows[0]?.views || 0),
       totalDownloads: Number(events.rows[0]?.downloads || 0)
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==================== SOCIAL FEATURES API ====================
+
+// ========== USER PROFILES ==========
+app.get('/api/social/profile/:candidateId', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    const profile = await pool.query(`
+      SELECT c.id, c.fullName, c.city, c.photoUrl FROM candidates c WHERE c.id = $1
+    `, [candidateId]);
+    
+    if (profile.rows.length === 0) return res.status(404).json({ message: 'Profil non trouvé' });
+    
+    const userProfile = await pool.query(`
+      SELECT * FROM user_profiles WHERE candidate_id = $1
+    `, [candidateId]);
+    
+    const profileData = userProfile.rows[0] || { candidate_id: candidateId, bio: '', avatar_url: null, website: '', location: '' };
+    res.json({
+      id: profileData.id,
+      candidateId: profileData.candidate_id,
+      fullName: profile.rows[0].fullname,
+      bio: profileData.bio || '',
+      avatar: profileData.avatar_url || profile.rows[0].photourl,
+      website: profileData.website || '',
+      location: profileData.location || profile.rows[0].city || '',
+      followers: profileData.followers_count || 0,
+      following: profileData.following_count || 0,
+      joinedAt: profileData.joined_at
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/social/profile/:candidateId', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    const { bio, avatar_url, website, location } = req.body;
+
+    if (bio && bio.length > 500) return res.status(400).json({ message: 'Bio trop longue' });
+
+    await pool.query(`
+      INSERT INTO user_profiles (candidate_id, bio, avatar_url, website, location)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (candidate_id) 
+      DO UPDATE SET 
+        bio = COALESCE($2, bio),
+        avatar_url = COALESCE($3, avatar_url),
+        website = COALESCE($4, website),
+        location = COALESCE($5, location),
+        updated_at = NOW()
+    `, [candidateId, bio || null, avatar_url || null, website || null, location || null]);
+
+    res.json({ message: 'Profil mis à jour' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ========== FOLLOWERS ==========
+app.post('/api/social/follow', async (req, res) => {
+  try {
+    const { followerId, followingId } = req.body;
+
+    if (followerId === followingId) return res.status(400).json({ message: 'Impossible de vous suivre vous-même' });
+
+    const profiles = await pool.query(`
+      SELECT id, candidate_id FROM user_profiles WHERE candidate_id IN ($1, $2)
+    `, [followerId, followingId]);
+
+    if (profiles.rows.length < 2) {
+      await pool.query(`INSERT INTO user_profiles (candidate_id) VALUES ($1) ON CONFLICT DO NOTHING`, [followerId]);
+      await pool.query(`INSERT INTO user_profiles (candidate_id) VALUES ($1) ON CONFLICT DO NOTHING`, [followingId]);
+    }
+
+    const followerProfile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [followerId]);
+    const followingProfile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [followingId]);
+
+    const followerProfileId = followerProfile.rows[0].id;
+    const followingProfileId = followingProfile.rows[0].id;
+
+    await pool.query('BEGIN');
+    await pool.query(`
+      INSERT INTO user_followers (follower_id, following_id) VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
+    `, [followerProfileId, followingProfileId]);
+
+    await pool.query(`
+      UPDATE user_profiles SET following_count = (SELECT COUNT(*) FROM user_followers WHERE follower_id = $1) WHERE id = $1
+    `, [followerProfileId]);
+
+    await pool.query(`
+      UPDATE user_profiles SET followers_count = (SELECT COUNT(*) FROM user_followers WHERE following_id = $1) WHERE id = $1
+    `, [followingProfileId]);
+
+    await pool.query('COMMIT');
+    res.json({ message: 'Utilisateur suivi' });
+  } catch (error) {
+    await pool.query('ROLLBACK').catch(() => {});
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/social/follow/:followingId', async (req, res) => {
+  try {
+    const { followingId } = req.params;
+    const { followerId } = req.body;
+
+    const followerProfile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [followerId]);
+    if (followerProfile.rows.length === 0) return res.status(404).json({ message: 'Profil non trouvé' });
+
+    const followerProfileId = followerProfile.rows[0].id;
+    const followingProfile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [followingId]);
+    const followingProfileId = followingProfile.rows[0].id;
+
+    await pool.query('BEGIN');
+    await pool.query(`DELETE FROM user_followers WHERE follower_id = $1 AND following_id = $2`, [followerProfileId, followingProfileId]);
+    await pool.query(`UPDATE user_profiles SET following_count = (SELECT COUNT(*) FROM user_followers WHERE follower_id = $1) WHERE id = $1`, [followerProfileId]);
+    await pool.query('COMMIT');
+    res.json({ message: 'Utilisateur non suivi' });
+  } catch (error) {
+    await pool.query('ROLLBACK').catch(() => {});
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ========== DIRECT MESSAGING ==========
+app.post('/api/social/messages', async (req, res) => {
+  try {
+    const { sender_id, recipient_id, content } = req.body;
+
+    if (!content || content.length > 1000) return res.status(400).json({ message: 'Message invalide' });
+
+    const senderProfile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [sender_id]);
+    const recipientProfile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [recipient_id]);
+
+    if (senderProfile.rows.length === 0 || recipientProfile.rows.length === 0) {
+      await pool.query(`INSERT INTO user_profiles (candidate_id) VALUES ($1) ON CONFLICT DO NOTHING`, [sender_id]);
+      await pool.query(`INSERT INTO user_profiles (candidate_id) VALUES ($1) ON CONFLICT DO NOTHING`, [recipient_id]);
+    }
+
+    const senderProfileId = senderProfile.rows[0]?.id || (await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [sender_id])).rows[0].id;
+    const recipientProfileId = recipientProfile.rows[0]?.id || (await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [recipient_id])).rows[0].id;
+
+    const result = await pool.query(`
+      INSERT INTO direct_messages (sender_id, recipient_id, content) VALUES ($1, $2, $3) RETURNING *
+    `, [senderProfileId, recipientProfileId, content]);
+
+    res.status(201).json({ message: 'Message envoyé', data: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/social/conversations/:candidateId', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    const limit = parseInt(req.query.limit || '20', 10);
+
+    const profile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [candidateId]);
+    if (profile.rows.length === 0) return res.status(404).json({ message: 'Profil non trouvé' });
+
+    const profileId = profile.rows[0].id;
+    const conversations = await pool.query(`
+      SELECT DISTINCT
+        CASE WHEN sender_id = $1 THEN recipient_id ELSE sender_id END as other_user_id,
+        (SELECT up.candidate_id FROM user_profiles up WHERE up.id = CASE WHEN sender_id = $1 THEN recipient_id ELSE sender_id END) as other_user_candidate_id,
+        MAX(created_at) as last_message_at,
+        SUM(CASE WHEN read_at IS NULL THEN 1 ELSE 0 END) as unread_count
+      FROM direct_messages
+      WHERE sender_id = $1 OR recipient_id = $1
+      GROUP BY other_user_id
+      ORDER BY last_message_at DESC
+      LIMIT $2
+    `, [profileId, limit]);
+
+    const results = await Promise.all(conversations.rows.map(async (conv) => {
+      const candidate = await pool.query(`SELECT fullName FROM candidates WHERE id = $1`, [conv.other_user_candidate_id]);
+      return {
+        other_user_id: conv.other_user_candidate_id,
+        other_user_name: candidate.rows[0]?.fullname || 'Utilisateur',
+        last_message_at: conv.last_message_at,
+        unread_count: parseInt(conv.unread_count || 0, 10)
+      };
+    }));
+
+    res.json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/social/messages/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { userId } = req.query;
+    const limit = parseInt(req.query.limit || '50', 10);
+
+    const userProfile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [userId]);
+    const conversationProfile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [conversationId]);
+
+    if (userProfile.rows.length === 0 || conversationProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    const userProfileId = userProfile.rows[0].id;
+    const conversationProfileId = conversationProfile.rows[0].id;
+
+    const messages = await pool.query(`
+      SELECT dm.*, up.candidate_id as sender_candidate_id FROM direct_messages dm
+      LEFT JOIN user_profiles up ON dm.sender_id = up.id
+      WHERE (dm.sender_id = $1 AND dm.recipient_id = $2) OR (dm.sender_id = $2 AND dm.recipient_id = $1)
+      ORDER BY dm.created_at ASC
+      LIMIT $3
+    `, [userProfileId, conversationProfileId, limit]);
+
+    await pool.query(`
+      UPDATE direct_messages SET read_at = NOW()
+      WHERE recipient_id = $1 AND sender_id = $2 AND read_at IS NULL
+    `, [userProfileId, conversationProfileId]);
+
+    res.json(messages.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ========== LEADERBOARD ==========
+app.get('/api/social/leaderboard', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit || '100', 10);
+
+    const leaderboard = await pool.query(`
+      SELECT c.id, c.fullName, c.city, c.photoUrl,
+             COALESCE(COUNT(DISTINCT v.id), 0) as votes_count,
+             COALESCE(COUNT(DISTINCT v.id) * 10 + COUNT(DISTINCT uf.id) * 5, 0) as score,
+             COALESCE(COUNT(DISTINCT uf.id), 0) as profile_views
+      FROM candidates c
+      LEFT JOIN votes v ON c.id = v.candidateId
+      LEFT JOIN user_followers uf ON c.id = (SELECT candidate_id FROM user_profiles WHERE id = uf.following_id)
+      GROUP BY c.id, c.fullName, c.city, c.photoUrl
+      ORDER BY score DESC
+      LIMIT $1
+    `, [limit]);
+
+    res.json(leaderboard.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ========== ACHIEVEMENTS ==========
+app.get('/api/social/achievements/:candidateId', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+
+    const profile = await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [candidateId]);
+    if (profile.rows.length === 0) {
+      await pool.query(`INSERT INTO user_profiles (candidate_id) VALUES ($1) ON CONFLICT DO NOTHING`, [candidateId]);
+    }
+
+    const profileId = (await pool.query(`SELECT id FROM user_profiles WHERE candidate_id = $1`, [candidateId])).rows[0].id;
+
+    const achievements = await pool.query(`
+      SELECT a.id, a.name, a.description, a.icon_emoji, a.category, ua.unlocked_at
+      FROM achievements a
+      LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = $1
+      ORDER BY a.id ASC
+    `, [profileId]);
+
+    res.json(achievements.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/social/achievements', async (req, res) => {
+  try {
+    const achievements = await pool.query(`
+      SELECT id, name, description, icon_emoji, category, criteria_type, criteria_value FROM achievements ORDER BY id ASC
+    `);
+    res.json(achievements.rows);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
