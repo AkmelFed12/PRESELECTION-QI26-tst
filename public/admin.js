@@ -29,6 +29,11 @@ const finalPhaseRankingPreview = document.getElementById('finalPhaseRankingPrevi
 const downloadFinalCandidatesBtn = document.getElementById('downloadFinalCandidatesBtn');
 const downloadFinalRankingBtn = document.getElementById('downloadFinalRankingBtn');
 const downloadFinalScoresheetBtn = document.getElementById('downloadFinalScoresheetBtn');
+const finalPhaseIdFilter = document.getElementById('finalPhaseIdFilter');
+const finalPhaseCommuneFilter = document.getElementById('finalPhaseCommuneFilter');
+const finalPhaseLockStatus = document.getElementById('finalPhaseLockStatus');
+const lockFinalPhaseBtn = document.getElementById('lockFinalPhaseBtn');
+const unlockFinalPhaseBtn = document.getElementById('unlockFinalPhaseBtn');
 const convocationDateInput = document.getElementById('convocationDate');
 const convocationTimeInput = document.getElementById('convocationTime');
 const convocationPlaceInput = document.getElementById('convocationPlace');
@@ -118,10 +123,12 @@ const scoresDateFrom = document.getElementById('scoresDateFrom');
 const scoresDateTo = document.getElementById('scoresDateTo');
 const scoresFilterClear = document.getElementById('scoresFilterClear');
 const scoresFilterInfo = document.getElementById('scoresFilterInfo');
+const scoreAuditList = document.getElementById('scoreAuditList');
 const exportCandidatesCsv = document.getElementById('exportCandidatesCsv');
 const exportRankingCsv = document.getElementById('exportRankingCsv');
 const exportRankingPdf = document.getElementById('exportRankingPdf');
 const exportRankingOfficialPdf = document.getElementById('exportRankingOfficialPdf');
+const exportFinalPvPdf = document.getElementById('exportFinalPvPdf');
 const exportCandidatesPdf = document.getElementById('exportCandidatesPdf');
 const exportFullPdf = document.getElementById('exportFullPdf');
 const generateGroupsBtn = document.getElementById('generateGroupsBtn');
@@ -289,6 +296,7 @@ let sponsorsCache = [];
 let newsImages = [];
 let isEditing = false;
 let lastEditAt = 0;
+let finalPhaseLocked = false;
 
 const FINAL_PHASE_QUALIFIED = [
   { id: 4, fullName: 'KAGONE FATIMA AIDA DJAMELLA', whatsapp: '+2250152606015', city: 'YOPOUGON' },
@@ -615,7 +623,7 @@ function getSelectedCandidateIds() {
 }
 
 function applyArchiveUI() {
-  const disabled = archiveLocked;
+  const disabled = archiveLocked || finalPhaseLocked;
   if (candidateForm) {
     Array.from(candidateForm.elements).forEach((el) => {
       el.disabled = disabled;
@@ -638,6 +646,47 @@ function applyArchiveUI() {
       el.disabled = disabled;
     });
   }
+}
+
+function applyFinalPhaseLockUI() {
+  if (finalPhaseLockStatus) {
+    finalPhaseLockStatus.textContent = finalPhaseLocked
+      ? 'Phase finale: verrouillée'
+      : 'Phase finale: ouverte';
+    finalPhaseLockStatus.classList.toggle('pill-danger', finalPhaseLocked);
+    finalPhaseLockStatus.classList.toggle('pill-success', !finalPhaseLocked);
+  }
+  if (lockFinalPhaseBtn) lockFinalPhaseBtn.disabled = finalPhaseLocked;
+  if (unlockFinalPhaseBtn) unlockFinalPhaseBtn.disabled = !finalPhaseLocked;
+  applyArchiveUI();
+  applyScoresFilters();
+}
+
+async function loadFinalPhaseLockStatus() {
+  const res = await authedFetch('/api/admin/final-phase-lock');
+  if (!res.ok) {
+    finalPhaseLocked = false;
+    applyFinalPhaseLockUI();
+    return;
+  }
+  const data = await res.json().catch(() => ({}));
+  finalPhaseLocked = !!data.locked;
+  applyFinalPhaseLockUI();
+}
+
+async function setFinalPhaseLocked(value) {
+  const res = await authedFetch('/api/admin/final-phase-lock', {
+    method: 'PUT',
+    body: JSON.stringify({ locked: value ? 1 : 0 }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.message || 'Action impossible.');
+    return;
+  }
+  finalPhaseLocked = !!value;
+  applyFinalPhaseLockUI();
+  setStatus(scoreMsg, data.message || 'Statut mis à jour.');
 }
 
 async function loadArchiveStatus() {
@@ -814,6 +863,7 @@ async function loadDashboard() {
   renderFinalPhaseSection();
   renderScoreboard();
   await loadScoresTable();
+  await loadScoresAudit();
   renderAnomalies();
   updateLiveScoreValidation();
 
@@ -833,6 +883,7 @@ async function loadDashboard() {
   await loadSiteContentAdmin();
   updateAdminRegistrationStatus();
   await loadArchiveStatus();
+  await loadFinalPhaseLockStatus();
 }
 
 function renderFromCache(data) {
@@ -871,6 +922,8 @@ function renderFromCache(data) {
   renderScoreboard();
   renderGlobalSearch();
   updateAdminRegistrationStatus();
+  finalPhaseLocked = false;
+  applyFinalPhaseLockUI();
 }
 
 function renderCandidates(list) {
@@ -937,10 +990,8 @@ async function loadScoreSummary(candidateId) {
   const rows = Array.isArray(data.items) ? data.items : [];
   if (!rows.length) return { passages: 0, average: 0, total: 0 };
   const totals = rows.map((s) => {
-    const theme = Number(s.themeScore || s.themescore || 0);
-    const pont = Number(s.pontAsSiratScore || s.pontassiratscore || 0);
-    const recognition = Number(s.recognitionScore || s.recognitionscore || 0);
-    return theme + pont + recognition;
+    const { total } = getScoreParts(s);
+    return total;
   });
   const sum = totals.reduce((acc, v) => acc + v, 0);
   return { passages: rows.length, average: sum / totals.length, total: sum };
@@ -1026,10 +1077,8 @@ async function loadCandidateScores(candidateId) {
     return;
   }
   const totals = rows.map((s) => {
-    const theme = Number(s.themeScore || 0);
-    const pont = Number(s.pontAsSiratScore || 0);
-    const recognition = Number(s.recognitionScore || s.recognitionscore || 0);
-    return theme + pont + recognition;
+    const { total } = getScoreParts(s);
+    return total;
   });
   const average = totals.reduce((sum, v) => sum + v, 0) / totals.length;
   candidateModalScores.innerHTML = `
@@ -1039,7 +1088,8 @@ async function loadCandidateScores(candidateId) {
         <tr>
           <th>Date</th>
           <th>Juge</th>
-          <th>Thèmes /30</th>
+          <th>Composition /40</th>
+          <th>Questions-réponses /30</th>
           <th>Pont As Sirat /25</th>
           <th>Reconnaissance de Verset /10</th>
           <th>Total</th>
@@ -1049,16 +1099,14 @@ async function loadCandidateScores(candidateId) {
       <tbody>
         ${rows
           .map((s) => {
-            const theme = Number(s.themeScore || 0);
-            const pont = Number(s.pontAsSiratScore || 0);
-            const recognition = Number(s.recognitionScore || s.recognitionscore || 0);
-            const total = theme + pont + recognition;
+            const { composition, question, pont, recognition, total } = getScoreParts(s);
             const date = s.createdAt ? new Date(s.createdAt).toLocaleString('fr-FR') : '';
             return `
               <tr>
                 <td>${date}</td>
                 <td>${s.judgeName || ''}</td>
-                <td>${theme}</td>
+                <td>${composition}</td>
+                <td>${question}</td>
                 <td>${pont}</td>
                 <td>${recognition}</td>
                 <td>${total}</td>
@@ -1268,6 +1316,7 @@ function buildTechnicalSheetHtml(title, communes, dateLabel) {
           <td></td>
           <td></td>
           <td></td>
+          <td></td>
         </tr>
       `,
     )
@@ -1289,7 +1338,7 @@ function buildTechnicalSheetHtml(title, communes, dateLabel) {
       <body>
         <h1>${title} — Fiche technique</h1>
         <h2>Date : ${dateLabel}</h2>
-        <p class="small">Notation : Questions‑Réponses /30 • Pont As Sirat /25 • Reconnaissance de Verset /10</p>
+        <p class="small">Notation : Composition /40 • Questions‑Réponses /30 • Pont As Sirat /25 • Reconnaissance de Verset /10</p>
         <table>
           <thead>
             <tr>
@@ -1297,10 +1346,11 @@ function buildTechnicalSheetHtml(title, communes, dateLabel) {
               <th>ID</th>
               <th>Nom</th>
               <th>Commune</th>
+              <th>Composition /40</th>
               <th>Questions‑Réponses /30</th>
               <th>Pont As Sirat /25</th>
               <th>Reconnaissance de Verset /10</th>
-              <th>TOTAL /60</th>
+              <th>TOTAL /105</th>
               <th>Signature</th>
             </tr>
           </thead>
@@ -1453,6 +1503,21 @@ function computeRanks(list, getScore) {
   });
 }
 
+function getScoreParts(scoreLike) {
+  const composition = Number(scoreLike.compositionScore ?? scoreLike.compositionscore ?? 0);
+  const question = Number(
+    scoreLike.questionScore ??
+      scoreLike.questionscore ??
+      scoreLike.themeScore ??
+      scoreLike.themescore ??
+      0,
+  );
+  const pont = Number(scoreLike.pontAsSiratScore ?? scoreLike.pontassiratscore ?? 0);
+  const recognition = Number(scoreLike.recognitionScore ?? scoreLike.recognitionscore ?? 0);
+  const total = composition + question + pont + recognition;
+  return { composition, question, pont, recognition, total };
+}
+
 function renderRanking(list) {
   if (!rankingTable) return;
   const ranks = computeRanks(list, (r) => r.totalScore ?? r.totalscore ?? r.averageScore ?? 0);
@@ -1509,8 +1574,15 @@ function getFinalPhaseQualifiedRows() {
 
 function renderFinalPhaseSection() {
   if (!finalPhaseCandidatesTable) return;
-  const rows = getFinalPhaseQualifiedRows();
-  finalPhaseCandidatesTable.innerHTML = rows
+  const idFilter = (finalPhaseIdFilter?.value || '').trim();
+  const communeFilter = (finalPhaseCommuneFilter?.value || '').trim().toUpperCase();
+  const rows = getFinalPhaseQualifiedRows().filter((r) => {
+    const byId = !idFilter || String(r.id).includes(idFilter);
+    const byCommune = !communeFilter || String(r.city || '').toUpperCase().includes(communeFilter);
+    return byId && byCommune;
+  });
+  finalPhaseCandidatesTable.innerHTML = rows.length
+    ? rows
     .map(
       (r, idx) => `
         <tr>
@@ -1522,9 +1594,10 @@ function renderFinalPhaseSection() {
         </tr>
       `,
     )
-    .join('');
+    .join('')
+    : `<tr><td colspan="5">Aucun candidat pour ce filtre.</td></tr>`;
 
-  const sorted = rows.slice().sort((a, b) => b.totalScore - a.totalScore);
+  const sorted = getFinalPhaseQualifiedRows().slice().sort((a, b) => b.totalScore - a.totalScore);
   const ranks = computeRanks(sorted, (r) => r.totalScore);
   const topRows = sorted
     .slice(0, 5)
@@ -1612,10 +1685,7 @@ function renderScoresTable(list) {
   const rows = Array.isArray(list) ? list : [];
   scoresTable.innerHTML = rows
     .map((s) => {
-      const themeScore = s.themeScore ?? s.themescore ?? 0;
-      const pontScore = s.pontAsSiratScore ?? s.pontassiratscore ?? 0;
-      const recognitionScore = s.recognitionScore ?? s.recognitionscore ?? 0;
-      const total = Number(themeScore || 0) + Number(pontScore || 0) + Number(recognitionScore || 0);
+      const { composition, question, pont, recognition, total } = getScoreParts(s);
       const created = s.createdAt || s.createdat;
       const date = created ? new Date(created).toLocaleString('fr-FR') : '';
       return `
@@ -1623,12 +1693,13 @@ function renderScoresTable(list) {
           <td>${s.id}</td>
           <td>${s.fullName || s.fullname || 'Inconnu'}</td>
           <td>${s.judgeName || s.judgename || ''}</td>
-          <td>${themeScore ?? 0}</td>
-          <td>${pontScore ?? 0}</td>
-          <td>${recognitionScore ?? 0}</td>
+          <td>${composition}</td>
+          <td>${question}</td>
+          <td>${pont}</td>
+          <td>${recognition}</td>
           <td>${total}</td>
           <td>${date}</td>
-          <td><button data-delete-score="${s.id}">Supprimer</button></td>
+          <td><button data-delete-score="${s.id}" ${finalPhaseLocked ? 'disabled' : ''}>Supprimer</button></td>
         </tr>
       `;
     })
@@ -1645,10 +1716,7 @@ function renderScoreboard() {
   scoresCache.forEach((s) => {
     const id = Number(s.candidateId || s.candidateid);
     if (!id) return;
-    const theme = Number(s.themeScore || s.themescore || 0);
-    const pont = Number(s.pontAsSiratScore || s.pontassiratscore || 0);
-    const rec = Number(s.recognitionScore || s.recognitionscore || 0);
-    const total = theme + pont + rec;
+    const { total } = getScoreParts(s);
     const created = new Date(s.createdAt || s.createdat || 0);
     if (!byCandidate.has(id)) byCandidate.set(id, []);
     byCandidate.get(id).push({ total, created, name: s.fullName || s.fullname || '' });
@@ -1766,11 +1834,8 @@ function renderAnomalies() {
     }
   });
   scoresCache.forEach((s) => {
-    const theme = Number(s.themeScore || s.themescore || 0);
-    const pont = Number(s.pontAsSiratScore || s.pontassiratscore || 0);
-    const rec = Number(s.recognitionScore || s.recognitionscore || 0);
-    const total = theme + pont + rec;
-    if (total > 60 || total < 0) {
+    const { total } = getScoreParts(s);
+    if (total > 105 || total < 0) {
       issues.push(`Score anormal (${total}) — ${s.fullName || 'Inconnu'} (note ${s.id})`);
     }
   });
@@ -1840,10 +1905,12 @@ async function setRegistrationLocked(value) {
 
 function updateLiveScoreValidation() {
   const entries = [
-    { form: scoreForm, name: 'themeScore', max: 30, label: 'Thèmes /30' },
+    { form: scoreForm, name: 'compositionScore', max: 40, label: 'Composition /40' },
+    { form: scoreForm, name: 'questionScore', max: 30, label: 'Questions-réponses /30' },
     { form: scoreForm, name: 'pontAsSiratScore', max: 25, label: 'Pont As Sirat /25' },
     { form: scoreForm, name: 'recognitionScore', max: 10, label: 'Reconnaissance /10' },
-    { form: scoreQuickForm, name: 'themeScore', max: 30, label: 'Thèmes /30' },
+    { form: scoreQuickForm, name: 'compositionScore', max: 40, label: 'Composition /40' },
+    { form: scoreQuickForm, name: 'questionScore', max: 30, label: 'Questions-réponses /30' },
     { form: scoreQuickForm, name: 'pontAsSiratScore', max: 25, label: 'Pont As Sirat /25' },
     { form: scoreQuickForm, name: 'recognitionScore', max: 10, label: 'Reconnaissance /10' },
   ];
@@ -3346,12 +3413,47 @@ async function loadScoresTable() {
   renderAnomalies();
 }
 
+async function loadScoresAudit() {
+  if (!scoreAuditList) return;
+  const res = await authedFetch('/api/admin/scores-audit');
+  if (!res.ok) {
+    scoreAuditList.textContent = 'Aucune activité.';
+    return;
+  }
+  const data = await res.json().catch(() => ({}));
+  const items = Array.isArray(data.items) ? data.items : [];
+  if (!items.length) {
+    scoreAuditList.textContent = 'Aucune activité.';
+    return;
+  }
+  const rows = items
+    .map((item) => {
+      const when = item.createdAt || item.createdat || '';
+      const action = item.action || '';
+      const payload = item.payload ? String(item.payload) : '';
+      const ip = item.ip || '';
+      return `<tr><td>${when}</td><td>${action}</td><td>${payload}</td><td>${ip}</td></tr>`;
+    })
+    .join('');
+  scoreAuditList.innerHTML = `
+    <table class="table">
+      <thead><tr><th>Date</th><th>Action</th><th>Détails</th><th>IP</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
 async function deleteScore(scoreId) {
+  if (finalPhaseLocked) {
+    setStatus(scoreMsg, 'Phase finale verrouillée: suppression bloquée.');
+    return;
+  }
   if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) return;
   const res = await authedFetch(`/api/admin/scores/${scoreId}`, { method: 'DELETE' });
   const data = await res.json().catch(() => ({}));
   setStatus(scoreMsg, data.message || 'Note supprimée.');
   await loadScoresTable();
+  await loadScoresAudit();
   await loadDashboard();
 }
 
@@ -3382,10 +3484,15 @@ scoreQuickForm?.addEventListener('input', updateLiveScoreValidation);
 
 scoreForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (finalPhaseLocked) {
+    setStatus(scoreMsg, 'Phase finale verrouillée: enregistrement bloqué.');
+    return;
+  }
   setStatus(scoreMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(scoreForm).entries());
   if (
-    Number(payload.themeScore || 0) > 30 ||
+    Number(payload.compositionScore || 0) > 40 ||
+    Number(payload.questionScore || 0) > 30 ||
     Number(payload.pontAsSiratScore || 0) > 25 ||
     Number(payload.recognitionScore || 0) > 10
   ) {
@@ -3406,16 +3513,22 @@ scoreForm?.addEventListener('submit', async (e) => {
     scoreForm.reset();
     if (candidateName) candidateName.textContent = 'À remplir';
     await loadScoresTable();
+    await loadScoresAudit();
   }
   await loadDashboard();
 });
 
 scoreQuickForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (finalPhaseLocked) {
+    setStatus(scoreMsg, 'Phase finale verrouillée: enregistrement bloqué.');
+    return;
+  }
   setStatus(scoreMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(scoreQuickForm).entries());
   if (
-    Number(payload.themeScore || 0) > 30 ||
+    Number(payload.compositionScore || 0) > 40 ||
+    Number(payload.questionScore || 0) > 30 ||
     Number(payload.pontAsSiratScore || 0) > 25 ||
     Number(payload.recognitionScore || 0) > 10
   ) {
@@ -3435,6 +3548,7 @@ scoreQuickForm?.addEventListener('submit', async (e) => {
   if (res.ok) {
     scoreQuickForm.reset();
     await loadScoresTable();
+    await loadScoresAudit();
   }
   await loadDashboard();
 });
@@ -3455,6 +3569,22 @@ scoresFilterClear?.addEventListener('click', () => {
   if (scoresDateFrom) scoresDateFrom.value = '';
   if (scoresDateTo) scoresDateTo.value = '';
   applyScoresFilters();
+});
+finalPhaseIdFilter?.addEventListener('input', renderFinalPhaseSection);
+finalPhaseCommuneFilter?.addEventListener('input', renderFinalPhaseSection);
+
+lockFinalPhaseBtn?.addEventListener('click', async () => {
+  const ok = confirm('Verrouiller la phase finale ? Aucune nouvelle note ne pourra être ajoutée.');
+  if (!ok) return;
+  await setFinalPhaseLocked(true);
+  await loadDashboard();
+});
+
+unlockFinalPhaseBtn?.addEventListener('click', async () => {
+  const ok = confirm('Déverrouiller la phase finale ?');
+  if (!ok) return;
+  await setFinalPhaseLocked(false);
+  await loadDashboard();
 });
 
 openRegistrationBtn?.addEventListener('click', async () => {
@@ -4092,6 +4222,26 @@ exportRankingOfficialPdf?.addEventListener('click', async () => {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+});
+
+exportFinalPvPdf?.addEventListener('click', () => {
+  const rows = getFinalPhaseQualifiedRows()
+    .slice()
+    .sort((a, b) => b.totalScore - a.totalScore);
+  if (!rows.length) return;
+  const ranks = computeRanks(rows, (r) => r.totalScore);
+  const bodyRows = rows
+    .map(
+      (r, idx) =>
+        `<tr><td>${formatRank(ranks[idx]) || `${idx + 1}e`}</td><td>${r.id}</td><td>${r.fullName}</td><td>${r.totalScore.toFixed(2)}</td><td>${r.passages}</td><td></td></tr>`,
+    )
+    .join('');
+  openPdfPrintWindow(
+    'PV final signé',
+    `Phase finale — Quiz Islamique 2026 — Édité le ${new Date().toLocaleDateString('fr-FR')}`,
+    ['Rang', 'ID', 'Nom', 'Total /105', 'Passages', 'Signature'],
+    bodyRows,
+  );
 });
 
 exportCandidatesPdf?.addEventListener('click', () => {

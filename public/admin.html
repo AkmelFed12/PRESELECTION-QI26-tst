@@ -608,7 +608,22 @@
             <button class="btn-primary" id="downloadFinalRankingBtn" type="button">Télécharger le classement (PDF)</button>
             <button class="btn-primary" id="downloadFinalScoresheetBtn" type="button">Télécharger la feuille de notation (PDF)</button>
           </div>
+          <div class="nav-links" style="margin-bottom: 12px;">
+            <span class="pill" id="finalPhaseLockStatus">Phase finale: ouverte</span>
+            <button class="btn outline" id="lockFinalPhaseBtn" type="button">Verrouiller la phase finale</button>
+            <button class="btn outline" id="unlockFinalPhaseBtn" type="button">Déverrouiller la phase finale</button>
+          </div>
           <div id="finalPhaseRankingPreview" class="status" style="margin-bottom: 12px;">Classement en attente.</div>
+          <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-bottom:10px;">
+            <div>
+              <label>Filtrer les qualifiés par ID</label>
+              <input id="finalPhaseIdFilter" placeholder="Ex: 23" />
+            </div>
+            <div>
+              <label>Filtrer les qualifiés par commune</label>
+              <input id="finalPhaseCommuneFilter" placeholder="Ex: ADJAME" />
+            </div>
+          </div>
           <table class="table" id="finalPhaseCandidatesTable">
             <thead>
               <tr>
@@ -621,15 +636,6 @@
             </thead>
             <tbody></tbody>
           </table>
-          <div class="commune-card" style="margin-top:12px;">
-            <div class="card-subtitle">Suggestions pour le jury</div>
-            <ul id="finalPhaseSuggestions" class="anomaly-list" style="color:#1f2937;">
-              <li>Prévoir 2 jurys tournants pour limiter la fatigue et homogénéiser les notes.</li>
-              <li>Vérifier les identités et la présence 30 minutes avant le début des épreuves.</li>
-              <li>Utiliser une double signature (juge + superviseur) sur chaque feuille de notation.</li>
-              <li>Publier un récapitulatif provisoire en fin de journée puis valider le classement final.</li>
-            </ul>
-          </div>
         </div>
         <div class="form-grid" style="margin-bottom:12px;">
           <div>
@@ -650,7 +656,8 @@
           <form id="scoreQuickForm" class="form-grid">
             <div><label>ID candidat</label><input name="candidateId" required /></div>
             <div><label>Nom du juge</label><input name="judgeName" required /></div>
-            <div><label>Thèmes /30</label><input name="themeScore" type="number" step="0.1" /></div>
+            <div><label>Composition sur table /40</label><input name="compositionScore" type="number" step="0.1" /></div>
+            <div><label>Questions-réponses /30</label><input name="questionScore" type="number" step="0.1" /></div>
             <div><label>Pont As Sirat /25</label><input name="pontAsSiratScore" type="number" step="0.1" /></div>
             <div><label>Reconnaissance de Verset /10</label><input name="recognitionScore" type="number" step="0.1" /></div>
             <div class="full"><label>Notes</label><textarea name="notes"></textarea></div>
@@ -660,7 +667,8 @@
         <form id="scoreForm" class="form-grid">
           <div><label>ID candidat</label><input name="candidateId" required /></div>
           <div><label>Nom du juge</label><input name="judgeName" required /></div>
-          <div><label>Thèmes fusionnés /30</label><input name="themeScore" type="number" step="0.1" /></div>
+          <div><label>Composition sur table /40</label><input name="compositionScore" type="number" step="0.1" /></div>
+          <div><label>Questions-réponses /30</label><input name="questionScore" type="number" step="0.1" /></div>
           <div><label>Pont As Sirat /25</label><input name="pontAsSiratScore" type="number" step="0.1" /></div>
           <div><label>Reconnaissance de Verset /10</label><input name="recognitionScore" type="number" step="0.1" /></div>
           <div class="full"><label>Notes</label><textarea name="notes"></textarea></div>
@@ -695,16 +703,21 @@
               <th>ID</th>
               <th>Candidat</th>
               <th>Juge</th>
-              <th>Thèmes /30</th>
+              <th>Composition /40</th>
+              <th>Questions-réponses /30</th>
               <th>Pont As Sirat /25</th>
               <th>Reconnaissance de Verset /10</th>
-              <th>Total</th>
+              <th>Total /105</th>
               <th>Date</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
+        <div class="card" style="margin-top:12px;">
+          <h3>Journal d'audit des notes</h3>
+          <div id="scoreAuditList" class="status">Aucune activité.</div>
+        </div>
 
         <h3>Classement (totaux)</h3>
         <div class="nav-links" style="margin-bottom: 12px;">
@@ -712,6 +725,7 @@
           <button class="btn-primary" id="exportRankingCsv" type="button">Exporter classement (CSV)</button>
           <button class="btn-primary" id="exportRankingPdf" type="button">Exporter classement (PDF)</button>
           <button class="btn-primary" id="exportRankingOfficialPdf" type="button">Exporter classement officiel (PDF)</button>
+          <button class="btn-primary" id="exportFinalPvPdf" type="button">Exporter PV final signé (PDF)</button>
           <button class="btn-primary" id="exportCandidatesPdf" type="button">Exporter candidats (PDF)</button>
           <button class="btn-primary" id="exportFullPdf" type="button">Exporter rapport complet (PDF)</button>
         </div>

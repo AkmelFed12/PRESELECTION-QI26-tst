@@ -483,6 +483,28 @@ async function ensureNotArchived(res) {
   return false;
 }
 
+async function isFinalPhaseLocked() {
+  const val = await getAdminConfigValue('final_phase_locked');
+  return String(val || '') === '1';
+}
+
+async function ensureFinalPhaseUnlocked(res) {
+  const locked = await isFinalPhaseLocked();
+  if (!locked) return true;
+  res.status(403).json({ message: 'Phase finale verrouillée. Modifications bloquées.' });
+  return false;
+}
+
+async function logScoreAudit(action, payload, req) {
+  try {
+    await pool.query(
+      `INSERT INTO admin_audit (action, payload, ip)
+       VALUES ($1, $2, $3)`,
+      [action, JSON.stringify(payload || {}), getClientIp(req)],
+    );
+  } catch {}
+}
+
 function normalizeSettingsRow(row) {
   if (!row) return {
     votingEnabled: 0,
@@ -1161,12 +1183,16 @@ async function initDatabase() {
         id BIGSERIAL PRIMARY KEY,
         candidateId BIGINT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
         judgeName TEXT NOT NULL,
+        compositionScore REAL DEFAULT 0,
+        questionScore REAL DEFAULT 0,
         themeScore REAL DEFAULT 0,
         pontAsSiratScore REAL DEFAULT 0,
         recognitionScore REAL DEFAULT 0,
         notes TEXT,
         createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      ALTER TABLE scores ADD COLUMN IF NOT EXISTS compositionScore REAL DEFAULT 0;
+      ALTER TABLE scores ADD COLUMN IF NOT EXISTS questionScore REAL DEFAULT 0;
       ALTER TABLE scores ADD COLUMN IF NOT EXISTS themeScore REAL DEFAULT 0;
       ALTER TABLE scores ADD COLUMN IF NOT EXISTS pontAsSiratScore REAL DEFAULT 0;
       ALTER TABLE scores ADD COLUMN IF NOT EXISTS recognitionScore REAL DEFAULT 0;
@@ -1781,8 +1807,8 @@ app.get('/api/public-results', async (req, res) => {
       ) v ON c.id = v.candidateId
       LEFT JOIN (
         SELECT candidateId,
-               CAST(COALESCE(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0) + COALESCE(recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
-               CAST(COALESCE(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0) + COALESCE(recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore
+               CAST(COALESCE(SUM(COALESCE(compositionScore, 0) + COALESCE(questionScore, themeScore, 0) + COALESCE(pontAsSiratScore, 0) + COALESCE(recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+               CAST(COALESCE(SUM(COALESCE(compositionScore, 0) + COALESCE(questionScore, themeScore, 0) + COALESCE(pontAsSiratScore, 0) + COALESCE(recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore
         FROM scores
         WHERE COALESCE(scorePhase, '${SCORE_PHASE_PREVIOUS}') = '${SCORE_PHASE_FINAL_2026}'
         GROUP BY candidateId
@@ -2027,8 +2053,8 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
       `),
       pool.query(`
         SELECT c.id, c.fullName,
-               CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
-               CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
+               CAST(COALESCE(SUM(COALESCE(s.compositionScore, 0) + COALESCE(s.questionScore, s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+               CAST(COALESCE(SUM(COALESCE(s.compositionScore, 0) + COALESCE(s.questionScore, s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
                COUNT(s.id) as passages
         FROM candidates c
         LEFT JOIN scores s
@@ -2095,6 +2121,29 @@ app.post('/api/admin/unarchive', verifyAdmin, async (req, res) => {
   try {
     await setAdminConfigValue('season_archived', '0');
     res.json({ message: 'Saison déverrouillée.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.get('/api/admin/final-phase-lock', verifyAdmin, async (req, res) => {
+  try {
+    const locked = await isFinalPhaseLocked();
+    res.json({ locked });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.put('/api/admin/final-phase-lock', verifyAdmin, async (req, res) => {
+  try {
+    if (!(await ensureNotArchived(res))) return;
+    const locked = Number(req.body?.locked || 0) === 1;
+    await setAdminConfigValue('final_phase_locked', locked ? '1' : '0');
+    await logScoreAudit(locked ? 'final_phase_lock' : 'final_phase_unlock', { locked }, req);
+    res.json({ message: locked ? 'Phase finale verrouillée.' : 'Phase finale déverrouillée.', locked });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Database error' });
@@ -3305,8 +3354,8 @@ app.get('/api/admin/export/ranking', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.fullName,
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
+             CAST(COALESCE(SUM(COALESCE(s.compositionScore, 0) + COALESCE(s.questionScore, s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+             CAST(COALESCE(SUM(COALESCE(s.compositionScore, 0) + COALESCE(s.questionScore, s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s
@@ -3349,8 +3398,8 @@ app.get('/api/admin/export/ranking-xls', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.fullName,
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
+             CAST(COALESCE(SUM(COALESCE(s.compositionScore, 0) + COALESCE(s.questionScore, s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+             CAST(COALESCE(SUM(COALESCE(s.compositionScore, 0) + COALESCE(s.questionScore, s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s
@@ -3378,7 +3427,7 @@ app.get('/api/admin/export/ranking-official-pdf', verifyAdmin, async (req, res) 
   try {
     const result = await pool.query(`
       SELECT c.fullName as "fullName",
-             CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
+             CAST(COALESCE(SUM(COALESCE(s.compositionScore, 0) + COALESCE(s.questionScore, s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
              COUNT(s.id) as passages
       FROM candidates c
       LEFT JOIN scores s
@@ -3452,29 +3501,60 @@ app.post('/api/admin/sync-manual-candidates', verifyAdmin, async (req, res) => {
 app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
   try {
     if (!(await ensureNotArchived(res))) return;
-    const { candidateId, judgeName, themeScore, pontAsSiratScore, recognitionScore, notes } = req.body || {};
+    if (!(await ensureFinalPhaseUnlocked(res))) return;
+    const {
+      candidateId,
+      judgeName,
+      compositionScore,
+      questionScore,
+      themeScore,
+      pontAsSiratScore,
+      recognitionScore,
+      notes
+    } = req.body || {};
     if (!candidateId || !judgeName) {
       return res.status(400).json({ message: 'ID candidat et nom du juge requis.' });
     }
 
+    const cleanJudge = sanitizeString(judgeName, 100);
     const candidate = await pool.query('SELECT id, fullName FROM candidates WHERE id = $1', [candidateId]);
     if (candidate.rows.length === 0) {
       return res.status(404).json({ message: 'Candidat introuvable.' });
     }
 
+    const duplicate = await pool.query(
+      `SELECT id
+       FROM scores
+       WHERE candidateId = $1
+         AND COALESCE(scorePhase, $2) = $3
+         AND LOWER(TRIM(judgeName)) = LOWER(TRIM($4))
+       LIMIT 1`,
+      [candidateId, SCORE_PHASE_PREVIOUS, SCORE_PHASE_FINAL_2026, cleanJudge]
+    );
+    if (duplicate.rows.length) {
+      return res.status(409).json({ message: 'Ce juge a déjà noté ce candidat pour cette phase.' });
+    }
+
     await pool.query(
-      `INSERT INTO scores (candidateId, judgeName, themeScore, pontAsSiratScore, recognitionScore, notes, scorePhase)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO scores (candidateId, judgeName, compositionScore, questionScore, themeScore, pontAsSiratScore, recognitionScore, notes, scorePhase)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         candidateId,
-        sanitizeString(judgeName, 100),
-        Number(themeScore || 0),
+        cleanJudge,
+        Number(compositionScore || 0),
+        Number(questionScore || themeScore || 0),
+        Number(questionScore || themeScore || 0),
         Number(pontAsSiratScore || 0),
         Number(recognitionScore || 0),
         sanitizeString(notes, 500),
         SCORE_PHASE_FINAL_2026,
       ]
     );
+    await logScoreAudit('score_created', {
+      candidateId: Number(candidateId),
+      judgeName: cleanJudge,
+      phase: SCORE_PHASE_FINAL_2026,
+    }, req);
 
     res.status(201).json({ 
       message: 'Note enregistrée.',
@@ -3493,6 +3573,8 @@ app.get('/api/admin/scores', verifyAdmin, async (req, res) => {
               s.candidateId,
               c.fullName as "fullName",
               s.judgeName as "judgeName",
+              s.compositionScore as "compositionScore",
+              s.questionScore as "questionScore",
               s.themeScore as "themeScore",
               s.pontAsSiratScore as "pontAsSiratScore",
               s.recognitionScore as "recognitionScore",
@@ -3505,6 +3587,22 @@ app.get('/api/admin/scores', verifyAdmin, async (req, res) => {
        ORDER BY s.id DESC
        LIMIT 500`,
       [SCORE_PHASE_PREVIOUS, SCORE_PHASE_FINAL_2026]
+    );
+    res.json({ items: result.rows || [] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/scores-audit', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT action, payload, ip, createdAt as "createdAt"
+       FROM admin_audit
+       WHERE action IN ('score_created', 'score_deleted', 'final_phase_lock', 'final_phase_unlock')
+       ORDER BY id DESC
+       LIMIT 200`
     );
     res.json({ items: result.rows || [] });
   } catch (error) {
@@ -3566,7 +3664,7 @@ app.get('/api/admin/candidates/:id/pdf', verifyAdmin, async (req, res) => {
     }
     const candidate = candidateRes.rows[0];
     const scoresRes = await pool.query(
-      `SELECT judgeName, themeScore, pontAsSiratScore, recognitionScore, notes, createdAt
+      `SELECT judgeName, compositionScore, questionScore, themeScore, pontAsSiratScore, recognitionScore, notes, createdAt
        FROM scores
        WHERE candidateId = $1
          AND COALESCE(scorePhase, $2) = $3
@@ -3599,7 +3697,8 @@ app.get('/api/admin/candidates/:id/pdf', verifyAdmin, async (req, res) => {
 
     scoresRes.rows.forEach((s) => {
       const total =
-        Number(s.themescore || s.themeScore || 0) +
+        Number(s.compositionscore || s.compositionScore || 0) +
+        Number(s.questionscore || s.questionScore || s.themescore || s.themeScore || 0) +
         Number(s.pontassiratscore || s.pontAsSiratScore || 0) +
         Number(s.recognitionscore || s.recognitionScore || 0);
       const date = s.createdat || s.createdAt ? new Date(s.createdat || s.createdAt).toLocaleString('fr-FR') : '';
@@ -3618,14 +3717,21 @@ app.get('/api/admin/candidates/:id/pdf', verifyAdmin, async (req, res) => {
 app.delete('/api/admin/scores/:id', verifyAdmin, async (req, res) => {
   try {
     if (!(await ensureNotArchived(res))) return;
+    if (!(await ensureFinalPhaseUnlocked(res))) return;
     const scoreId = Number(req.params.id);
     if (!Number.isFinite(scoreId)) {
       return res.status(400).json({ error: 'Invalid score id' });
     }
-    const result = await pool.query('DELETE FROM scores WHERE id = $1', [scoreId]);
+    const result = await pool.query(
+      `DELETE FROM scores
+       WHERE id = $1
+         AND COALESCE(scorePhase, $2) = $3`,
+      [scoreId, SCORE_PHASE_PREVIOUS, SCORE_PHASE_FINAL_2026]
+    );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Score not found' });
     }
+    await logScoreAudit('score_deleted', { scoreId }, req);
     res.json({ message: 'Note supprimée.' });
   } catch (error) {
     console.error(error);
@@ -3642,6 +3748,8 @@ app.get('/api/admin/candidates/:id/scores', verifyAdmin, async (req, res) => {
     const result = await pool.query(
       `SELECT id,
               judgeName as "judgeName",
+              compositionScore as "compositionScore",
+              questionScore as "questionScore",
               themeScore as "themeScore",
               pontAsSiratScore as "pontAsSiratScore",
               recognitionScore as "recognitionScore",
