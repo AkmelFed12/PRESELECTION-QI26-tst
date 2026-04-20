@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groupes de Discussion - ASAA Quiz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            color: #333;
+            font-size: 28px;
+        }
+
+        .header-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .header-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .group-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .group-item:hover {
+            background: #e8e8ff;
+            border-left-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .group-item.active {
+            background: #e8e8ff;
+            border-left-color: #667eea;
+        }
+
+        .group-item-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .group-item-count {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .chat-area {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .chat-header {
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h3 {
+            color: #333;
+            font-size: 18px;
+        }
+
+        .chat-members-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.own {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 15px;
+            border-radius: 12px;
+            background: #f0f0f0;
+            color: #333;
+            word-wrap: break-word;
+        }
+
+        .message.own .message-bubble {
+            background: #667eea;
+            color: white;
+        }
+
+        .message-author {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #bbb;
+            margin-top: 5px;
+        }
+
+        .message-reactions {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
+
+        .reaction-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .reaction-btn:hover {
+            background: #e8e8ff;
+            border-color: #667eea;
+        }
+
+        .typing-indicator {
+            padding: 10px;
+            color: #999;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 15px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .input-area input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .emoji-picker-btn {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        /* Badges Section */
+        .badges-section {
+            margin-top: 30px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .badges-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .badges-header h2 {
+            color: #333;
+            font-size: 22px;
+        }
+
+        .badge-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-card-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .badges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .badge {
+            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .badge:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .badge.unlocked {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f0f0ff 0%, #f5f5ff 100%);
+        }
+
+        .badge-emoji {
+            font-size: 36px;
+            margin-bottom: 10px;
+            animation: bounceIn 0.6s ease;
+        }
+
+        @keyframes bounceIn {
+            0%, 100% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .badge-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .badge-progress {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .badge-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .badge-info {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .badge.unlocked .badge-info {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                max-height: 300px;
+            }
+
+            .chat-area {
+                height: auto;
+            }
+
+            .message-bubble {
+                max-width: 90%;
+            }
+
+            .badges-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+
+            header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>💬 Groupes de Discussion</h1>
+            </div>
+            <button class="header-btn" onclick="showCreateGroupModal()">+ Créer un groupe</button>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <h2>Mes Groupes</h2>
+                <div id="groupsList">
+                    <div class="empty-state" style="height: auto; color: #ccc;">
+                        <p>Aucun groupe rejoint</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-area" id="chatArea">
+                <div class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <p>Sélectionnez un groupe pour commencer</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="badges-section">
+            <div class="badges-header">
+                <h2>🏅 Mes Badges</h2>
+                <div style="color: #667eea; font-weight: 600;" id="badgeStats">0 / 15 déverrouillés</div>
+            </div>
+
+            <div class="badge-stats">
+                <div class="stat-card">
+                    <div class="stat-card-value" id="unlockedCount">0</div>
+                    <div class="stat-card-label">Badges déverrouillés</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-value" id="totalPoints">0</div>
+                    <div class="stat-card-label">Points obtenus</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-value" id="lastBadge">-</div>
+                    <div class="stat-card-label">Dernier badge</div>
+                </div>
+            </div>
+
+            <div class="badges-grid" id="badgesGrid">
+                <!-- Badges will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/social';
+        let currentUserId = null;
+        let currentGroupId = null;
+        let messageRefreshInterval = null;
+
+        // Get current user ID from localStorage
+        function getCurrentUserId() {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            return userData.candidateId;
+        }
+
+        // Initialize
+        async function init() {
+            currentUserId = getCurrentUserId();
+            if (!currentUserId) {
+                alert('Veuillez vous connecter d\'abord');
+                window.location.href = '/member-login.html';
+                return;
+            }
+
+            loadUserGroups();
+            loadBadges();
+            loadBadgeStats();
+        }
+
+        // Load user's groups
+        async function loadUserGroups() {
+            try {
+                const response = await fetch(`${API_BASE}/chat-groups?type=public&limit=20`);
+                const groups = await response.json();
+
+                const groupsList = document.getElementById('groupsList');
+                if (groups.length === 0) {
+                    groupsList.innerHTML = '<div class="empty-state" style="height: auto; color: #ccc;"><p>Aucun groupe disponible</p></div>';
+                    return;
+                }
+
+                groupsList.innerHTML = groups.map(group => `
+                    <div class="group-item" onclick="selectGroup(${group.id})">
+                        <div class="group-item-name">${escapeHtml(group.name)}</div>
+                        <div class="group-item-count">${group.member_count} membres • ${group.message_count} messages</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading groups:', error);
+            }
+        }
+
+        // Select and display group
+        async function selectGroup(groupId) {
+            currentGroupId = groupId;
+            document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
+            event.target.closest('.group-item').classList.add('active');
+
+            await loadChatMessages(groupId);
+            startMessageRefresh(groupId);
+        }
+
+        // Load chat messages
+        async function loadChatMessages(groupId) {
+            try {
+                const response = await fetch(`${API_BASE}/chat-groups/${groupId}/messages?limit=30`);
+                const messages = await response.json();
+
+                const chatArea = document.getElementById('chatArea');
+                if (messages.length === 0) {
+                    chatArea.innerHTML = `
+                        <div class="chat-header">
+                            <h3>Groupe</h3>
+                        </div>
+                        <div class="empty-state">
+                            <p>Aucun message pour le moment</p>
+                        </div>
+                        <div class="input-area">
+                            <input type="text" placeholder="Votre message..." id="messageInput" />
+                            <button class="send-btn" onclick="sendMessage()">Envoyer</button>
+                        </div>
+                    `;
+                } else {
+                    chatArea.innerHTML = `
+                        <div class="chat-header">
+                            <h3>Discussion du groupe</h3>
+                            <button class="chat-members-btn" onclick="showMembers()">Membres</button>
+                        </div>
+                        <div class="messages-container" id="messagesContainer"></div>
+                        <div id="typingIndicator"></div>
+                        <div class="input-area">
+                            <button class="emoji-picker-btn" onclick="showEmojiPicker()">😊</button>
+                            <input type="text" placeholder="Votre message..." id="messageInput" onkeypress="handleKeyPress(event)" />
+                            <button class="send-btn" onclick="sendMessage()">Envoyer</button>
+                        </div>
+                    `;
+
+                    const container = document.getElementById('messagesContainer');
+                    container.innerHTML = messages.reverse().map(msg => `
+                        <div class="message ${msg.author_id === currentUserId ? 'own' : ''}">
+                            <div>
+                                <div class="message-author">${msg.author_name}</div>
+                                <div class="message-bubble">${escapeHtml(msg.content)}</div>
+                                <div class="message-reactions">
+                                    ${msg.reactions ? msg.reactions.map(r => `<button class="reaction-btn">${r.emoji}</button>`).join('') : ''}
+                                </div>
+                                <div class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+
+            if (!content || !currentGroupId) return;
+
+            try {
+                await fetch(`${API_BASE}/chat-groups/${currentGroupId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidateId: currentUserId,
+                        content: content
+                    })
+                });
+
+                input.value = '';
+                loadChatMessages(currentGroupId);
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+        }
+
+        // Load badges
+        async function loadBadges() {
+            try {
+                const response = await fetch(`${API_BASE}/badges`);
+                const badges = await response.json();
+
+                const unlockedResponse = await fetch(`${API_BASE}/users/${currentUserId}/badges/unlocked`);
+                const unlockedBadges = await unlockedResponse.json();
+                const unlockedIds = new Set(unlockedBadges.map(b => b.id));
+
+                const progressResponse = await fetch(`${API_BASE}/users/${currentUserId}/badges/progress`);
+                const progress = await progressResponse.json();
+
+                const grid = document.getElementById('badgesGrid');
+                grid.innerHTML = badges.map(badge => {
+                    const isUnlocked = unlockedIds.has(badge.id);
+                    const userProgress = progress.find(p => p.id === badge.id);
+                    const progressPercent = userProgress ? Math.min(100, (userProgress.current_progress / userProgress.target_value) * 100) : 0;
+
+                    return `
+                        <div class="badge ${isUnlocked ? 'unlocked' : ''}">
+                            <div class="badge-emoji">${badge.emoji}</div>
+                            <div class="badge-name">${badge.name}</div>
+                            <div class="badge-progress">
+                                <div class="badge-progress-bar" style="width: ${progressPercent}%"></div>
+                            </div>
+                            <div class="badge-info">${isUnlocked ? '✓ Déverrouillé' : `${Math.round(progressPercent)}%`}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading badges:', error);
+            }
+        }
+
+        // Load badge stats
+        async function loadBadgeStats() {
+            try {
+                const response = await fetch(`${API_BASE}/users/${currentUserId}/badges/stats`);
+                const stats = await response.json();
+
+                document.getElementById('unlockedCount').textContent = stats.badges_unlocked;
+                document.getElementById('totalPoints').textContent = stats.total_points;
+                document.getElementById('badgeStats').textContent = `${stats.badges_unlocked} / ${stats.badges_total} déverrouillés`;
+                document.getElementById('lastBadge').textContent = stats.last_unlocked ? new Date(stats.last_unlocked).toLocaleDateString() : '-';
+            } catch (error) {
+                console.error('Error loading badge stats:', error);
+            }
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function startMessageRefresh(groupId) {
+            if (messageRefreshInterval) clearInterval(messageRefreshInterval);
+            messageRefreshInterval = setInterval(() => loadChatMessages(groupId), 5000);
+        }
+
+        function showCreateGroupModal() {
+            const name = prompt('Nom du groupe:');
+            if (!name) return;
+
+            const type = prompt('Type (public/private):') || 'public';
+            const description = prompt('Description:') || '';
+
+            fetch(`${API_BASE}/chat-groups`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    candidateId: currentUserId,
+                    name,
+                    type,
+                    description
+                })
+            }).then(() => {
+                loadUserGroups();
+                alert('Groupe créé avec succès!');
+            }).catch(error => console.error('Error creating group:', error));
+        }
+
+        function showMembers() {
+            alert('Fonctionnalité membres - À implémenter');
+        }
+
+        function showEmojiPicker() {
+            alert('Sélecteur emoji - À implémenter');
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -1793,6 +1793,304 @@ async function initDatabase() {
     await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS convocationTime TEXT DEFAULT '';`);
     await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS convocationPlace TEXT DEFAULT '';`);
 
+    // ========== PHASE 3: CHAT GROUPS & DYNAMIC BADGES TABLES ==========
+
+    // Chat Groups Tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_groups (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        type TEXT NOT NULL DEFAULT 'public' CHECK (type IN ('public', 'private', 'invite-only')),
+        topic TEXT DEFAULT 'general',
+        created_by BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        avatar_url TEXT,
+        members_count INTEGER DEFAULT 1,
+        is_archived INTEGER DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_group_members (
+        id BIGSERIAL PRIMARY KEY,
+        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        role TEXT DEFAULT 'member' CHECK (role IN ('creator', 'admin', 'moderator', 'member')),
+        joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        muted INTEGER DEFAULT 0,
+        notifications_enabled INTEGER DEFAULT 1,
+        UNIQUE(group_id, user_id)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id BIGSERIAL PRIMARY KEY,
+        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+        author_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE SET NULL,
+        content TEXT NOT NULL,
+        media_url TEXT,
+        media_type TEXT,
+        is_pinned INTEGER DEFAULT 0,
+        is_edited INTEGER DEFAULT 0,
+        reactions_count INTEGER DEFAULT 0,
+        reply_to_id BIGINT REFERENCES chat_messages(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS typing_indicators (
+        id BIGSERIAL PRIMARY KEY,
+        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        is_typing INTEGER DEFAULT 1,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(group_id, user_id)
+      )
+    `);
+
+    // Badges Tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS badge_templates (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        emoji TEXT NOT NULL,
+        icon_url TEXT,
+        category TEXT DEFAULT 'general' CHECK (category IN ('general', 'achievement', 'milestone', 'special', 'seasonal')),
+        requirement_type TEXT NOT NULL,
+        requirement_value INTEGER,
+        rarity TEXT DEFAULT 'common' CHECK (rarity IN ('common', 'uncommon', 'rare', 'legendary')),
+        points_reward INTEGER DEFAULT 0,
+        display_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_badges (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        badge_id BIGINT NOT NULL REFERENCES badge_templates(id) ON DELETE CASCADE,
+        unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        progress INTEGER DEFAULT 100,
+        displayed_on_profile INTEGER DEFAULT 1,
+        UNIQUE(user_id, badge_id)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS badge_progress (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        badge_id BIGINT NOT NULL REFERENCES badge_templates(id) ON DELETE CASCADE,
+        current_progress INTEGER DEFAULT 0,
+        target_value INTEGER NOT NULL,
+        last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_id, badge_id)
+      )
+    `);
+
+    // Create Indexes for Performance
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_groups_creator ON chat_groups(created_by)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_groups_type ON chat_groups(type)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_group_members_group ON chat_group_members(group_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_group_members_user ON chat_group_members(user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_group ON chat_messages(group_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at DESC)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_badges_unlocked ON user_badges(unlocked_at DESC)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_badge_progress_user ON badge_progress(user_id)`);
+
+    // Add new columns to existing tables
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS chat_groups_joined_count INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS chat_messages_count INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS badges_unlocked_count INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS badge_points_total INTEGER DEFAULT 0`);
+
+    // Pre-populate badge templates
+    await pool.query(`
+      INSERT INTO badge_templates (name, description, emoji, category, requirement_type, requirement_value, rarity, points_reward, display_order)
+      VALUES
+        ('Quiz Starter', 'Take your first quiz', '🎯', 'milestone', 'quiz_count', 1, 'common', 10, 1),
+        ('Quiz Enthusiast', 'Complete 10 quizzes', '📝', 'milestone', 'quiz_count', 10, 'uncommon', 50, 2),
+        ('Quiz Master', 'Complete 100 quizzes', '🏆', 'achievement', 'quiz_count', 100, 'rare', 200, 3),
+        ('Perfect Score', 'Score 100% on 5 quizzes', '⭐', 'achievement', 'score', 100, 'uncommon', 100, 4),
+        ('Week Warrior', 'Take quizzes 7 days in a row', '🔥', 'streak', 'streak', 7, 'rare', 150, 5),
+        ('Social Butterfly', 'Follow 50 users', '🦋', 'social', 'social', 50, 'uncommon', 75, 6),
+        ('Community Helper', 'Get 100 message reactions', '💬', 'community', 'community', 100, 'uncommon', 80, 7),
+        ('Knowledge Seeker', 'Join 5 study groups', '📚', 'community', 'community', 5, 'uncommon', 60, 8),
+        ('Night Owl', 'Take 10 quizzes between 10pm-6am', '🌙', 'special', 'streak', 10, 'uncommon', 90, 10),
+        ('Speed Runner', 'Complete 5 quizzes under 2 minutes', '⚡', 'achievement', 'score', 5, 'rare', 130, 11),
+        ('Ranking Master', 'Reach top 10 in monthly leaderboard', '🏅', 'achievement', 'score', 10, 'rare', 180, 12),
+        ('First Steps', 'Complete profile setup', '👣', 'milestone', 'quiz_count', 0, 'common', 5, 0),
+        ('Team Player', 'Participate in a group quiz challenge', '🤝', 'community', 'community', 1, 'uncommon', 70, 13),
+        ('Legend', 'Achieve Rank 1 on leaderboard', '👑', 'special', 'score', 1, 'legendary', 500, 99)
+      ON CONFLICT DO NOTHING
+    `);
+
+    // Pre-populate badge progress for existing users
+    await pool.query(`
+      INSERT INTO badge_progress (user_id, badge_id, current_progress, target_value)
+      SELECT up.id, bt.id, 0, COALESCE(bt.requirement_value, 1)
+      FROM user_profiles up
+      CROSS JOIN badge_templates bt
+      ON CONFLICT DO NOTHING
+    `);
+
+    // ========== PHASE 3: CHAT GROUPS & DYNAMIC BADGES TABLES ==========
+
+    // Chat Groups Tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_groups (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        type TEXT NOT NULL DEFAULT 'public' CHECK (type IN ('public', 'private', 'invite-only')),
+        topic TEXT DEFAULT 'general',
+        created_by BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        avatar_url TEXT,
+        members_count INTEGER DEFAULT 1,
+        is_archived INTEGER DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_group_members (
+        id BIGSERIAL PRIMARY KEY,
+        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        role TEXT DEFAULT 'member' CHECK (role IN ('creator', 'admin', 'moderator', 'member')),
+        joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        muted INTEGER DEFAULT 0,
+        notifications_enabled INTEGER DEFAULT 1,
+        UNIQUE(group_id, user_id)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id BIGSERIAL PRIMARY KEY,
+        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+        author_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE SET NULL,
+        content TEXT NOT NULL,
+        media_url TEXT,
+        media_type TEXT,
+        is_pinned INTEGER DEFAULT 0,
+        is_edited INTEGER DEFAULT 0,
+        reactions_count INTEGER DEFAULT 0,
+        reply_to_id BIGINT REFERENCES chat_messages(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS typing_indicators (
+        id BIGSERIAL PRIMARY KEY,
+        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        is_typing INTEGER DEFAULT 1,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(group_id, user_id)
+      )
+    `);
+
+    // Badges Tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS badge_templates (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        emoji TEXT NOT NULL,
+        icon_url TEXT,
+        category TEXT DEFAULT 'general' CHECK (category IN ('general', 'achievement', 'milestone', 'special', 'seasonal')),
+        requirement_type TEXT NOT NULL,
+        requirement_value INTEGER,
+        rarity TEXT DEFAULT 'common' CHECK (rarity IN ('common', 'uncommon', 'rare', 'legendary')),
+        points_reward INTEGER DEFAULT 0,
+        display_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_badges (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        badge_id BIGINT NOT NULL REFERENCES badge_templates(id) ON DELETE CASCADE,
+        unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        progress INTEGER DEFAULT 100,
+        displayed_on_profile INTEGER DEFAULT 1,
+        UNIQUE(user_id, badge_id)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS badge_progress (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        badge_id BIGINT NOT NULL REFERENCES badge_templates(id) ON DELETE CASCADE,
+        current_progress INTEGER DEFAULT 0,
+        target_value INTEGER NOT NULL,
+        last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_id, badge_id)
+      )
+    `);
+
+    // Create Indexes for Performance
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_groups_creator ON chat_groups(created_by)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_groups_type ON chat_groups(type)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_group_members_group ON chat_group_members(group_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_group_members_user ON chat_group_members(user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_group ON chat_messages(group_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at DESC)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_badges_unlocked ON user_badges(unlocked_at DESC)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_badge_progress_user ON badge_progress(user_id)`);
+
+    // Add new columns to existing tables
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS chat_groups_joined_count INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS chat_messages_count INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS badges_unlocked_count INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS badge_points_total INTEGER DEFAULT 0`);
+
+    // Pre-populate badge templates
+    await pool.query(`
+      INSERT INTO badge_templates (name, description, emoji, category, requirement_type, requirement_value, rarity, points_reward, display_order)
+      VALUES
+        ('Quiz Starter', 'Take your first quiz', '🎯', 'milestone', 'quiz_count', 1, 'common', 10, 1),
+        ('Quiz Enthusiast', 'Complete 10 quizzes', '📝', 'milestone', 'quiz_count', 10, 'uncommon', 50, 2),
+        ('Quiz Master', 'Complete 100 quizzes', '🏆', 'achievement', 'quiz_count', 100, 'rare', 200, 3),
+        ('Perfect Score', 'Score 100% on 5 quizzes', '⭐', 'achievement', 'score', 100, 'uncommon', 100, 4),
+        ('Week Warrior', 'Take quizzes 7 days in a row', '🔥', 'streak', 'streak', 7, 'rare', 150, 5),
+        ('Social Butterfly', 'Follow 50 users', '🦋', 'social', 'social', 50, 'uncommon', 75, 6),
+        ('Community Helper', 'Get 100 message reactions', '💬', 'community', 'community', 100, 'uncommon', 80, 7),
+        ('Knowledge Seeker', 'Join 5 study groups', '📚', 'community', 'community', 5, 'uncommon', 60, 8),
+        ('Night Owl', 'Take 10 quizzes between 10pm-6am', '🌙', 'special', 'streak', 10, 'uncommon', 90, 10),
+        ('Speed Runner', 'Complete 5 quizzes under 2 minutes', '⚡', 'achievement', 'score', 5, 'rare', 130, 11),
+        ('Ranking Master', 'Reach top 10 in monthly leaderboard', '🏅', 'achievement', 'score', 10, 'rare', 180, 12),
+        ('First Steps', 'Complete profile setup', '👣', 'milestone', 'quiz_count', 0, 'common', 5, 0),
+        ('Team Player', 'Participate in a group quiz challenge', '🤝', 'community', 'community', 1, 'uncommon', 70, 13),
+        ('Legend', 'Achieve Rank 1 on leaderboard', '👑', 'special', 'score', 1, 'legendary', 500, 99)
+      ON CONFLICT DO NOTHING
+    `);
+
+    // Pre-populate badge progress for existing users
+    await pool.query(`
+      INSERT INTO badge_progress (user_id, badge_id, current_progress, target_value)
+      SELECT up.id, bt.id, 0, COALESCE(bt.requirement_value, 1)
+      FROM user_profiles up
+      CROSS JOIN badge_templates bt
+      ON CONFLICT DO NOTHING
+    `);
+
     await pool.query(`
       INSERT INTO poll (question, optionsJson, active)
       SELECT 'Sondage rapide : Souhaitez-vous recevoir les résultats en direct ?', '["Oui","Non"]', 1
@@ -6638,7 +6936,435 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Not found' });
 });
 
-// Error handler
+// ========== CHAT GROUPS ENDPOINTS (Phase 3) ==========
+
+// Create chat group
+app.post('/api/social/chat-groups', async (req, res) => {
+  try {
+    const { candidateId, name, description, type, topic } = req.body;
+
+    if (!name || name.length > 100 || !['public', 'private', 'invite-only'].includes(type)) {
+      return res.status(400).json({ message: 'Données invalides' });
+    }
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO chat_groups (name, description, type, topic, created_by)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [name, description || null, type, topic || 'general', userProfile.rows[0].id]);
+
+    // Add creator as member
+    await pool.query(`
+      INSERT INTO chat_group_members (group_id, user_id, role)
+      VALUES ($1, $2, 'creator')
+    `, [result.rows[0].id, userProfile.rows[0].id]);
+
+    res.status(201).json({ message: 'Groupe créé', group: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get all chat groups
+app.get('/api/social/chat-groups', async (req, res) => {
+  try {
+    const { type, topic, limit, search } = req.query;
+    const safeLimit = Math.min(parseInt(limit || '20', 10), 50);
+    const searchTerm = String(search || '').trim();
+
+    let query = `SELECT * FROM active_chat_groups WHERE 1=1`;
+    const params = [];
+    let paramCount = 0;
+
+    if (type && ['public', 'private', 'invite-only'].includes(type)) {
+      query += ` AND type = $${++paramCount}`;
+      params.push(type);
+    }
+
+    if (topic) {
+      query += ` AND topic = $${++paramCount}`;
+      params.push(topic);
+    }
+
+    if (searchTerm) {
+      query += ` AND name ILIKE $${++paramCount}`;
+      params.push(`%${searchTerm}%`);
+    }
+
+    query += ` LIMIT $${++paramCount}`;
+    params.push(safeLimit);
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get chat group details
+app.get('/api/social/chat-groups/:groupId', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    const group = await pool.query(`
+      SELECT cg.*, up.fullName as creator_name, up.avatar_url as creator_avatar
+      FROM chat_groups cg
+      JOIN user_profiles up ON cg.created_by = up.id
+      WHERE cg.id = $1
+    `, [groupId]);
+
+    if (group.rows.length === 0) {
+      return res.status(404).json({ message: 'Groupe non trouvé' });
+    }
+
+    res.json(group.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Join chat group
+app.post('/api/social/chat-groups/:groupId/join', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { candidateId } = req.body;
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    await pool.query(`
+      INSERT INTO chat_group_members (group_id, user_id, role)
+      VALUES ($1, $2, 'member')
+      ON CONFLICT DO NOTHING
+    `, [groupId, userProfile.rows[0].id]);
+
+    res.json({ message: 'Groupe rejoint' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Leave chat group
+app.post('/api/social/chat-groups/:groupId/leave', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { candidateId } = req.body;
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    await pool.query(`
+      DELETE FROM chat_group_members WHERE group_id = $1 AND user_id = $2
+    `, [groupId, userProfile.rows[0].id]);
+
+    res.json({ message: 'Groupe quitté' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get group members
+app.get('/api/social/chat-groups/:groupId/members', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { limit } = req.query;
+    const safeLimit = Math.min(parseInt(limit || '50', 10), 200);
+
+    const members = await pool.query(`
+      SELECT up.id, up.candidate_id, up.fullName, up.avatar_url, up.bio, up.verified,
+             cgm.role, cgm.joined_at, cgm.notifications_enabled
+      FROM chat_group_members cgm
+      JOIN user_profiles up ON cgm.user_id = up.id
+      WHERE cgm.group_id = $1
+      ORDER BY cgm.joined_at ASC
+      LIMIT $2
+    `, [groupId, safeLimit]);
+
+    res.json(members.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ========== CHAT MESSAGES ENDPOINTS ==========
+
+// Post message to group
+app.post('/api/social/chat-groups/:groupId/messages', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { candidateId, content, media_url, media_type, reply_to_id } = req.body;
+
+    if (!content || content.length > 2000) {
+      return res.status(400).json({ message: 'Contenu invalide' });
+    }
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO chat_messages (group_id, author_id, content, media_url, media_type, reply_to_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [groupId, userProfile.rows[0].id, content, media_url || null, media_type || null, reply_to_id || null]);
+
+    // Update user message count
+    await pool.query(
+      `UPDATE user_profiles SET chat_messages_count = chat_messages_count + 1 WHERE id = $1`,
+      [userProfile.rows[0].id]
+    );
+
+    res.status(201).json({ message: 'Message envoyé', data: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get group messages
+app.get('/api/social/chat-groups/:groupId/messages', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { limit, offset } = req.query;
+    const safeLimit = Math.min(parseInt(limit || '50', 10), 100);
+    const safeOffset = Math.max(parseInt(offset || '0', 10), 0);
+
+    const messages = await pool.query(`
+      SELECT cm.*, up.fullName as author_name, up.avatar_url
+      FROM chat_messages cm
+      JOIN user_profiles up ON cm.author_id = up.id
+      WHERE cm.group_id = $1
+      ORDER BY cm.created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [groupId, safeLimit, safeOffset]);
+
+    res.json(messages.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Add message reaction
+app.post('/api/social/chat-groups/:groupId/messages/:messageId/react', async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { candidateId, emoji } = req.body;
+
+    if (!emoji || emoji.length > 10) {
+      return res.status(400).json({ message: 'Emoji invalide' });
+    }
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    await pool.query(`
+      INSERT INTO message_reactions (message_id, user_id, emoji)
+      VALUES ($1, $2, $3)
+      ON CONFLICT DO NOTHING
+    `, [messageId, userProfile.rows[0].id, emoji]);
+
+    res.json({ message: 'Réaction ajoutée' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ========== BADGES ENDPOINTS ==========
+
+// Get all available badge templates
+app.get('/api/social/badges', async (req, res) => {
+  try {
+    const { category, rarity } = req.query;
+
+    let query = `SELECT * FROM badge_templates WHERE 1=1`;
+    const params = [];
+
+    if (category) {
+      query += ` AND category = $${params.length + 1}`;
+      params.push(category);
+    }
+
+    if (rarity && ['common', 'uncommon', 'rare', 'legendary'].includes(rarity)) {
+      query += ` AND rarity = $${params.length + 1}`;
+      params.push(rarity);
+    }
+
+    query += ` ORDER BY display_order ASC`;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user's unlocked badges
+app.get('/api/social/users/:candidateId/badges/unlocked', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    const { limit } = req.query;
+    const safeLimit = Math.min(parseInt(limit || '50', 10), 100);
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    const badges = await pool.query(`
+      SELECT bt.*, ub.unlocked_at, ub.displayed_on_profile
+      FROM user_badges ub
+      JOIN badge_templates bt ON ub.badge_id = bt.id
+      WHERE ub.user_id = $1
+      ORDER BY ub.unlocked_at DESC
+      LIMIT $2
+    `, [userProfile.rows[0].id, safeLimit]);
+
+    res.json(badges.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user's badge progress
+app.get('/api/social/users/:candidateId/badges/progress', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    const progress = await pool.query(`
+      SELECT bt.*, bp.current_progress, bp.target_value,
+             ROUND((bp.current_progress::float / bp.target_value) * 100) as progress_percent,
+             CASE WHEN ub.id IS NOT NULL THEN 1 ELSE 0 END as is_unlocked
+      FROM badge_progress bp
+      JOIN badge_templates bt ON bp.badge_id = bt.id
+      LEFT JOIN user_badges ub ON bp.user_id = ub.user_id AND bp.badge_id = ub.badge_id
+      WHERE bp.user_id = $1
+      ORDER BY bt.display_order ASC
+    `, [userProfile.rows[0].id]);
+
+    res.json(progress.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Unlock badge
+app.post('/api/social/badges/unlock', async (req, res) => {
+  try {
+    const { candidateId, badge_id } = req.body;
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO user_badges (user_id, badge_id)
+      VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
+      RETURNING *
+    `, [userProfile.rows[0].id, badge_id]);
+
+    if (result.rows.length > 0) {
+      res.json({ message: 'Badge déverrouillé!', badge: result.rows[0] });
+    } else {
+      res.json({ message: 'Badge déjà déverrouillé' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user badge stats
+app.get('/api/social/users/:candidateId/badges/stats', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+
+    const userProfile = await pool.query(
+      `SELECT id FROM user_profiles WHERE candidate_id = $1`,
+      [candidateId]
+    );
+
+    if (userProfile.rows.length === 0) {
+      return res.status(404).json({ message: 'Profil non trouvé' });
+    }
+
+    const stats = await pool.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM user_badges WHERE user_id = $1) as badges_unlocked,
+        (SELECT COUNT(*) FROM badge_templates) as badges_total,
+        (SELECT COALESCE(SUM(bt.points_reward), 0) FROM user_badges ub JOIN badge_templates bt ON ub.badge_id = bt.id WHERE ub.user_id = $1) as total_points,
+        (SELECT MAX(unlocked_at) FROM user_badges WHERE user_id = $1) as last_unlocked
+    `, [userProfile.rows[0].id]);
+
+    res.json(stats.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// 404 handler
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Server error' });
