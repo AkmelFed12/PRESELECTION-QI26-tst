@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actualité - Quiz Islamique 2026</title>
+    <meta name="description" content="Fil d'actualité du réseau social">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .feed-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px 12px;
+        }
+        .feed-header {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 15px;
+        }
+        .feed-header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .story-composer {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .composer-input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .composer-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .composer-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .composer-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+        .composer-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .composer-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .composer-btn:hover {
+            background: #f5f5f5;
+        }
+        .composer-btn.publish {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .composer-btn.publish:hover {
+            background: #764ba2;
+        }
+        .story-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        .story-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .story-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .story-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .story-author-info {
+            flex: 1;
+        }
+        .story-author-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .story-time {
+            font-size: 12px;
+            color: #999;
+        }
+        .story-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: cover;
+        }
+        .story-content {
+            padding: 16px;
+        }
+        .story-text {
+            color: #333;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            word-break: break-word;
+        }
+        .story-stats {
+            display: flex;
+            gap: 16px;
+            padding: 12px 16px;
+            border-top: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            color: #666;
+        }
+        .story-stat {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .story-stat:hover {
+            color: #667eea;
+        }
+        .story-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+        }
+        .story-action-btn {
+            padding: 12px;
+            border: none;
+            background: white;
+            color: #666;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            border-right: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .story-action-btn:last-child {
+            border-right: none;
+        }
+        .story-action-btn:hover {
+            background: #f5f5f5;
+            color: #667eea;
+        }
+        .story-action-btn.liked {
+            color: #ff6b6b;
+        }
+        .story-comments-section {
+            padding: 12px 16px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .comment {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        .comment-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            flex-shrink: 0;
+        }
+        .comment-content {
+            flex: 1;
+        }
+        .comment-author {
+            font-weight: 600;
+            color: #333;
+        }
+        .comment-text {
+            color: #666;
+            margin-top: 2px;
+        }
+        .comment-form {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .comment-form input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 16px;
+            font-size: 13px;
+        }
+        .comment-form button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .no-stories {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .no-stories-icon {
+            font-size: 64px;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 768px) {
+            .feed-container {
+                padding: 12px;
+            }
+            .story-card {
+                border-radius: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">ASAA Quiz</a>
+            <ul class="nav-menu">
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="feed.html" class="active">Actualité</a></li>
+                <li><a href="notifications.html">Notifications</a></li>
+                <li><a href="leaderboard.html">Classement</a></li>
+                <li><a href="profile.html">Mon Profil</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="feed-container">
+        <div class="feed-header">
+            <h1>📰 Actualité</h1>
+        </div>
+
+        <!-- Story Composer -->
+        <div class="story-composer">
+            <div class="composer-input-group">
+                <div class="composer-avatar" id="userInitial">U</div>
+                <input type="text" id="storyInput" class="composer-input" placeholder="Partagez une pensée, un moment...">
+            </div>
+            <div class="composer-actions">
+                <button class="composer-btn" id="clearBtn" style="display:none;">Annuler</button>
+                <button class="composer-btn publish" id="publishBtn">Publier</button>
+            </div>
+        </div>
+
+        <!-- Stories Feed -->
+        <div id="storiesFeed">
+            <div class="no-stories">
+                <div class="no-stories-icon">📝</div>
+                <p>Aucune histoire pour le moment</p>
+            </div>
+        </div>
+    </div>
+
+    <footer style="margin-top: 60px; padding: 40px 20px; text-align: center; color: #999; border-top: 1px solid #eee;">
+        <p>&copy; 2026 ASAA - Quiz Islamique. Tous droits réservés.</p>
+    </footer>
+
+    <script src="utils.js"></script>
+    <script>
+        let currentCandidateId = localStorage.getItem('candidateId');
+        let currentUserName = localStorage.getItem('userName') || 'User';
+        let allStories = [];
+
+        // Set user initial
+        document.getElementById('userInitial').textContent = currentUserName.charAt(0).toUpperCase();
+
+        async function loadFeed() {
+            try {
+                const response = await fetch(`/api/social/feed?candidateId=${currentCandidateId}&limit=30`);
+                allStories = await response.json();
+                displayStories();
+            } catch (error) {
+                console.error(error);
+                showToast('Erreur lors du chargement', 'error');
+            }
+        }
+
+        function displayStories() {
+            if (allStories.length === 0) {
+                document.getElementById('storiesFeed').innerHTML = `
+                    <div class="no-stories">
+                        <div class="no-stories-icon">📝</div>
+                        <p>Aucune histoire pour le moment</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = allStories.map(story => {
+                const time = new Date(story.created_at).toLocaleString('fr-FR');
+                return `
+                    <div class="story-card" data-story-id="${story.id}">
+                        <div class="story-header">
+                            <div class="story-avatar">${(story.author_name?.[0] || 'U').toUpperCase()}</div>
+                            <div class="story-author-info">
+                                <div class="story-author-name">${story.author_name || 'Utilisateur'}</div>
+                                <div class="story-time">${time}</div>
+                            </div>
+                        </div>
+                        ${story.image_url ? `<img src="${story.image_url}" alt="story" class="story-image">` : ''}
+                        <div class="story-content">
+                            <div class="story-text">${escapeHtml(story.content)}</div>
+                        </div>
+                        <div class="story-stats">
+                            <div class="story-stat">❤️ ${story.likes_count || 0}</div>
+                            <div class="story-stat">💬 ${story.comments_count || 0}</div>
+                            <div class="story-stat">📤 ${story.shares_count || 0}</div>
+                        </div>
+                        <div class="story-actions">
+                            <button class="story-action-btn like-btn" onclick="likeStory(${story.id}, this)" ${story.is_liked ? 'data-liked="true"' : ''}>
+                                ${story.is_liked ? '❤️' : '🤍'} J'aime
+                            </button>
+                            <button class="story-action-btn comment-btn" onclick="toggleComments(${story.id})">
+                                💬 Commenter
+                            </button>
+                            <button class="story-action-btn share-btn">
+                                📤 Partager
+                            </button>
+                        </div>
+                        <div id="comments-${story.id}" class="story-comments-section" style="display:none;"></div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('storiesFeed').innerHTML = html;
+        }
+
+        async function publishStory() {
+            const content = document.getElementById('storyInput').value.trim();
+            if (!content) {
+                showToast('Veuillez entrer un message', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/social/stories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidateId: currentCandidateId,
+                        content: content,
+                        visibility: 'public'
+                    })
+                });
+
+                if (response.ok) {
+                    document.getElementById('storyInput').value = '';
+                    showToast('Story publiée!', 'success');
+                    loadFeed();
+                } else {
+                    showToast('Erreur lors de la publication', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Erreur réseau', 'error');
+            }
+        }
+
+        async function likeStory(storyId, button) {
+            try {
+                const isLiked = button.dataset.liked === 'true';
+                const method = isLiked ? 'DELETE' : 'POST';
+                
+                const response = await fetch(`/api/social/stories/${storyId}/like`, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ candidateId: currentCandidateId })
+                });
+
+                if (response.ok) {
+                    button.dataset.liked = !isLiked;
+                    button.textContent = !isLiked ? '❤️ J\'aime' : '🤍 J\'aime';
+                    button.classList.toggle('liked');
+                    loadFeed();
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Erreur', 'error');
+            }
+        }
+
+        async function toggleComments(storyId) {
+            const commentsSection = document.getElementById(`comments-${storyId}`);
+            if (commentsSection.style.display === 'none') {
+                commentsSection.style.display = 'block';
+                await loadComments(storyId);
+            } else {
+                commentsSection.style.display = 'none';
+            }
+        }
+
+        async function loadComments(storyId) {
+            try {
+                const response = await fetch(`/api/social/stories/${storyId}/comments`);
+                const comments = await response.json();
+                
+                let html = comments.map(comment => `
+                    <div class="comment">
+                        <div class="comment-avatar"></div>
+                        <div class="comment-content">
+                            <div><span class="comment-author">${comment.author_name}</span></div>
+                            <div class="comment-text">${escapeHtml(comment.content)}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                html += `
+                    <div class="comment-form">
+                        <input type="text" placeholder="Ajouter un commentaire..." data-story-id="${storyId}" class="comment-input">
+                        <button onclick="addComment(${storyId})">Publier</button>
+                    </div>
+                `;
+
+                document.getElementById(`comments-${storyId}`).innerHTML = html;
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function addComment(storyId) {
+            const input = document.querySelector(`input[data-story-id="${storyId}"]`);
+            const content = input.value.trim();
+            
+            if (!content) return;
+
+            try {
+                const response = await fetch(`/api/social/stories/${storyId}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidateId: currentCandidateId,
+                        content: content
+                    })
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    await loadComments(storyId);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        document.getElementById('publishBtn').addEventListener('click', publishStory);
+
+        document.getElementById('storyInput').addEventListener('focus', () => {
+            document.getElementById('clearBtn').style.display = 'inline-block';
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            document.getElementById('storyInput').value = '';
+            document.getElementById('clearBtn').style.display = 'none';
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        if (currentCandidateId) {
+            loadFeed();
+            setInterval(loadFeed, 30000); // Refresh every 30 seconds
+        } else {
+            showToast('Veuillez d\'abord vous inscrire', 'warning');
+        }
+    </script>
+</body>
+</html>

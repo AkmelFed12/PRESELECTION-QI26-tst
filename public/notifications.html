@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Quiz Islamique 2026</title>
+    <meta name="description" content="Vos notifications">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .notifications-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .notifications-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 15px;
+        }
+        .notifications-header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .mark-all-read {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .mark-all-read:hover {
+            background: #764ba2;
+        }
+        .notification-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .notification-item:hover {
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+        }
+        .notification-item.unread {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+        }
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+        .notification-type {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .notification-type.follow {
+            background: #4CAF50;
+        }
+        .notification-type.message {
+            background: #2196F3;
+        }
+        .notification-type.achievement {
+            background: #FF9800;
+        }
+        .notification-type.mention {
+            background: #9C27B0;
+        }
+        .notification-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        .notification-message {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .notification-time {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+        .notification-sender {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .sender-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .sender-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .notification-unread-dot {
+            width: 12px;
+            height: 12px;
+            background: #667eea;
+            border-radius: 50%;
+            position: absolute;
+            right: 12px;
+            top: 12px;
+        }
+        .no-notifications {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        .no-notifications-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .notification-count {
+            background: #ff6b6b;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 8px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        @media (max-width: 768px) {
+            .notifications-container {
+                padding: 12px;
+            }
+            .notification-item {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">ASAA Quiz</a>
+            <ul class="nav-menu">
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="feed.html">Actualité</a></li>
+                <li><a href="notifications.html" class="active">Notifications <span id="notifBadge" style="display:none;" class="notification-count">0</span></a></li>
+                <li><a href="profile.html">Mon Profil</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="notifications-container">
+        <div class="notifications-header">
+            <div>
+                <h1>🔔 Notifications</h1>
+            </div>
+            <button class="mark-all-read" id="markAllReadBtn" style="display:none;">Tout marquer comme lu</button>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">Tous</button>
+            <button class="filter-btn" data-filter="follow">Abonnements</button>
+            <button class="filter-btn" data-filter="message">Messages</button>
+            <button class="filter-btn" data-filter="achievement">Badges</button>
+        </div>
+
+        <div id="notificationsList">
+            <div class="no-notifications">
+                <div class="no-notifications-icon">🔔</div>
+                <p>Aucune notification</p>
+            </div>
+        </div>
+    </div>
+
+    <footer style="margin-top: 60px; padding: 40px 20px; text-align: center; color: #999; border-top: 1px solid #eee;">
+        <p>&copy; 2026 ASAA - Quiz Islamique. Tous droits réservés.</p>
+    </footer>
+
+    <script src="utils.js"></script>
+    <script>
+        let currentCandidateId = localStorage.getItem('candidateId');
+        let allNotifications = [];
+        let currentFilter = 'all';
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch(`/api/social/notifications?candidateId=${currentCandidateId}`);
+                const data = await response.json();
+
+                allNotifications = data.notifications || [];
+                updateNotificationDisplay();
+                updateBadge(data.unread_count);
+
+                if (data.unread_count > 0) {
+                    document.getElementById('markAllReadBtn').style.display = 'block';
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Erreur lors du chargement', 'error');
+            }
+        }
+
+        function updateNotificationDisplay() {
+            let filtered = allNotifications;
+            
+            if (currentFilter !== 'all') {
+                filtered = allNotifications.filter(n => n.type === currentFilter);
+            }
+
+            if (filtered.length === 0) {
+                document.getElementById('notificationsList').innerHTML = `
+                    <div class="no-notifications">
+                        <div class="no-notifications-icon">📭</div>
+                        <p>Aucune notification ${currentFilter !== 'all' ? 'de ce type' : ''}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = filtered.map(notif => {
+                const typeEmoji = {
+                    'follow': '👥',
+                    'message': '💬',
+                    'achievement': '🏆',
+                    'mention': '🏷️',
+                    'like': '❤️'
+                };
+
+                const time = new Date(notif.created_at).toLocaleString('fr-FR');
+                
+                return `
+                    <div class="notification-item ${notif.is_read === 0 ? 'unread' : ''}" onclick="markAsRead(${notif.id})">
+                        ${notif.is_read === 0 ? '<div class="notification-unread-dot"></div>' : ''}
+                        ${notif.sender_name ? `
+                            <div class="notification-sender">
+                                <div class="sender-avatar">${(notif.sender_name[0] || 'U').toUpperCase()}</div>
+                                <span class="sender-name">${notif.sender_name}</span>
+                            </div>
+                        ` : ''}
+                        <div class="notification-header">
+                            <span class="notification-type ${notif.type}">${typeEmoji[notif.type] || '•'} ${notif.type.toUpperCase()}</span>
+                        </div>
+                        <div class="notification-title">${notif.title}</div>
+                        ${notif.message ? `<div class="notification-message">${notif.message}</div>` : ''}
+                        <div class="notification-time">${time}</div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('notificationsList').innerHTML = html;
+        }
+
+        async function markAsRead(notificationId) {
+            try {
+                await fetch(`/api/social/notifications/${notificationId}/read`, { method: 'PUT' });
+                allNotifications = allNotifications.map(n => 
+                    n.id === notificationId ? { ...n, is_read: 1 } : n
+                );
+                updateNotificationDisplay();
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function markAllAsRead() {
+            try {
+                await fetch(`/api/social/notifications/read-all`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ candidateId: currentCandidateId })
+                });
+                allNotifications = allNotifications.map(n => ({ ...n, is_read: 1 }));
+                updateNotificationDisplay();
+                updateBadge(0);
+                document.getElementById('markAllReadBtn').style.display = 'none';
+            } catch (error) {
+                console.error(error);
+                showToast('Erreur', 'error');
+            }
+        }
+
+        function updateBadge(count) {
+            const badge = document.getElementById('notifBadge');
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                updateNotificationDisplay();
+            });
+        });
+
+        document.getElementById('markAllReadBtn')?.addEventListener('click', markAllAsRead);
+
+        if (currentCandidateId) {
+            loadNotifications();
+            setInterval(loadNotifications, 10000); // Refresh every 10 seconds
+        } else {
+            showToast('Veuillez d\'abord vous inscrire', 'warning');
+        }
+    </script>
+</body>
+</html>
