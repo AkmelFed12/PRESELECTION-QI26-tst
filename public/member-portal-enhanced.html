@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASAA Officiel — Espace membre avancé</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3"></script>
+    <style>
+      :root {
+        --primary: #667eea;
+        --secondary: #764ba2;
+        --success: #0b6f4f;
+        --danger: #c41e3a;
+        --warning: #ff8c00;
+        --light: #f5f5f5;
+        --dark: #1a1a1a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body.member-dark {
+        background: var(--dark);
+        color: #e0e0e0;
+      }
+
+      body.member-dark .card, body.member-dark .stat-card, body.member-dark .badge-item {
+        background: #2a2a2a;
+        border-color: #444;
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+
+      .stat-card {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      }
+
+      .stat-card .number {
+        font-size: 2.5em;
+        font-weight: bold;
+        margin: 0.5rem 0;
+      }
+
+      .stat-card .label {
+        font-size: 0.9em;
+        opacity: 0.9;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid var(--light);
+        flex-wrap: wrap;
+      }
+
+      .tab {
+        padding: 0.75rem 1rem;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 0.95em;
+        color: #999;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s;
+      }
+
+      .tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+      }
+
+      .tab:hover {
+        color: var(--primary);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .badges-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+      }
+
+      .badge-item {
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+      }
+
+      .badge-item.unlocked {
+        border-color: var(--primary);
+        background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+      }
+
+      .badge-item.locked {
+        opacity: 0.6;
+        background: #f9f9f9;
+      }
+
+      .badge-emoji {
+        font-size: 2.5em;
+        margin-bottom: 0.5rem;
+      }
+
+      .badge-name {
+        font-weight: bold;
+        font-size: 0.85em;
+        margin-bottom: 0.5rem;
+      }
+
+      .badge-progress {
+        width: 100%;
+        height: 4px;
+        background: #ddd;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+      }
+
+      .badge-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        width: 0%;
+        transition: width 0.3s;
+      }
+
+      .badge-percentage {
+        font-size: 0.75em;
+        color: #666;
+        margin-top: 0.25rem;
+      }
+
+      .rarity-common { color: #999; }
+      .rarity-uncommon { color: #0066ff; }
+      .rarity-rare { color: #9933ff; }
+      .rarity-legendary { color: #ffaa00; }
+
+      .leaderboard-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .leaderboard-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        background: white;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid var(--primary);
+        transition: all 0.3s;
+      }
+
+      .leaderboard-item:hover {
+        background: var(--light);
+        transform: translateX(4px);
+      }
+
+      .leaderboard-rank {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: var(--primary);
+        color: white;
+        border-radius: 50%;
+        font-weight: bold;
+        margin-right: 1rem;
+        flex-shrink: 0;
+      }
+
+      .leaderboard-rank.rank-1 {
+        background: linear-gradient(135deg, #ffd700, #ffed4e);
+        color: #333;
+      }
+
+      .leaderboard-rank.rank-2 {
+        background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+        color: #333;
+      }
+
+      .leaderboard-rank.rank-3 {
+        background: linear-gradient(135deg, #cd7f32, #e0ad70);
+        color: white;
+      }
+
+      .leaderboard-info {
+        flex: 1;
+      }
+
+      .leaderboard-info .name {
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+      }
+
+      .leaderboard-info .score {
+        font-size: 0.85em;
+        color: #666;
+      }
+
+      .leaderboard-trend {
+        margin-left: 1rem;
+        font-size: 1.2em;
+      }
+
+      .leaderboard-trend.up { color: var(--success); }
+      .leaderboard-trend.down { color: var(--danger); }
+      .leaderboard-trend.flat { color: #999; }
+
+      .leaderboard-points {
+        font-weight: bold;
+        margin-left: 1rem;
+        font-size: 1.1em;
+        color: var(--primary);
+      }
+
+      .my-rank-card {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        text-align: center;
+      }
+
+      .my-rank-card .rank-number {
+        font-size: 2em;
+        font-weight: bold;
+      }
+
+      .my-rank-card .rank-label {
+        opacity: 0.9;
+        font-size: 0.9em;
+      }
+
+      .groups-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+      }
+
+      .group-card {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+      }
+
+      .group-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      }
+
+      .group-card .header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .group-card .emoji {
+        font-size: 2em;
+      }
+
+      .group-card .title {
+        font-weight: bold;
+      }
+
+      .group-card .content {
+        padding: 1rem;
+      }
+
+      .group-card .description {
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 0.5rem;
+      }
+
+      .group-card .stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.85em;
+        color: #999;
+        margin-bottom: 1rem;
+      }
+
+      .group-card .actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .group-card .actions button {
+        flex: 1;
+        padding: 0.5rem;
+        border: 1px solid var(--primary);
+        background: none;
+        color: var(--primary);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85em;
+        transition: all 0.3s;
+      }
+
+      .group-card .actions button:hover {
+        background: var(--primary);
+        color: white;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+      }
+
+      .performance-chart {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+
+      .settings-group {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--primary);
+      }
+
+      .settings-group h3 {
+        margin-top: 0;
+        color: var(--primary);
+      }
+
+      .setting-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #eee;
+      }
+
+      .setting-item:last-child {
+        border-bottom: none;
+      }
+
+      .setting-item label {
+        font-weight: 500;
+      }
+
+      .toggle {
+        position: relative;
+        width: 50px;
+        height: 24px;
+        background: #ccc;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .toggle.active {
+        background: var(--primary);
+      }
+
+      .toggle::after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border-radius: 50%;
+        top: 2px;
+        left: 2px;
+        transition: left 0.3s;
+      }
+
+      .toggle.active::after {
+        left: 28px;
+      }
+
+      .calendar-month {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 0.85em;
+      }
+
+      .calendar-day:hover {
+        background: var(--light);
+      }
+
+      .calendar-day.today {
+        background: var(--primary);
+        color: white;
+        font-weight: bold;
+      }
+
+      .calendar-day.event {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+      }
+
+      .export-options {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .export-btn {
+        flex: 1;
+        min-width: 150px;
+        padding: 0.75rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+      }
+
+      .export-btn:hover {
+        background: var(--secondary);
+        transform: translateY(-2px);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+        animation: fadeIn 0.3s;
+      }
+
+      .modal.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 2rem;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        animation: slideDown 0.3s;
+      }
+
+      @keyframes slideDown {
+        from { transform: translateY(-50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      .modal-close {
+        float: right;
+        font-size: 1.5em;
+        font-weight: bold;
+        cursor: pointer;
+        color: #aaa;
+      }
+
+      .modal-close:hover {
+        color: #000;
+      }
+
+      .badge-detail-emoji {
+        font-size: 3em;
+        text-align: center;
+        margin: 1rem 0;
+      }
+
+      .profile-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2em;
+        color: white;
+        margin-bottom: 1rem;
+      }
+
+      .header-enhanced {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid var(--light);
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+
+      .header-controls {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .header-controls button {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--primary);
+        background: white;
+        color: var(--primary);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .header-controls button:hover {
+        background: var(--primary);
+        color: white;
+      }
+
+      @media (max-width: 768px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .tabs {
+          gap: 0.25rem;
+        }
+
+        .tab {
+          padding: 0.5rem 0.75rem;
+          font-size: 0.85em;
+        }
+
+        .badges-grid {
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+
+        .leaderboard-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+
+        .header-enhanced {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
+      <div>
+        <h1>💼 Espace Membre Avancé</h1>
+        <p class="subtitle">Dashboard, badges, chat et bien plus</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="index.html">Accueil</a>
+        <a class="btn outline" href="daily-quiz.html">Quiz</a>
+        <a class="btn outline" href="chat-groups.html">💬 Chat</a>
+        <button class="btn outline" id="memberDarkToggle" type="button">🌙 Thème</button>
+        <button class="btn outline" id="memberLogout" type="button">Déconnexion</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- HEADER ENHANCED WITH AVATAR -->
+      <section class="header-enhanced">
+        <div class="header-left">
+          <div>
+            <div class="profile-avatar" id="profileAvatar">👤</div>
+            <div id="memberRoleBadge" style="text-align: center; font-weight: bold;">Chargement...</div>
+          </div>
+          <div>
+            <h2 id="memberDisplayName">Membre</h2>
+            <p id="memberStats" style="color: #666; margin: 0;">Statistiques: <strong>--</strong> quizzes</p>
+          </div>
+        </div>
+        <div class="header-controls">
+          <button id="memberDarkToggle2" type="button" title="Thème sombre">🌙</button>
+          <button id="memberReminderToggle" type="button" title="Rappels">🔔</button>
+          <button id="memberExportBtn" type="button" title="Exporter">📥</button>
+        </div>
+      </section>
+
+      <!-- DASHBOARD STATS -->
+      <section class="dashboard-grid" id="dashboardStats">
+        <div class="stat-card">
+          <div class="label">Quizzes ce mois</div>
+          <div class="number" id="stat-quizzes">0</div>
+          <div class="label">+0% vs mois dernier</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Score moyen</div>
+          <div class="number" id="stat-average">--</div>
+          <div class="label">/ 100</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Badges déverrouillés</div>
+          <div class="number" id="stat-badges">0</div>
+          <div class="label">sur <span id="stat-badges-total">15</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Streak</div>
+          <div class="number" id="stat-streak">0</div>
+          <div class="label">jours consécutifs</div>
+        </div>
+      </section>
+
+      <!-- TABS SECTION -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" data-tab="badges">🏅 Badges & Succès</button>
+        <button class="tab" role="tab" data-tab="leaderboard">🏆 Leaderboard</button>
+        <button class="tab" role="tab" data-tab="chat">💬 Groupes d'étude</button>
+        <button class="tab" role="tab" data-tab="performance">📊 Performance</button>
+        <button class="tab" role="tab" data-tab="official">📋 Officiel</button>
+        <button class="tab" role="tab" data-tab="settings">⚙️ Paramètres</button>
+      </div>
+
+      <!-- BADGES TAB -->
+      <div id="badges" class="tab-content active">
+        <div class="card">
+          <h2>🏅 Mes Badges & Succès</h2>
+          <p style="color: #666; margin-bottom: 1rem;">Déverrouille des badges en accomplissant des défis et en participant activement.</p>
+          <div class="badges-grid" id="badgesGrid">
+            <div class="badge-item locked">
+              <div class="badge-emoji">⏳</div>
+              <div class="badge-name">Chargement...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD TAB -->
+      <div id="leaderboard" class="tab-content">
+        <div class="card">
+          <h2>🏆 Leaderboard & Classement</h2>
+          
+          <div class="my-rank-card">
+            <div>Ma position</div>
+            <div class="rank-number" id="myRank">--</div>
+            <div class="rank-label">Rang global • <span id="myRankPoints">0</span> points</div>
+            <div style="margin-top: 0.5rem; opacity: 0.9; font-size: 0.9em;">
+              Prochaine personne: <span id="nextRankDiff">--</span> points
+            </div>
+          </div>
+
+          <h3>🥇 Top 10</h3>
+          <ul class="leaderboard-list" id="leaderboardList">
+            <li style="padding: 1rem; color: #999;">Chargement...</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- CHAT GROUPS TAB -->
+      <div id="chat" class="tab-content">
+        <div class="card">
+          <h2>💬 Groupes d'étude</h2>
+          <p style="color: #666; margin-bottom: 1rem;">Rejoins des groupes pour étudier, discuter et partager tes connaissances.</p>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <button class="btn-primary" id="createGroupBtn" style="width: 100%;">➕ Créer un groupe</button>
+          </div>
+
+          <div class="groups-grid" id="groupsGrid">
+            <div style="padding: 1rem; color: #999;">Chargement des groupes...</div>
+          </div>
+
+          <div style="text-align: center; margin-top: 1rem;">
+            <a href="chat-groups.html" class="btn outline">Voir tous les groupes →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- PERFORMANCE TAB -->
+      <div id="performance" class="tab-content">
+        <div class="card">
+          <h2>📊 Ma Performance</h2>
+          
+          <div class="performance-chart">
+            <h3>Performance 7 derniers jours</h3>
+            <div class="chart-container">
+              <canvas id="performanceChart"></canvas>
+            </div>
+          </div>
+
+          <div class="performance-chart">
+            <h3>Catégories maitrisées</h3>
+            <div class="chart-container">
+              <canvas id="categoriesChart"></canvas>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="background: #f5f5f5; padding: 1rem; border-radius: 4px;">
+              <div style="color: #666; font-size: 0.9em;">Total quizzes</div>
+              <div style="font-size: 1.5em; font-weight: bold; color: var(--primary);" id="perfTotal">0</div>
+            </div>
+            <div style="background: #f5f5f5; padding: 1rem; border-radius: 4px;">
+              <div style="color: #666; font-size: 0.9em;">Taux de réussite</div>
+              <div style="font-size: 1.5em; font-weight: bold; color: var(--success);" id="perfSuccess">--%</div>
+            </div>
+            <div style="background: #f5f5f5; padding: 1rem; border-radius: 4px;">
+              <div style="color: #666; font-size: 0.9em;">Meilleur score</div>
+              <div style="font-size: 1.5em; font-weight: bold; color: var(--secondary);" id="perfBest">0/100</div>
+            </div>
+            <div style="background: #f5f5f5; padding: 1rem; border-radius: 4px;">
+              <div style="color: #666; font-size: 0.9em;">Total points badges</div>
+              <div style="font-size: 1.5em; font-weight: bold; color: var(--warning);" id="perfPoints">0 pts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OFFICIAL TAB -->
+      <div id="official" class="tab-content">
+        <div class="card">
+          <h2>📋 Documents Officiels</h2>
+          <div id="memberMessages" style="margin-bottom: 2rem;">Chargement...</div>
+        </div>
+
+        <div class="card">
+          <h2>📌 Tâches à faire</h2>
+          <div id="memberTasks">Chargement...</div>
+        </div>
+
+        <div class="card">
+          <h2>📄 Documents</h2>
+          <div id="memberDocuments" style="margin-bottom: 1rem;">Chargement...</div>
+          <div class="export-options">
+            <button class="export-btn" id="memberDownloadAll">📥 Télécharger tout</button>
+            <button class="export-btn" id="memberExportPDF" style="background: var(--secondary);">📄 Rapport PDF</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>📊 Historique des actions</h2>
+          <div id="memberActions">Chargement...</div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div id="settings" class="tab-content">
+        <div class="card">
+          <h2>📝 Mon Profil</h2>
+          <form id="memberProfileForm" class="form-grid">
+            <div>
+              <label>Nom complet</label>
+              <input id="memberFullName" name="fullName" required />
+            </div>
+            <div>
+              <label>Email</label>
+              <input id="memberEmail" name="email" type="email" />
+            </div>
+            <div>
+              <label>Téléphone</label>
+              <input id="memberPhone" name="phone" />
+            </div>
+            <div class="full">
+              <button class="btn-primary" type="submit">💾 Mettre à jour</button>
+            </div>
+          </form>
+          <p id="memberProfileMsg" class="status"></p>
+        </div>
+
+        <div class="settings-group">
+          <h3>🔔 Notifications</h3>
+          <div class="setting-item">
+            <label>Rappels journaliers</label>
+            <div class="toggle active" id="toggleReminders"></div>
+          </div>
+          <div class="setting-item">
+            <label>Notifications badge</label>
+            <div class="toggle active" id="toggleBadgeNotifs"></div>
+          </div>
+          <div class="setting-item">
+            <label>Notifications chat</label>
+            <div class="toggle active" id="toggleChatNotifs"></div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>🎨 Affichage</h3>
+          <div class="setting-item">
+            <label>Mode sombre</label>
+            <div class="toggle" id="toggleDarkMode"></div>
+          </div>
+          <div class="setting-item">
+            <label>Animations</label>
+            <div class="toggle active" id="toggleAnimations"></div>
+          </div>
+          <div class="setting-item">
+            <label>Langue</label>
+            <select style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+              <option>Français</option>
+              <option>English</option>
+              <option>العربية</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>🔐 Sécurité</h3>
+          <div class="setting-item">
+            <label>Authentification à deux facteurs</label>
+            <button style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">Configurer</button>
+          </div>
+          <div class="setting-item">
+            <label>Sessions actives</label>
+            <button style="padding: 0.5rem 1rem; background: var(--danger); color: white; border: none; border-radius: 4px; cursor: pointer;">Fermer tout</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>💾 Données</h3>
+          <div class="setting-item">
+            <label>Exporter mes données</label>
+            <button id="exportDataBtn" style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">Télécharger</button>
+          </div>
+          <div class="setting-item">
+            <label>Supprimer mon compte</label>
+            <button style="padding: 0.5rem 1rem; background: var(--danger); color: white; border: none; border-radius: 4px; cursor: pointer;">Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- BADGE DETAIL MODAL -->
+    <div id="badgeModal" class="modal">
+      <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <div class="badge-detail-emoji" id="modalBadgeEmoji">🏅</div>
+        <h2 id="modalBadgeName">Badge</h2>
+        <p id="modalBadgeDesc">Description</p>
+        <div style="background: #f5f5f5; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <div style="color: #666; font-size: 0.85em;">Rareté</div>
+              <div id="modalBadgeRarity" style="font-weight: bold;">--</div>
+            </div>
+            <div>
+              <div style="color: #666; font-size: 0.85em;">Points</div>
+              <div id="modalBadgePoints" style="font-weight: bold;">0 pts</div>
+            </div>
+          </div>
+        </div>
+        <div id="modalBadgeProgress" style="margin: 1rem 0;">
+          <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+            <span>Progression</span>
+            <span id="modalProgressPercent">0%</span>
+          </div>
+          <div class="badge-progress">
+            <div class="badge-progress-bar" id="modalProgressBar"></div>
+          </div>
+        </div>
+        <button id="modalUnlockBtn" class="btn-primary" style="width: 100%; display: none;">Déverrouiller</button>
+        <p id="modalBadgeStatus" style="text-align: center; color: var(--success); font-weight: bold; margin-top: 1rem; display: none;">✓ Déverrouillé</p>
+      </div>
+    </div>
+
+    <footer>
+      <div>Association des Serviteurs d'Allah Azawajal — ASAA</div>
+      <div class="footer-signature">Design & Created by LMO Website Services</div>
+    </footer>
+
+    <script src="member-portal-enhanced.js"></script>
+  </body>
+</html>
