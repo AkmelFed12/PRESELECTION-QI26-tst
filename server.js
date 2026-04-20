@@ -1260,6 +1260,19 @@ async function initDatabase() {
         updatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS score_corrections (
+        id BIGSERIAL PRIMARY KEY,
+        scoreId BIGINT NOT NULL,
+        candidateId BIGINT NOT NULL,
+        judgeName TEXT NOT NULL,
+        oldPayload TEXT NOT NULL,
+        newPayload TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        editedBy TEXT,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_score_corrections_score ON score_corrections(scoreId);
+
       CREATE TABLE IF NOT EXISTS posts (
         id BIGSERIAL PRIMARY KEY,
         authorName TEXT NOT NULL,
@@ -3600,11 +3613,83 @@ app.get('/api/admin/scores-audit', verifyAdmin, async (req, res) => {
     const result = await pool.query(
       `SELECT action, payload, ip, createdAt as "createdAt"
        FROM admin_audit
-       WHERE action IN ('score_created', 'score_deleted', 'final_phase_lock', 'final_phase_unlock')
+       WHERE action IN ('score_created', 'score_deleted', 'score_updated', 'final_phase_lock', 'final_phase_unlock')
        ORDER BY id DESC
        LIMIT 200`
     );
     res.json({ items: result.rows || [] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/admin/scores/:id', verifyAdmin, async (req, res) => {
+  try {
+    if (!(await ensureNotArchived(res))) return;
+    if (!(await ensureFinalPhaseUnlocked(res))) return;
+    const scoreId = Number(req.params.id);
+    if (!Number.isFinite(scoreId)) {
+      return res.status(400).json({ message: 'ID note invalide.' });
+    }
+    const reason = sanitizeString(req.body?.correctionReason, 300);
+    if (!reason) {
+      return res.status(400).json({ message: 'Motif de correction obligatoire.' });
+    }
+    const previous = await pool.query(
+      `SELECT id, candidateId, judgeName, compositionScore, questionScore, themeScore, pontAsSiratScore, recognitionScore, notes
+       FROM scores
+       WHERE id = $1
+         AND COALESCE(scorePhase, $2) = $3
+       LIMIT 1`,
+      [scoreId, SCORE_PHASE_PREVIOUS, SCORE_PHASE_FINAL_2026]
+    );
+    if (!previous.rows.length) {
+      return res.status(404).json({ message: 'Note introuvable.' });
+    }
+    const prev = previous.rows[0];
+    const nextPayload = {
+      compositionScore: Number(req.body?.compositionScore || 0),
+      questionScore: Number(req.body?.questionScore || 0),
+      themeScore: Number(req.body?.questionScore || req.body?.themeScore || 0),
+      pontAsSiratScore: Number(req.body?.pontAsSiratScore || 0),
+      recognitionScore: Number(req.body?.recognitionScore || 0),
+      notes: sanitizeString(req.body?.notes, 500),
+    };
+    await pool.query(
+      `UPDATE scores
+       SET compositionScore = $1,
+           questionScore = $2,
+           themeScore = $3,
+           pontAsSiratScore = $4,
+           recognitionScore = $5,
+           notes = $6
+       WHERE id = $7`,
+      [
+        nextPayload.compositionScore,
+        nextPayload.questionScore,
+        nextPayload.themeScore,
+        nextPayload.pontAsSiratScore,
+        nextPayload.recognitionScore,
+        nextPayload.notes,
+        scoreId
+      ]
+    );
+    await pool.query(
+      `INSERT INTO score_corrections (scoreId, candidateId, judgeName, oldPayload, newPayload, reason, editedBy)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        scoreId,
+        Number(prev.candidateid || prev.candidateId),
+        prev.judgename || prev.judgeName || '',
+        JSON.stringify(prev),
+        JSON.stringify(nextPayload),
+        reason,
+        req.adminUser || 'admin',
+      ]
+    );
+    await logScoreAudit('score_updated', { scoreId, reason }, req);
+    res.json({ message: 'Note corrigée.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

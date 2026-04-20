@@ -34,6 +34,11 @@ const finalPhaseCommuneFilter = document.getElementById('finalPhaseCommuneFilter
 const finalPhaseLockStatus = document.getElementById('finalPhaseLockStatus');
 const lockFinalPhaseBtn = document.getElementById('lockFinalPhaseBtn');
 const unlockFinalPhaseBtn = document.getElementById('unlockFinalPhaseBtn');
+const assistModeToggleBtn = document.getElementById('assistModeToggleBtn');
+const offlineQueueStatus = document.getElementById('offlineQueueStatus');
+const syncOfflineScoresBtn = document.getElementById('syncOfflineScoresBtn');
+const exportOfficialPackBtn = document.getElementById('exportOfficialPackBtn');
+const juryLiveBoard = document.getElementById('juryLiveBoard');
 const convocationDateInput = document.getElementById('convocationDate');
 const convocationTimeInput = document.getElementById('convocationTime');
 const convocationPlaceInput = document.getElementById('convocationPlace');
@@ -115,6 +120,9 @@ const scoreForm = document.getElementById('scoreForm');
 const scoreQuickForm = document.getElementById('scoreQuickForm');
 const scoreMsg = document.getElementById('scoreMsg');
 const scoreLiveMsg = document.getElementById('scoreLiveMsg');
+const scoreQuickTotal = document.getElementById('scoreQuickTotal');
+const scoreFormTotal = document.getElementById('scoreFormTotal');
+const scoreCorrectionReason = document.getElementById('scoreCorrectionReason');
 const candidateName = document.getElementById('candidateName');
 const rankingTable = document.querySelector('#rankingTable tbody');
 const scoresTable = document.querySelector('#scoresTable tbody');
@@ -297,6 +305,8 @@ let newsImages = [];
 let isEditing = false;
 let lastEditAt = 0;
 let finalPhaseLocked = false;
+let assistModeEnabled = true;
+const OFFLINE_SCORE_QUEUE_KEY = 'offlineScoreQueue';
 
 const FINAL_PHASE_QUALIFIED = [
   { id: 4, fullName: 'KAGONE FATIMA AIDA DJAMELLA', whatsapp: '+2250152606015', city: 'YOPOUGON' },
@@ -1518,6 +1528,135 @@ function getScoreParts(scoreLike) {
   return { composition, question, pont, recognition, total };
 }
 
+function getOfflineScoreQueue() {
+  try {
+    const raw = localStorage.getItem(OFFLINE_SCORE_QUEUE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function setOfflineScoreQueue(items) {
+  localStorage.setItem(OFFLINE_SCORE_QUEUE_KEY, JSON.stringify(Array.isArray(items) ? items : []));
+  renderOfflineQueueStatus();
+}
+
+function pushOfflineScore(payload) {
+  const queue = getOfflineScoreQueue();
+  queue.push({ ...payload, queuedAt: new Date().toISOString() });
+  setOfflineScoreQueue(queue);
+}
+
+function renderOfflineQueueStatus() {
+  if (!offlineQueueStatus) return;
+  const count = getOfflineScoreQueue().length;
+  offlineQueueStatus.textContent = `File hors-ligne: ${count}`;
+  offlineQueueStatus.classList.toggle('pill-danger', count > 0);
+  offlineQueueStatus.classList.toggle('pill-success', count === 0);
+}
+
+function setAssistMode(enabled) {
+  assistModeEnabled = !!enabled;
+  localStorage.setItem('assistModeEnabled', assistModeEnabled ? '1' : '0');
+  if (assistModeToggleBtn) {
+    assistModeToggleBtn.textContent = `Saisie assistée: ${assistModeEnabled ? 'ON' : 'OFF'}`;
+  }
+}
+
+function computeFormTotal(form) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  return getScoreParts(values).total;
+}
+
+function updateScoreTotals() {
+  if (scoreQuickForm && scoreQuickTotal) {
+    scoreQuickTotal.value = String(computeFormTotal(scoreQuickForm).toFixed(2));
+  }
+  if (scoreForm && scoreFormTotal) {
+    scoreFormTotal.value = String(computeFormTotal(scoreForm).toFixed(2));
+  }
+}
+
+function maybeAutoFocusNext(form, event) {
+  if (!assistModeEnabled) return;
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  const ordered = Array.from(
+    form.querySelectorAll('input[name="candidateId"], input[name="judgeName"], input[name="compositionScore"], input[name="questionScore"], input[name="pontAsSiratScore"], input[name="recognitionScore"], textarea[name="notes"]'),
+  );
+  const idx = ordered.indexOf(target);
+  const next = ordered[idx + 1];
+  if (next) next.focus();
+}
+
+function detectJudgeRepetitionRisk(payload) {
+  const judge = String(payload.judgeName || '').trim().toLowerCase();
+  if (!judge) return { risky: false, count: 0, total: 0 };
+  const total = getScoreParts(payload).total;
+  const same = scoresCache.filter((s) => {
+    const j = String(s.judgeName || s.judgename || '').trim().toLowerCase();
+    if (j !== judge) return false;
+    const t = getScoreParts(s).total;
+    return Number(t.toFixed(2)) === Number(total.toFixed(2));
+  });
+  return { risky: same.length >= 3, count: same.length, total };
+}
+
+async function syncOfflineScoresQueue() {
+  const queue = getOfflineScoreQueue();
+  if (!queue.length) {
+    renderOfflineQueueStatus();
+    return;
+  }
+  const remaining = [];
+  for (const item of queue) {
+    try {
+      const res = await authedFetch('/api/admin/scores', {
+        method: 'POST',
+        body: JSON.stringify(item),
+      });
+      if (!res.ok) {
+        remaining.push(item);
+      }
+    } catch {
+      remaining.push(item);
+    }
+  }
+  setOfflineScoreQueue(remaining);
+  if (!remaining.length) {
+    await loadDashboard();
+  }
+}
+
+function buildOfficialPackFiles() {
+  const candidates = getFinalPhaseQualifiedRows();
+  const ranking = candidates.slice().sort((a, b) => b.totalScore - a.totalScore);
+  const ranks = computeRanks(ranking, (r) => r.totalScore);
+  const auditRows = Array.from(document.querySelectorAll('#scoreAuditList table tbody tr'))
+    .map((tr) => Array.from(tr.querySelectorAll('td')).map((td) => td.textContent || '').join(';'))
+    .join('\n');
+
+  const candidatesCsv = [
+    'N;ID;Nom;WhatsApp;Commune',
+    ...candidates.map((c, i) => `${i + 1};${c.id};"${c.fullName}";"${c.whatsapp}";"${c.city}"`)
+  ].join('\n');
+
+  const rankingCsv = [
+    'Rang;ID;Nom;Total /105;Passages',
+    ...ranking.map((r, i) => `${formatRank(ranks[i]) || `${i + 1}e`};${r.id};"${r.fullName}";${r.totalScore.toFixed(2)};${r.passages}`)
+  ].join('\n');
+
+  return {
+    candidatesCsv,
+    rankingCsv,
+    auditCsv: `Date;Action;Details;IP\n${auditRows}`,
+  };
+}
+
 function renderRanking(list) {
   if (!rankingTable) return;
   const ranks = computeRanks(list, (r) => r.totalScore ?? r.totalscore ?? r.averageScore ?? 0);
@@ -1609,6 +1748,46 @@ function renderFinalPhaseSection() {
       ? `<strong>Top 5 provisoire:</strong><br>${topRows}`
       : 'Classement en attente des notes de la phase finale.';
   }
+  renderJuryLiveBoard();
+}
+
+function renderJuryLiveBoard() {
+  if (!juryLiveBoard) return;
+  const qualified = getFinalPhaseQualifiedRows();
+  const notedIds = new Set(
+    scoresCache.map((s) => Number(s.candidateId || s.candidateid)).filter(Boolean),
+  );
+  const remaining = qualified.filter((q) => !notedIds.has(Number(q.id))).length;
+  const byCommune = qualified.reduce((acc, q) => {
+    const key = String(q.city || 'INCONNU').toUpperCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const communeRows = Object.entries(byCommune)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `<div>${k}: <strong>${v}</strong></div>`)
+    .join('');
+  const orderedTimes = scoresCache
+    .map((s) => new Date(s.createdAt || s.createdat || 0).getTime())
+    .filter((t) => Number.isFinite(t) && t > 0)
+    .sort((a, b) => a - b);
+  let avgMinutes = 0;
+  if (orderedTimes.length > 1) {
+    const gaps = [];
+    for (let i = 1; i < orderedTimes.length; i += 1) {
+      gaps.push((orderedTimes[i] - orderedTimes[i - 1]) / 60000);
+    }
+    avgMinutes = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  }
+  juryLiveBoard.innerHTML = `
+    <div class="card-subtitle">Pilotage Jury Live</div>
+    <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <div class="status">Qualifiés: <strong>${qualified.length}</strong></div>
+      <div class="status">Restants à noter: <strong>${remaining}</strong></div>
+      <div class="status">Temps moyen/passage: <strong>${avgMinutes ? avgMinutes.toFixed(1) : '—'} min</strong></div>
+    </div>
+    <div style="margin-top:10px;">${communeRows || '<div>Aucune commune.</div>'}</div>
+  `;
 }
 
 function generateGroupsFromRanking() {
@@ -1699,7 +1878,10 @@ function renderScoresTable(list) {
           <td>${recognition}</td>
           <td>${total}</td>
           <td>${date}</td>
-          <td><button data-delete-score="${s.id}" ${finalPhaseLocked ? 'disabled' : ''}>Supprimer</button></td>
+          <td>
+            <button data-edit-score="${s.id}" ${finalPhaseLocked ? 'disabled' : ''}>Corriger</button>
+            <button data-delete-score="${s.id}" ${finalPhaseLocked ? 'disabled' : ''}>Supprimer</button>
+          </td>
         </tr>
       `;
     })
@@ -2496,6 +2678,12 @@ function setJuryMode(enabled) {
 
 const storedJuryMode = localStorage.getItem('juryMode') === '1';
 setJuryMode(storedJuryMode);
+setAssistMode(localStorage.getItem('assistModeEnabled') !== '0');
+renderOfflineQueueStatus();
+updateScoreTotals();
+window.addEventListener('online', () => {
+  syncOfflineScoresQueue();
+});
 
 juryModeToggle?.addEventListener('click', () => {
   const enabled = !document.body.classList.contains('jury-mode');
@@ -3409,6 +3597,7 @@ async function loadScoresTable() {
       ? data
       : [];
   applyScoresFilters();
+  renderFinalPhaseSection();
   renderScoreboard();
   renderAnomalies();
 }
@@ -3481,6 +3670,10 @@ if (candidateIdInput) {
 
 scoreForm?.addEventListener('input', updateLiveScoreValidation);
 scoreQuickForm?.addEventListener('input', updateLiveScoreValidation);
+scoreForm?.addEventListener('input', updateScoreTotals);
+scoreQuickForm?.addEventListener('input', updateScoreTotals);
+scoreForm?.addEventListener('keydown', (e) => maybeAutoFocusNext(scoreForm, e));
+scoreQuickForm?.addEventListener('keydown', (e) => maybeAutoFocusNext(scoreQuickForm, e));
 
 scoreForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -3490,6 +3683,16 @@ scoreForm?.addEventListener('submit', async (e) => {
   }
   setStatus(scoreMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(scoreForm).entries());
+  const repetition = detectJudgeRepetitionRisk(payload);
+  if (repetition.risky) {
+    const okRisk = confirm(
+      `Alerte anti-erreur: ${payload.judgeName} a déjà ${repetition.count} note(s) avec le total ${repetition.total.toFixed(2)}. Continuer ?`,
+    );
+    if (!okRisk) {
+      setStatus(scoreMsg, 'Annulé.');
+      return;
+    }
+  }
   if (
     Number(payload.compositionScore || 0) > 40 ||
     Number(payload.questionScore || 0) > 30 ||
@@ -3503,17 +3706,23 @@ scoreForm?.addEventListener('submit', async (e) => {
     }
   }
   payload.scorePhase = 'phase_finale_2026';
-  const res = await authedFetch('/api/admin/scores', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  setStatus(scoreMsg, data.message || (res.ok ? 'Note enregistrée.' : 'Erreur.'));
-  if (res.ok) {
-    scoreForm.reset();
-    if (candidateName) candidateName.textContent = 'À remplir';
-    await loadScoresTable();
-    await loadScoresAudit();
+  try {
+    const res = await authedFetch('/api/admin/scores', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    setStatus(scoreMsg, data.message || (res.ok ? 'Note enregistrée.' : 'Erreur.'));
+    if (res.ok) {
+      scoreForm.reset();
+      if (candidateName) candidateName.textContent = 'À remplir';
+      updateScoreTotals();
+      await loadScoresTable();
+      await loadScoresAudit();
+    }
+  } catch {
+    pushOfflineScore(payload);
+    setStatus(scoreMsg, 'Réseau indisponible: note mise en file hors-ligne.');
   }
   await loadDashboard();
 });
@@ -3526,6 +3735,16 @@ scoreQuickForm?.addEventListener('submit', async (e) => {
   }
   setStatus(scoreMsg, 'Enregistrement...');
   const payload = Object.fromEntries(new FormData(scoreQuickForm).entries());
+  const repetition = detectJudgeRepetitionRisk(payload);
+  if (repetition.risky) {
+    const okRisk = confirm(
+      `Alerte anti-erreur: ${payload.judgeName} a déjà ${repetition.count} note(s) avec le total ${repetition.total.toFixed(2)}. Continuer ?`,
+    );
+    if (!okRisk) {
+      setStatus(scoreMsg, 'Annulé.');
+      return;
+    }
+  }
   if (
     Number(payload.compositionScore || 0) > 40 ||
     Number(payload.questionScore || 0) > 30 ||
@@ -3539,16 +3758,22 @@ scoreQuickForm?.addEventListener('submit', async (e) => {
     }
   }
   payload.scorePhase = 'phase_finale_2026';
-  const res = await authedFetch('/api/admin/scores', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  setStatus(scoreMsg, data.message || (res.ok ? 'Note enregistrée.' : 'Erreur.'));
-  if (res.ok) {
-    scoreQuickForm.reset();
-    await loadScoresTable();
-    await loadScoresAudit();
+  try {
+    const res = await authedFetch('/api/admin/scores', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    setStatus(scoreMsg, data.message || (res.ok ? 'Note enregistrée.' : 'Erreur.'));
+    if (res.ok) {
+      scoreQuickForm.reset();
+      updateScoreTotals();
+      await loadScoresTable();
+      await loadScoresAudit();
+    }
+  } catch {
+    pushOfflineScore(payload);
+    setStatus(scoreMsg, 'Réseau indisponible: note mise en file hors-ligne.');
   }
   await loadDashboard();
 });
@@ -3569,6 +3794,27 @@ scoresFilterClear?.addEventListener('click', () => {
   if (scoresDateFrom) scoresDateFrom.value = '';
   if (scoresDateTo) scoresDateTo.value = '';
   applyScoresFilters();
+});
+assistModeToggleBtn?.addEventListener('click', () => setAssistMode(!assistModeEnabled));
+syncOfflineScoresBtn?.addEventListener('click', async () => {
+  setStatus(scoreMsg, 'Synchronisation file hors-ligne...');
+  await syncOfflineScoresQueue();
+  setStatus(scoreMsg, 'Synchronisation terminée.');
+});
+exportOfficialPackBtn?.addEventListener('click', async () => {
+  const zipLib = window.JSZip;
+  if (!zipLib) {
+    alert('Librairie ZIP indisponible.');
+    return;
+  }
+  const files = buildOfficialPackFiles();
+  const zip = new zipLib();
+  zip.file('liste-candidats.csv', files.candidatesCsv);
+  zip.file('classement-final.csv', files.rankingCsv);
+  zip.file('journal-audit.csv', files.auditCsv);
+  zip.file('README.txt', 'Pack officiel - Phase finale Quiz Islamique 2026');
+  const blob = await zip.generateAsync({ type: 'blob' });
+  downloadBlob('pack-officiel-phase-finale.zip', blob);
 });
 finalPhaseIdFilter?.addEventListener('input', renderFinalPhaseSection);
 finalPhaseCommuneFilter?.addEventListener('input', renderFinalPhaseSection);
@@ -3760,17 +4006,62 @@ sponsorForm?.addEventListener('submit', async (e) => {
 });
 
 scoresTable?.addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('button[data-edit-score]');
   const deleteBtn = e.target.closest('button[data-delete-score]');
-  if (!deleteBtn) return;
-  const id = deleteBtn.dataset.deleteScore;
-  const ok = confirm('Supprimer cette note ?');
-  if (!ok) return;
-  const res = await authedFetch(`/api/admin/scores/${id}`, { method: 'DELETE' });
-  if (res.ok) {
-    await renderScoresTable();
+  if (editBtn) {
+    const id = Number(editBtn.dataset.editScore);
+    const item = scoresCache.find((s) => Number(s.id) === id);
+    if (!item) return;
+    const reason = (scoreCorrectionReason?.value || '').trim();
+    if (!reason) {
+      alert('Veuillez renseigner le motif de correction avant de corriger.');
+      scoreCorrectionReason?.focus();
+      return;
+    }
+    const newComposition = prompt('Composition /40', String(getScoreParts(item).composition));
+    if (newComposition === null) return;
+    const newQuestion = prompt('Questions-réponses /30', String(getScoreParts(item).question));
+    if (newQuestion === null) return;
+    const newPont = prompt('Pont As Sirat /25', String(getScoreParts(item).pont));
+    if (newPont === null) return;
+    const newRecognition = prompt('Reconnaissance /10', String(getScoreParts(item).recognition));
+    if (newRecognition === null) return;
+    const newNotes = prompt('Notes', String(item.notes || '')) ?? '';
+    const res = await authedFetch(`/api/admin/scores/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        compositionScore: Number(newComposition || 0),
+        questionScore: Number(newQuestion || 0),
+        pontAsSiratScore: Number(newPont || 0),
+        recognitionScore: Number(newRecognition || 0),
+        notes: newNotes,
+        correctionReason: reason,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.message || 'Correction impossible.');
+      return;
+    }
+    setStatus(scoreMsg, data.message || 'Note corrigée.');
+    if (scoreCorrectionReason) scoreCorrectionReason.value = '';
+    await loadScoresTable();
+    await loadScoresAudit();
     await loadDashboard();
-  } else {
-    alert('Suppression impossible.');
+    return;
+  }
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.deleteScore;
+    const ok = confirm('Supprimer cette note ?');
+    if (!ok) return;
+    const res = await authedFetch(`/api/admin/scores/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadScoresTable();
+      await loadScoresAudit();
+      await loadDashboard();
+    } else {
+      alert('Suppression impossible.');
+    }
   }
 });
 
