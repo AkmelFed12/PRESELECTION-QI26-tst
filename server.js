@@ -24,6 +24,8 @@ const __dirname = dirname(__filename);
 // ==================== CONFIGURATION ====================
 const app = express();
 const PORT = process.env.PORT || 10000;
+const SCORE_PHASE_FINAL_2026 = 'phase_finale_2026';
+const SCORE_PHASE_PREVIOUS = 'phase_precedente';
 const SITE_URL = (process.env.SITE_URL || '').trim().replace(/\/+$/, '');
 const GOOGLE_SITE_VERIFICATION_FILE = 'googleca617fc6537967d0.html';
 const GOOGLE_SITE_VERIFICATION_CONTENT = `google-site-verification: ${GOOGLE_SITE_VERIFICATION_FILE}`;
@@ -706,7 +708,7 @@ const DEFAULT_SITE_CONTENT = {
     enabled: true,
     title: 'Phase de notation',
     body:
-      'La phase précédente est terminée. La notation se fait désormais sur trois épreuves techniques : Questions‑Réponses /30, Pont As Sirat /25, Reconnaissance de Verset /5.',
+      'La phase précédente est terminée. La notation se fait désormais sur trois épreuves techniques : Questions‑Réponses /30, Pont As Sirat /25, Reconnaissance de Verset /10.',
     northDate: 'DIMANCHE 19 AVRIL 2026',
     southDate: 'DIMANCHE 12 AVRIL 2026'
   },
@@ -1168,6 +1170,10 @@ async function initDatabase() {
       ALTER TABLE scores ADD COLUMN IF NOT EXISTS themeScore REAL DEFAULT 0;
       ALTER TABLE scores ADD COLUMN IF NOT EXISTS pontAsSiratScore REAL DEFAULT 0;
       ALTER TABLE scores ADD COLUMN IF NOT EXISTS recognitionScore REAL DEFAULT 0;
+      ALTER TABLE scores ADD COLUMN IF NOT EXISTS scorePhase TEXT DEFAULT '${SCORE_PHASE_PREVIOUS}';
+      UPDATE scores
+      SET scorePhase = '${SCORE_PHASE_PREVIOUS}'
+      WHERE scorePhase IS NULL OR TRIM(scorePhase) = '';
 
       CREATE TABLE IF NOT EXISTS tournament_settings (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -1777,7 +1783,9 @@ app.get('/api/public-results', async (req, res) => {
         SELECT candidateId,
                CAST(COALESCE(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0) + COALESCE(recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
                CAST(COALESCE(SUM(COALESCE(themeScore, 0) + COALESCE(pontAsSiratScore, 0) + COALESCE(recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore
-        FROM scores GROUP BY candidateId
+        FROM scores
+        WHERE COALESCE(scorePhase, '${SCORE_PHASE_PREVIOUS}') = '${SCORE_PHASE_FINAL_2026}'
+        GROUP BY candidateId
       ) s ON c.id = s.candidateId
       ORDER BY COALESCE(v.totalVotes, 0) DESC, c.fullname ASC
     `);
@@ -2023,7 +2031,9 @@ app.get('/api/admin/dashboard', verifyAdmin, async (req, res) => {
                CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
                COUNT(s.id) as passages
         FROM candidates c
-        LEFT JOIN scores s ON c.id = s.candidateId
+        LEFT JOIN scores s
+          ON c.id = s.candidateId
+         AND COALESCE(s.scorePhase, '${SCORE_PHASE_PREVIOUS}') = '${SCORE_PHASE_FINAL_2026}'
         GROUP BY c.id, c.fullName
         ORDER BY averageScore DESC NULLS LAST
       `),
@@ -3299,7 +3309,9 @@ app.get('/api/admin/export/ranking', verifyAdmin, async (req, res) => {
              CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
-      LEFT JOIN scores s ON c.id = s.candidateId
+      LEFT JOIN scores s
+        ON c.id = s.candidateId
+       AND COALESCE(s.scorePhase, '${SCORE_PHASE_PREVIOUS}') = '${SCORE_PHASE_FINAL_2026}'
       GROUP BY c.id, c.fullName
       ORDER BY averageScore DESC NULLS LAST
     `);
@@ -3341,7 +3353,9 @@ app.get('/api/admin/export/ranking-xls', verifyAdmin, async (req, res) => {
              CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as averageScore,
              COUNT(s.id) as passages
       FROM candidates c
-      LEFT JOIN scores s ON c.id = s.candidateId
+      LEFT JOIN scores s
+        ON c.id = s.candidateId
+       AND COALESCE(s.scorePhase, '${SCORE_PHASE_PREVIOUS}') = '${SCORE_PHASE_FINAL_2026}'
       GROUP BY c.id, c.fullName
       ORDER BY averageScore DESC NULLS LAST
     `);
@@ -3367,7 +3381,9 @@ app.get('/api/admin/export/ranking-official-pdf', verifyAdmin, async (req, res) 
              CAST(COALESCE(SUM(COALESCE(s.themeScore, 0) + COALESCE(s.pontAsSiratScore, 0) + COALESCE(s.recognitionScore, 0)), 0) AS NUMERIC(10,2)) as totalScore,
              COUNT(s.id) as passages
       FROM candidates c
-      LEFT JOIN scores s ON c.id = s.candidateId
+      LEFT JOIN scores s
+        ON c.id = s.candidateId
+       AND COALESCE(s.scorePhase, '${SCORE_PHASE_PREVIOUS}') = '${SCORE_PHASE_FINAL_2026}'
       GROUP BY c.id, c.fullName
       ORDER BY totalScore DESC NULLS LAST
     `);
@@ -3447,8 +3463,8 @@ app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO scores (candidateId, judgeName, themeScore, pontAsSiratScore, recognitionScore, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+      `INSERT INTO scores (candidateId, judgeName, themeScore, pontAsSiratScore, recognitionScore, notes, scorePhase)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [
         candidateId,
         sanitizeString(judgeName, 100),
@@ -3456,6 +3472,7 @@ app.post('/api/admin/scores', verifyAdmin, async (req, res) => {
         Number(pontAsSiratScore || 0),
         Number(recognitionScore || 0),
         sanitizeString(notes, 500),
+        SCORE_PHASE_FINAL_2026,
       ]
     );
 
@@ -3479,12 +3496,15 @@ app.get('/api/admin/scores', verifyAdmin, async (req, res) => {
               s.themeScore as "themeScore",
               s.pontAsSiratScore as "pontAsSiratScore",
               s.recognitionScore as "recognitionScore",
+              s.scorePhase as "scorePhase",
               s.notes,
               s.createdAt as "createdAt"
        FROM scores s
        LEFT JOIN candidates c ON c.id = s.candidateId
+       WHERE COALESCE(s.scorePhase, $1) = $2
        ORDER BY s.id DESC
-       LIMIT 500`
+       LIMIT 500`,
+      [SCORE_PHASE_PREVIOUS, SCORE_PHASE_FINAL_2026]
     );
     res.json({ items: result.rows || [] });
   } catch (error) {
@@ -3547,8 +3567,11 @@ app.get('/api/admin/candidates/:id/pdf', verifyAdmin, async (req, res) => {
     const candidate = candidateRes.rows[0];
     const scoresRes = await pool.query(
       `SELECT judgeName, themeScore, pontAsSiratScore, recognitionScore, notes, createdAt
-       FROM scores WHERE candidateId = $1 ORDER BY createdAt DESC`,
-      [candidateId]
+       FROM scores
+       WHERE candidateId = $1
+         AND COALESCE(scorePhase, $2) = $3
+       ORDER BY createdAt DESC`,
+      [candidateId, SCORE_PHASE_PREVIOUS, SCORE_PHASE_FINAL_2026]
     );
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
@@ -3622,12 +3645,14 @@ app.get('/api/admin/candidates/:id/scores', verifyAdmin, async (req, res) => {
               themeScore as "themeScore",
               pontAsSiratScore as "pontAsSiratScore",
               recognitionScore as "recognitionScore",
+              scorePhase as "scorePhase",
               notes,
               createdAt as "createdAt"
        FROM scores
        WHERE candidateId = $1
+         AND COALESCE(scorePhase, $2) = $3
        ORDER BY createdAt DESC`,
-      [candidateId]
+      [candidateId, SCORE_PHASE_PREVIOUS, SCORE_PHASE_FINAL_2026]
     );
     res.json({ items: result.rows || [] });
   } catch (error) {

@@ -1041,7 +1041,7 @@ async function loadCandidateScores(candidateId) {
           <th>Juge</th>
           <th>Thèmes /30</th>
           <th>Pont As Sirat /25</th>
-          <th>Reconnaissance de Verset /5</th>
+          <th>Reconnaissance de Verset /10</th>
           <th>Total</th>
           <th>Notes</th>
         </tr>
@@ -1289,7 +1289,7 @@ function buildTechnicalSheetHtml(title, communes, dateLabel) {
       <body>
         <h1>${title} — Fiche technique</h1>
         <h2>Date : ${dateLabel}</h2>
-        <p class="small">Notation : Questions‑Réponses /30 • Pont As Sirat /25 • Reconnaissance de Verset /5</p>
+        <p class="small">Notation : Questions‑Réponses /30 • Pont As Sirat /25 • Reconnaissance de Verset /10</p>
         <table>
           <thead>
             <tr>
@@ -1299,7 +1299,7 @@ function buildTechnicalSheetHtml(title, communes, dateLabel) {
               <th>Commune</th>
               <th>Questions‑Réponses /30</th>
               <th>Pont As Sirat /25</th>
-              <th>Reconnaissance de Verset /5</th>
+              <th>Reconnaissance de Verset /10</th>
               <th>TOTAL /60</th>
               <th>Signature</th>
             </tr>
@@ -1842,10 +1842,10 @@ function updateLiveScoreValidation() {
   const entries = [
     { form: scoreForm, name: 'themeScore', max: 30, label: 'Thèmes /30' },
     { form: scoreForm, name: 'pontAsSiratScore', max: 25, label: 'Pont As Sirat /25' },
-    { form: scoreForm, name: 'recognitionScore', max: 5, label: 'Reconnaissance /5' },
+    { form: scoreForm, name: 'recognitionScore', max: 10, label: 'Reconnaissance /10' },
     { form: scoreQuickForm, name: 'themeScore', max: 30, label: 'Thèmes /30' },
     { form: scoreQuickForm, name: 'pontAsSiratScore', max: 25, label: 'Pont As Sirat /25' },
-    { form: scoreQuickForm, name: 'recognitionScore', max: 5, label: 'Reconnaissance /5' },
+    { form: scoreQuickForm, name: 'recognitionScore', max: 10, label: 'Reconnaissance /10' },
   ];
 
   const exceeded = [];
@@ -3387,7 +3387,7 @@ scoreForm?.addEventListener('submit', async (e) => {
   if (
     Number(payload.themeScore || 0) > 30 ||
     Number(payload.pontAsSiratScore || 0) > 25 ||
-    Number(payload.recognitionScore || 0) > 5
+    Number(payload.recognitionScore || 0) > 10
   ) {
     const ok = confirm('Attention: une note dépasse le maximum autorisé. Continuer ?');
     if (!ok) {
@@ -3395,6 +3395,7 @@ scoreForm?.addEventListener('submit', async (e) => {
       return;
     }
   }
+  payload.scorePhase = 'phase_finale_2026';
   const res = await authedFetch('/api/admin/scores', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -3416,7 +3417,7 @@ scoreQuickForm?.addEventListener('submit', async (e) => {
   if (
     Number(payload.themeScore || 0) > 30 ||
     Number(payload.pontAsSiratScore || 0) > 25 ||
-    Number(payload.recognitionScore || 0) > 5
+    Number(payload.recognitionScore || 0) > 10
   ) {
     const ok = confirm('Attention: une note dépasse le maximum autorisé. Continuer ?');
     if (!ok) {
@@ -3424,6 +3425,7 @@ scoreQuickForm?.addEventListener('submit', async (e) => {
       return;
     }
   }
+  payload.scorePhase = 'phase_finale_2026';
   const res = await authedFetch('/api/admin/scores', {
     method: 'POST',
     body: JSON.stringify(payload),
