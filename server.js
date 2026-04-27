@@ -21,6 +21,10 @@ import { registerAuthRoutes } from './server-modules/auth-routes.js';
 import { registerMemberRoutes } from './server-modules/member-routes.js';
 import { registerAdminContentRoutes } from './server-modules/admin-content-routes.js';
 import { registerCandidateScoreRoutes } from './server-modules/candidate-score-routes.js';
+import { registerNotificationRoutes, NotificationService } from './server-modules/notifications-service.js';
+import { registerAchievementRoutes, AchievementService } from './server-modules/achievements-service.js';
+import { registerReportRoutes } from './server-modules/reports-service.js';
+import { registerModerationRoutes, ModerationService } from './server-modules/moderation-service.js';
 import { sanitizeString } from './services/string-utils.js';
 
 dotenv.config();
@@ -2077,6 +2081,65 @@ async function initDatabase() {
 
     // Ensure names are synchronized even if records already exist
     await upsertManualCandidates(manualCandidates);
+
+    // ========== NEW FEATURES: NOTIFICATIONS, ACHIEVEMENTS, REPORTS, MODERATION ==========
+    
+    // Notifications table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'info',
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        read_at TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+    `);
+
+    // Achievements table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS achievements_unlocked (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        achievement_id VARCHAR(100) NOT NULL,
+        unlocked_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, achievement_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_achievements_unlocked_user_id ON achievements_unlocked(user_id);
+      CREATE INDEX IF NOT EXISTS idx_achievements_unlocked_achievement_id ON achievements_unlocked(achievement_id);
+    `);
+
+    // Add achievement_points column to users
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS achievement_points INTEGER DEFAULT 0`);
+
+    // Moderation tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS moderation_reports (
+        id SERIAL PRIMARY KEY,
+        content_id INTEGER NOT NULL,
+        content_type VARCHAR(50) NOT NULL,
+        reason TEXT NOT NULL,
+        reported_by INTEGER,
+        status VARCHAR(50) DEFAULT 'pending',
+        moderated_by INTEGER,
+        moderated_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_moderation_reports_status ON moderation_reports(status);
+      CREATE INDEX IF NOT EXISTS idx_moderation_reports_created_at ON moderation_reports(created_at DESC);
+    `);
+
+    // Add moderation columns to users
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_until TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP;
+    `);
 
     console.log('✅ Database initialized successfully');
   } catch (error) {
@@ -4423,6 +4486,12 @@ registerCandidateScoreRoutes({
   loadManualCandidates,
   replaceCandidatesFromManualList
 });
+
+// ==================== NEW FEATURES - Register Services ====================
+registerNotificationRoutes(app, pool);
+registerAchievementRoutes(app, pool);
+registerReportRoutes(app, pool);
+registerModerationRoutes(app, pool);
 
 function classifyMediaType(filename = '') {
   const ext = (filename.split('.').pop() || '').toLowerCase();
