@@ -776,7 +776,8 @@ body.jury-mode #pollSection,
 body.jury-mode #memberAccountsSection,
 body.jury-mode #memberToolsSection,
 body.jury-mode #dailyQuizSection,
-body.jury-mode #memberAuditSection {
+body.jury-mode #memberAuditSection,
+body.jury-mode #securityThrottleSection {
   display: none !important;
 }
 
@@ -794,8 +795,14 @@ body.super-admin-locked #pollSection,
 body.super-admin-locked #memberAccountsSection,
 body.super-admin-locked #memberToolsSection,
 body.super-admin-locked #dailyQuizSection,
-body.super-admin-locked #memberAuditSection {
+body.super-admin-locked #memberAuditSection,
+body.super-admin-locked #securityThrottleSection {
   display: none !important;
+}
+
+.throttle-sortable {
+  cursor: pointer;
+  user-select: none;
 }
 
 .stats-bar {

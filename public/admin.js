@@ -222,6 +222,21 @@ const memberActiveInput = document.getElementById('memberActive');
 const membersTableBody = document.querySelector('#membersTable tbody');
 const memberAuditSection = document.getElementById('memberAuditSection');
 const memberAuditList = document.getElementById('memberAuditList');
+const securityThrottleSection = document.getElementById('securityThrottleSection');
+const throttleNamespaceFilter = document.getElementById('throttleNamespaceFilter');
+const throttleIpFilter = document.getElementById('throttleIpFilter');
+const throttleUsernameFilter = document.getElementById('throttleUsernameFilter');
+const throttleBlockedFilter = document.getElementById('throttleBlockedFilter');
+const throttleFilterBtn = document.getElementById('throttleFilterBtn');
+const throttleResetBtn = document.getElementById('throttleResetBtn');
+const throttleRefreshBtn = document.getElementById('throttleRefreshBtn');
+const throttlePurgeBtn = document.getElementById('throttlePurgeBtn');
+const throttleStatusMsg = document.getElementById('throttleStatusMsg');
+const throttleTableBody = document.querySelector('#throttleTable tbody');
+const throttleTableHead = document.querySelector('#throttleTable thead');
+const throttlePrevPageBtn = document.getElementById('throttlePrevPageBtn');
+const throttleNextPageBtn = document.getElementById('throttleNextPageBtn');
+const throttlePageInfo = document.getElementById('throttlePageInfo');
 const resetAllMembersPwd = document.getElementById('resetAllMembersPwd');
 const memberDefaultPasswordInput = document.getElementById('memberDefaultPassword');
 const updateDefaultMemberPwd = document.getElementById('updateDefaultMemberPwd');
@@ -307,6 +322,43 @@ let lastEditAt = 0;
 let finalPhaseLocked = false;
 let assistModeEnabled = true;
 const OFFLINE_SCORE_QUEUE_KEY = 'offlineScoreQueue';
+let throttlePage = 1;
+let throttleHasNextPage = false;
+const THROTTLE_PAGE_SIZE = 20;
+let throttleSortBy = 'updatedAt';
+let throttleSortDir = 'desc';
+const THROTTLE_SORT_STORAGE_KEY = 'adminThrottleSort';
+const THROTTLE_SORT_FIELDS = new Set([
+  'namespace',
+  'ip',
+  'username',
+  'failures',
+  'blockedSeconds',
+  'updatedAt'
+]);
+
+function saveThrottleSortPreference() {
+  try {
+    localStorage.setItem(
+      THROTTLE_SORT_STORAGE_KEY,
+      JSON.stringify({ by: throttleSortBy, dir: throttleSortDir })
+    );
+  } catch {}
+}
+
+function loadThrottleSortPreference() {
+  try {
+    const raw = localStorage.getItem(THROTTLE_SORT_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (THROTTLE_SORT_FIELDS.has(parsed?.by)) {
+      throttleSortBy = parsed.by;
+    }
+    if (parsed?.dir === 'asc' || parsed?.dir === 'desc') {
+      throttleSortDir = parsed.dir;
+    }
+  } catch {}
+}
 
 const FINAL_PHASE_QUALIFIED = [
   { id: 4, fullName: 'KAGONE FATIMA AIDA DJAMELLA', whatsapp: '+2250152606015', city: 'YOPOUGON' },
@@ -436,34 +488,42 @@ function resolveName(candidate) {
 }
 
 function showAdmin() {
+  const sectionsToShow = [
+    dashboard,
+    settingsSection,
+    maintenanceSection,
+    phaseTimelineSection,
+    siteContentSection,
+    candidatesSection,
+    scoresSection,
+    newsSection,
+    sponsorsSection,
+    globalSearchSection,
+    financeSection,
+    pollSection,
+    securityThrottleSection
+  ];
   loginCard.classList.add('admin-hidden');
-  dashboard.classList.remove('admin-hidden');
-  settingsSection.classList.remove('admin-hidden');
-  maintenanceSection?.classList.remove('admin-hidden');
-  phaseTimelineSection?.classList.remove('admin-hidden');
-  siteContentSection?.classList.remove('admin-hidden');
-  candidatesSection.classList.remove('admin-hidden');
-  scoresSection.classList.remove('admin-hidden');
-  newsSection?.classList.remove('admin-hidden');
-  sponsorsSection?.classList.remove('admin-hidden');
-  globalSearchSection?.classList.remove('admin-hidden');
-  financeSection?.classList.remove('admin-hidden');
-  pollSection?.classList.remove('admin-hidden');
+  sectionsToShow.forEach((section) => section?.classList.remove('admin-hidden'));
 }
 
 function hideAdmin() {
-  dashboard.classList.add('admin-hidden');
-  settingsSection.classList.add('admin-hidden');
-  maintenanceSection?.classList.add('admin-hidden');
-  phaseTimelineSection?.classList.add('admin-hidden');
-  siteContentSection?.classList.add('admin-hidden');
-  candidatesSection.classList.add('admin-hidden');
-  scoresSection.classList.add('admin-hidden');
-  newsSection?.classList.add('admin-hidden');
-  sponsorsSection?.classList.add('admin-hidden');
-  globalSearchSection?.classList.add('admin-hidden');
-  financeSection?.classList.add('admin-hidden');
-  pollSection?.classList.add('admin-hidden');
+  const sectionsToHide = [
+    dashboard,
+    settingsSection,
+    maintenanceSection,
+    phaseTimelineSection,
+    siteContentSection,
+    candidatesSection,
+    scoresSection,
+    newsSection,
+    sponsorsSection,
+    globalSearchSection,
+    financeSection,
+    pollSection,
+    securityThrottleSection
+  ];
+  sectionsToHide.forEach((section) => section?.classList.add('admin-hidden'));
   loginCard.classList.remove('admin-hidden');
 }
 
@@ -500,6 +560,15 @@ function lockSuperAdmin() {
 
 function setStatus(el, text) {
   if (el) el.textContent = text || '';
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function initThemeToggle() {
@@ -884,6 +953,7 @@ async function loadDashboard() {
   await loadSponsors();
   await loadMembers();
   await loadMemberAudit();
+  await loadSecurityThrottle(1);
   await loadMemberTools();
   await loadDailyQuizAdmin();
 
@@ -2207,6 +2277,134 @@ async function loadMemberAudit() {
     : 'Aucune activité.';
 }
 
+function buildThrottleQuery(page = 1) {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(THROTTLE_PAGE_SIZE));
+  params.set('sortBy', throttleSortBy);
+  params.set('sortDir', throttleSortDir);
+  const namespace = (throttleNamespaceFilter?.value || '').trim();
+  const ip = (throttleIpFilter?.value || '').trim();
+  const username = (throttleUsernameFilter?.value || '').trim();
+  const blockedOnly = (throttleBlockedFilter?.value || '').trim();
+
+  if (namespace) params.set('namespace', namespace);
+  if (ip) params.set('ip', ip);
+  if (username) params.set('username', username);
+  if (blockedOnly === 'true') params.set('blockedOnly', 'true');
+
+  return params.toString();
+}
+
+function updateThrottleSortIndicators() {
+  const indicatorMap = {
+    namespace: document.getElementById('throttleSortNamespace'),
+    ip: document.getElementById('throttleSortIp'),
+    username: document.getElementById('throttleSortUsername'),
+    failures: document.getElementById('throttleSortFailures'),
+    blockedSeconds: document.getElementById('throttleSortBlocked'),
+    updatedAt: document.getElementById('throttleSortUpdatedAt')
+  };
+  Object.entries(indicatorMap).forEach(([key, node]) => {
+    if (!node) return;
+    if (key === throttleSortBy) {
+      node.textContent = throttleSortDir === 'asc' ? '▲' : '▼';
+    } else {
+      node.textContent = '';
+    }
+  });
+}
+
+function buildThrottlePurgeQuery() {
+  const params = new URLSearchParams();
+  const namespace = (throttleNamespaceFilter?.value || '').trim();
+  const ip = (throttleIpFilter?.value || '').trim();
+  const username = (throttleUsernameFilter?.value || '').trim();
+  const blockedOnly = (throttleBlockedFilter?.value || '').trim();
+
+  if (namespace) params.set('namespace', namespace);
+  if (ip) params.set('ip', ip);
+  if (username) params.set('username', username);
+  if (blockedOnly === 'true') params.set('blockedOnly', 'true');
+  return params.toString();
+}
+
+function renderThrottleRows(items = []) {
+  if (!throttleTableBody) return;
+  if (!items.length) {
+    throttleTableBody.innerHTML = `<tr><td colspan="7">Aucune entrée.</td></tr>`;
+    return;
+  }
+
+  throttleTableBody.innerHTML = items
+    .map((item) => {
+      const retry = Number(item.retryAfterSeconds || 0);
+      const updatedAt = item.updatedAt
+        ? new Date(item.updatedAt).toLocaleString('fr-FR')
+        : '';
+      const blockedCell = retry > 0 ? String(retry) : '-';
+      const key = escapeHtml(item.key || '');
+      const namespace = escapeHtml(item.namespace || '');
+      const ip = escapeHtml(item.ip || '');
+      const username = escapeHtml(item.username || '');
+
+      return `
+        <tr>
+          <td>${namespace}</td>
+          <td>${ip}</td>
+          <td>${username}</td>
+          <td>${Number(item.failures || 0)}</td>
+          <td>${blockedCell}</td>
+          <td>${updatedAt}</td>
+          <td><button data-throttle-unblock="${key}">Débloquer</button></td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function updateThrottlePager() {
+  if (throttlePageInfo) {
+    throttlePageInfo.textContent = `Page ${throttlePage}`;
+  }
+  if (throttlePrevPageBtn) {
+    throttlePrevPageBtn.disabled = throttlePage <= 1;
+  }
+  if (throttleNextPageBtn) {
+    throttleNextPageBtn.disabled = !throttleHasNextPage;
+  }
+}
+
+async function loadSecurityThrottle(page = throttlePage) {
+  if (!securityThrottleSection) return;
+  securityThrottleSection.classList.remove('admin-hidden');
+  setStatus(throttleStatusMsg, 'Chargement...');
+
+  const query = buildThrottleQuery(page);
+  const res = await authedFetch(`/api/admin/security/throttle?${query}`);
+  if (!res.ok) {
+    setStatus(throttleStatusMsg, 'Erreur de chargement sécurité.');
+    return;
+  }
+  const data = await res.json().catch(() => ({}));
+  throttlePage = Number(data.page || page || 1);
+  throttleHasNextPage = Boolean(data.hasNextPage);
+  if (THROTTLE_SORT_FIELDS.has(data?.sort?.by)) {
+    throttleSortBy = data.sort.by;
+  }
+  if (data?.sort?.dir === 'asc' || data?.sort?.dir === 'desc') {
+    throttleSortDir = data.sort.dir;
+  }
+  saveThrottleSortPreference();
+  renderThrottleRows(Array.isArray(data.items) ? data.items : []);
+  updateThrottleSortIndicators();
+  updateThrottlePager();
+  setStatus(
+    throttleStatusMsg,
+    `Entrées: ${Number(data.total || 0)}.`
+  );
+}
+
 function renderMonthlyBarChart(target, data) {
   if (!target) return;
   if (!data.length) {
@@ -2631,6 +2829,91 @@ adminLogoutBtn?.addEventListener('click', () => {
   setStatus(loginMsg, 'Déconnecté.');
 });
 
+throttleFilterBtn?.addEventListener('click', async () => {
+  throttlePage = 1;
+  await loadSecurityThrottle(1);
+});
+
+throttleResetBtn?.addEventListener('click', async () => {
+  if (throttleNamespaceFilter) throttleNamespaceFilter.value = '';
+  if (throttleIpFilter) throttleIpFilter.value = '';
+  if (throttleUsernameFilter) throttleUsernameFilter.value = '';
+  if (throttleBlockedFilter) throttleBlockedFilter.value = '';
+  throttlePage = 1;
+  await loadSecurityThrottle(1);
+});
+
+throttleRefreshBtn?.addEventListener('click', async () => {
+  await loadSecurityThrottle(throttlePage);
+});
+
+throttlePrevPageBtn?.addEventListener('click', async () => {
+  if (throttlePage <= 1) return;
+  await loadSecurityThrottle(throttlePage - 1);
+});
+
+throttleNextPageBtn?.addEventListener('click', async () => {
+  if (!throttleHasNextPage) return;
+  await loadSecurityThrottle(throttlePage + 1);
+});
+
+throttlePurgeBtn?.addEventListener('click', async () => {
+  const query = buildThrottlePurgeQuery();
+  if (!query) {
+    alert('Ajoutez au moins un filtre avant la purge.');
+    return;
+  }
+  const ok = confirm('Purger les entrées de sécurité correspondant aux filtres actifs ?');
+  if (!ok) return;
+  setStatus(throttleStatusMsg, 'Purge en cours...');
+  const res = await authedFetch(`/api/admin/security/throttle?${query}`, { method: 'DELETE' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    setStatus(throttleStatusMsg, data.message || 'Erreur de purge.');
+    return;
+  }
+  setStatus(throttleStatusMsg, `Purge terminée. ${Number(data.deletedCount || 0)} entrée(s) supprimée(s).`);
+  throttlePage = 1;
+  await loadSecurityThrottle(1);
+});
+
+throttleTableBody?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-throttle-unblock]');
+  if (!btn) return;
+  const key = btn.getAttribute('data-throttle-unblock') || '';
+  if (!key) return;
+  const ok = confirm(`Débloquer cette entrée ?\n${key}`);
+  if (!ok) return;
+  const encodedKey = encodeURIComponent(key);
+  const res = await authedFetch(`/api/admin/security/throttle/${encodedKey}`, {
+    method: 'DELETE'
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    setStatus(throttleStatusMsg, data.message || 'Impossible de débloquer.');
+    return;
+  }
+  setStatus(throttleStatusMsg, 'Entrée débloquée.');
+  await loadSecurityThrottle(throttlePage);
+});
+
+throttleTableHead?.addEventListener('click', async (e) => {
+  const th = e.target.closest('[data-throttle-sort]');
+  if (!th) return;
+  const sortKey = th.getAttribute('data-throttle-sort');
+  if (!sortKey) return;
+
+  if (throttleSortBy === sortKey) {
+    throttleSortDir = throttleSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    throttleSortBy = sortKey;
+    throttleSortDir = sortKey === 'updatedAt' ? 'desc' : 'asc';
+  }
+  saveThrottleSortPreference();
+  throttlePage = 1;
+  await loadSecurityThrottle(1);
+});
+
 // Hard-stop autofill: always clear credentials on load
 (() => {
   if (usernameInput) usernameInput.value = '';
@@ -2664,6 +2947,7 @@ superAdminUnlocked = localStorage.getItem('superAdminUnlocked') === '1';
 applySuperAdminUI();
 superAdminUnlockBtn?.addEventListener('click', unlockSuperAdmin);
 superAdminLockBtn?.addEventListener('click', lockSuperAdmin);
+loadThrottleSortPreference();
 
 initThemeToggle();
 document.body.classList.add('loaded');

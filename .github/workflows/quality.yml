@@ -1,0 +1,36 @@
+name: Quality Checks
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check
+        run: npm run check:syntax
+
+      - name: Auth smoke
+        run: npm run test:auth
+
+      - name: Smoke test
+        run: npm run test:smoke
+
+      - name: Deep smoke test
+        run: npm run test:smoke:deep

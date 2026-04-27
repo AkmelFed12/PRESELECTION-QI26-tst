@@ -8,7 +8,11 @@
     "start": "node server.js",
     "dev": "node server.js",
     "build": "echo 'Build complete'",
-    "test": "echo 'No tests'"
+    "test": "echo 'No tests'",
+    "check:syntax": "node --check server.js",
+    "test:auth": "npm run check:syntax && node scripts/auth-smoke.mjs",
+    "test:smoke": "npm run check:syntax && node scripts/smoke-check.mjs",
+    "test:smoke:deep": "npm run check:syntax && node scripts/smoke-deep.mjs"
   },
   "keywords": [
     "quiz",

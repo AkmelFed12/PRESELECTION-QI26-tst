@@ -14,6 +14,12 @@ import axios from 'axios';
 import nodemailer from 'nodemailer';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
+import { validateEnvironment } from './server-modules/env-validation.js';
+import { createAuthThrottle } from './server-modules/auth-throttle.js';
+import { registerAdminSecurityThrottleRoutes } from './server-modules/admin-security-throttle-routes.js';
+import { registerAuthRoutes } from './server-modules/auth-routes.js';
+import { registerMemberRoutes } from './server-modules/member-routes.js';
+import { sanitizeString } from './services/string-utils.js';
 
 dotenv.config();
 
@@ -21,9 +27,21 @@ const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const envValidation = validateEnvironment(process.env);
+if (envValidation.errors.length > 0) {
+  for (const error of envValidation.errors) {
+    console.error(`[ENV] ${error}`);
+  }
+  process.exit(1);
+}
+for (const warning of envValidation.warnings) {
+  console.warn(`[ENV] ${warning}`);
+}
+
 // ==================== CONFIGURATION ====================
 const app = express();
-const PORT = process.env.PORT || 10000;
+const parsedPort = Number.parseInt(process.env.PORT || '10000', 10);
+const PORT = Number.isInteger(parsedPort) && parsedPort > 0 && parsedPort <= 65535 ? parsedPort : 10000;
 const SCORE_PHASE_FINAL_2026 = 'phase_finale_2026';
 const SCORE_PHASE_PREVIOUS = 'phase_precedente';
 const SITE_URL = (process.env.SITE_URL || '').trim().replace(/\/+$/, '');
@@ -164,6 +182,8 @@ const waitlistLimiter = rateLimit({
   message: 'Trop de tentatives, réessayez plus tard.'
 });
 
+const { authIpLimiter, authProgressiveBlock, markAuthAttempt } = createAuthThrottle(pool);
+
 // Constants
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'asaa';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ASAA';
@@ -187,13 +207,6 @@ const transporter = nodemailer.createTransport({
 });
 
 // ==================== HELPERS ====================
-function sanitizeString(value, maxLength = null) {
-  if (typeof value !== 'string') return '';
-  let str = value.trim();
-  if (maxLength) str = str.substring(0, maxLength);
-  return str;
-}
-
 async function hashPassword(password) {
   if (!password) return '';
   return await bcrypt.hash(password, 12);
@@ -1465,6 +1478,17 @@ async function initDatabase() {
         expiresAt TIMESTAMP WITH TIME ZONE
       );
 
+      CREATE TABLE IF NOT EXISTS auth_login_throttle (
+        key TEXT PRIMARY KEY,
+        namespace TEXT NOT NULL,
+        ip TEXT NOT NULL,
+        username TEXT NOT NULL,
+        failures INTEGER DEFAULT 0,
+        window_start TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        blocked_until TIMESTAMP WITH TIME ZONE,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS member_audit (
         id BIGSERIAL PRIMARY KEY,
         memberId BIGINT REFERENCES member_accounts(id) ON DELETE SET NULL,
@@ -1509,6 +1533,9 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_news_status ON news_posts(status);
       CREATE INDEX IF NOT EXISTS idx_sponsors_status ON sponsors(status);
       CREATE INDEX IF NOT EXISTS idx_member_sessions_token ON member_sessions(token);
+      CREATE INDEX IF NOT EXISTS idx_auth_login_throttle_namespace ON auth_login_throttle(namespace);
+      CREATE INDEX IF NOT EXISTS idx_auth_login_throttle_updated_at ON auth_login_throttle(updated_at);
+      CREATE INDEX IF NOT EXISTS idx_auth_login_throttle_blocked_until ON auth_login_throttle(blocked_until);
       CREATE INDEX IF NOT EXISTS idx_member_audit_member ON member_audit(memberId);
       CREATE INDEX IF NOT EXISTS idx_daily_quiz_date ON daily_quiz_attempts(quizDate);
 
@@ -1942,155 +1969,6 @@ async function initDatabase() {
       ON CONFLICT DO NOTHING
     `);
 
-    // ========== PHASE 3: CHAT GROUPS & DYNAMIC BADGES TABLES ==========
-
-    // Chat Groups Tables
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS chat_groups (
-        id BIGSERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT,
-        type TEXT NOT NULL DEFAULT 'public' CHECK (type IN ('public', 'private', 'invite-only')),
-        topic TEXT DEFAULT 'general',
-        created_by BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-        avatar_url TEXT,
-        members_count INTEGER DEFAULT 1,
-        is_archived INTEGER DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS chat_group_members (
-        id BIGSERIAL PRIMARY KEY,
-        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
-        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-        role TEXT DEFAULT 'member' CHECK (role IN ('creator', 'admin', 'moderator', 'member')),
-        joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        muted INTEGER DEFAULT 0,
-        notifications_enabled INTEGER DEFAULT 1,
-        UNIQUE(group_id, user_id)
-      )
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id BIGSERIAL PRIMARY KEY,
-        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
-        author_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE SET NULL,
-        content TEXT NOT NULL,
-        media_url TEXT,
-        media_type TEXT,
-        is_pinned INTEGER DEFAULT 0,
-        is_edited INTEGER DEFAULT 0,
-        reactions_count INTEGER DEFAULT 0,
-        reply_to_id BIGINT REFERENCES chat_messages(id) ON DELETE SET NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS typing_indicators (
-        id BIGSERIAL PRIMARY KEY,
-        group_id BIGINT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
-        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-        is_typing INTEGER DEFAULT 1,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        UNIQUE(group_id, user_id)
-      )
-    `);
-
-    // Badges Tables
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS badge_templates (
-        id BIGSERIAL PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE,
-        description TEXT,
-        emoji TEXT NOT NULL,
-        icon_url TEXT,
-        category TEXT DEFAULT 'general' CHECK (category IN ('general', 'achievement', 'milestone', 'special', 'seasonal')),
-        requirement_type TEXT NOT NULL,
-        requirement_value INTEGER,
-        rarity TEXT DEFAULT 'common' CHECK (rarity IN ('common', 'uncommon', 'rare', 'legendary')),
-        points_reward INTEGER DEFAULT 0,
-        display_order INTEGER DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS user_badges (
-        id BIGSERIAL PRIMARY KEY,
-        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-        badge_id BIGINT NOT NULL REFERENCES badge_templates(id) ON DELETE CASCADE,
-        unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        progress INTEGER DEFAULT 100,
-        displayed_on_profile INTEGER DEFAULT 1,
-        UNIQUE(user_id, badge_id)
-      )
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS badge_progress (
-        id BIGSERIAL PRIMARY KEY,
-        user_id BIGINT NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-        badge_id BIGINT NOT NULL REFERENCES badge_templates(id) ON DELETE CASCADE,
-        current_progress INTEGER DEFAULT 0,
-        target_value INTEGER NOT NULL,
-        last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        UNIQUE(user_id, badge_id)
-      )
-    `);
-
-    // Create Indexes for Performance
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_groups_creator ON chat_groups(created_by)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_groups_type ON chat_groups(type)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_group_members_group ON chat_group_members(group_id)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_group_members_user ON chat_group_members(user_id)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_group ON chat_messages(group_id)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at DESC)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_badges_unlocked ON user_badges(unlocked_at DESC)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_badge_progress_user ON badge_progress(user_id)`);
-
-    // Add new columns to existing tables
-    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS chat_groups_joined_count INTEGER DEFAULT 0`);
-    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS chat_messages_count INTEGER DEFAULT 0`);
-    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS badges_unlocked_count INTEGER DEFAULT 0`);
-    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS badge_points_total INTEGER DEFAULT 0`);
-
-    // Pre-populate badge templates
-    await pool.query(`
-      INSERT INTO badge_templates (name, description, emoji, category, requirement_type, requirement_value, rarity, points_reward, display_order)
-      VALUES
-        ('Quiz Starter', 'Take your first quiz', '🎯', 'milestone', 'quiz_count', 1, 'common', 10, 1),
-        ('Quiz Enthusiast', 'Complete 10 quizzes', '📝', 'milestone', 'quiz_count', 10, 'uncommon', 50, 2),
-        ('Quiz Master', 'Complete 100 quizzes', '🏆', 'achievement', 'quiz_count', 100, 'rare', 200, 3),
-        ('Perfect Score', 'Score 100% on 5 quizzes', '⭐', 'achievement', 'score', 100, 'uncommon', 100, 4),
-        ('Week Warrior', 'Take quizzes 7 days in a row', '🔥', 'streak', 'streak', 7, 'rare', 150, 5),
-        ('Social Butterfly', 'Follow 50 users', '🦋', 'social', 'social', 50, 'uncommon', 75, 6),
-        ('Community Helper', 'Get 100 message reactions', '💬', 'community', 'community', 100, 'uncommon', 80, 7),
-        ('Knowledge Seeker', 'Join 5 study groups', '📚', 'community', 'community', 5, 'uncommon', 60, 8),
-        ('Night Owl', 'Take 10 quizzes between 10pm-6am', '🌙', 'special', 'streak', 10, 'uncommon', 90, 10),
-        ('Speed Runner', 'Complete 5 quizzes under 2 minutes', '⚡', 'achievement', 'score', 5, 'rare', 130, 11),
-        ('Ranking Master', 'Reach top 10 in monthly leaderboard', '🏅', 'achievement', 'score', 10, 'rare', 180, 12),
-        ('First Steps', 'Complete profile setup', '👣', 'milestone', 'quiz_count', 0, 'common', 5, 0),
-        ('Team Player', 'Participate in a group quiz challenge', '🤝', 'community', 'community', 1, 'uncommon', 70, 13),
-        ('Legend', 'Achieve Rank 1 on leaderboard', '👑', 'special', 'score', 1, 'legendary', 500, 99)
-      ON CONFLICT DO NOTHING
-    `);
-
-    // Pre-populate badge progress for existing users
-    await pool.query(`
-      INSERT INTO badge_progress (user_id, badge_id, current_progress, target_value)
-      SELECT up.id, bt.id, 0, COALESCE(bt.requirement_value, 1)
-      FROM user_profiles up
-      CROSS JOIN badge_templates bt
-      ON CONFLICT DO NOTHING
-    `);
-
     await pool.query(`
       INSERT INTO poll (question, optionsJson, active)
       SELECT 'Sondage rapide : Souhaitez-vous recevoir les résultats en direct ?', '["Oui","Non"]', 1
@@ -2214,6 +2092,28 @@ app.get('/api/health', async (req, res) => {
   } catch (error) {
     res.status(500).json({ status: 'error', database: 'error', error: error.message });
   }
+});
+
+app.get('/api/ready', async (req, res) => {
+  const checks = {
+    environment: envValidation.errors.length === 0 ? 'ok' : 'error',
+    database: 'error'
+  };
+
+  try {
+    await pool.query('SELECT 1');
+    checks.database = 'ok';
+  } catch (error) {
+    checks.database = 'error';
+  }
+
+  const ready = checks.environment === 'ok' && checks.database === 'ok';
+  const statusCode = ready ? 200 : 503;
+  return res.status(statusCode).json({
+    status: ready ? 'ready' : 'not_ready',
+    checks,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Public candidates
@@ -5236,525 +5136,48 @@ async function listMediaFilesFromDisk() {
   }
 }
 
-// Admin login (returns token for subsequent calls)
-app.post('/api/admin/login', async (req, res) => {
-  try {
-    const { username, password } = req.body || {};
-    const rawUsername = typeof username === 'string' ? username.trim() : '';
-    const rawPassword = typeof password === 'string' ? password.trim() : '';
-    if (!rawUsername || !rawPassword) {
-      return res.status(400).json({ message: 'Identifiant et mot de passe requis.' });
-    }
-    const normalizedUsername = rawUsername.toLowerCase();
-    const primaryUser = ADMIN_USERNAME.toLowerCase();
-    const altUser = ADMIN_USERNAME_ALT.toLowerCase();
-    const legacyMatch = rawPassword === LEGACY_ADMIN_PASSWORD;
-
-    let hashKey = null;
-    let defaultPassword = null;
-    if (normalizedUsername === primaryUser) {
-      hashKey = 'admin_password_hash';
-      defaultPassword = ADMIN_PASSWORD;
-    } else if (normalizedUsername === altUser) {
-      hashKey = 'admin_password_hash_alt';
-      defaultPassword = ADMIN_PASSWORD_ALT;
-    } else if (legacyMatch) {
-      hashKey = 'admin_password_hash_alt';
-      defaultPassword = ADMIN_PASSWORD_ALT;
-    } else {
-      return res.status(401).json({ message: 'Accès non autorisé' });
-    }
-
-    if (legacyMatch) {
-      const newHash = await hashPassword(rawPassword);
-      await pool.query(
-        "INSERT INTO admin_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
-        [hashKey, newHash]
-      );
-      return res.json({ token: defaultPassword });
-    }
-    const result = await pool.query(
-      "SELECT value FROM admin_config WHERE key = $1 LIMIT 1",
-      [hashKey]
-    );
-    const adminHash = result.rows[0]?.value || await hashPassword(defaultPassword);
-    let valid = await checkPassword(rawPassword, adminHash);
-
-    if (!valid && rawPassword === defaultPassword) {
-      valid = true;
-      const newHash = await hashPassword(rawPassword);
-      await pool.query(
-        "INSERT INTO admin_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
-        [hashKey, newHash]
-      );
-    }
-
-    if (!valid) {
-      return res.status(401).json({ message: 'Identifiants incorrects.' });
-    }
-
-    return res.json({ token: defaultPassword });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur serveur.' });
-  }
+registerAuthRoutes({
+  app,
+  pool,
+  authIpLimiter,
+  authProgressiveBlock,
+  markAuthAttempt,
+  verifyAdmin,
+  ADMIN_USERNAME,
+  ADMIN_PASSWORD,
+  ADMIN_USERNAME_ALT,
+  ADMIN_PASSWORD_ALT,
+  LEGACY_ADMIN_PASSWORD,
+  hashPassword,
+  checkPassword,
+  sanitizeString,
+  normalizeUsername,
+  DEFAULT_SITE_CONTENT,
+  buildMemberUsername,
+  generateToken,
+  logMemberAction
 });
 
-app.post('/api/admin/verify-password', verifyAdmin, async (req, res) => {
-  try {
-    const { password } = req.body || {};
-    if (!password) return res.status(400).json({ message: 'Mot de passe requis.' });
-    const [primary, alt] = await Promise.all([
-      pool.query("SELECT value FROM admin_config WHERE key = 'admin_password_hash' LIMIT 1"),
-      pool.query("SELECT value FROM admin_config WHERE key = 'admin_password_hash_alt' LIMIT 1")
-    ]);
-    const adminHash = primary.rows[0]?.value || await hashPassword(ADMIN_PASSWORD);
-    const altHash = alt.rows[0]?.value || await hashPassword(ADMIN_PASSWORD_ALT);
-    const valid =
-      (await checkPassword(password, adminHash)) ||
-      (await checkPassword(password, altHash)) ||
-      password === LEGACY_ADMIN_PASSWORD;
-    if (!valid) return res.status(401).json({ message: 'Mot de passe incorrect.' });
-    res.json({ valid: true });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur serveur.' });
-  }
-});
-
-// Member login
-app.post('/api/members/login', async (req, res) => {
-  try {
-    const { username, password } = req.body || {};
-    const rawUsername = sanitizeString(username, 80);
-    if (!rawUsername || !password) {
-      return res.status(400).json({ message: 'Identifiant et mot de passe requis.' });
-    }
-    const normalized = normalizeUsername(rawUsername);
-    let result = await pool.query(
-      'SELECT id, username, fullName, role, email, phone, passwordHash, active FROM member_accounts WHERE username = $1',
-      [normalized]
-    );
-    let member = result.rows[0];
-
-    if (!member) {
-      const matched = DEFAULT_SITE_CONTENT.committee.members.filter((m) =>
-        String(m.name || '').toLowerCase().startsWith(rawUsername.toLowerCase())
-      );
-      if (matched.length === 1) {
-        const fallback = buildMemberUsername(matched[0].name);
-        if (fallback && fallback !== normalized) {
-          result = await pool.query(
-            'SELECT id, username, fullName, role, email, phone, passwordHash, active FROM member_accounts WHERE username = $1',
-            [fallback]
-          );
-          member = result.rows[0];
-        }
-      }
-    }
-    if (!member || !member.active) {
-      return res.status(401).json({ message: 'Identifiants incorrects.' });
-    }
-    const valid = await checkPassword(password, member.passwordhash || member.passwordHash || '');
-    if (!valid) {
-      return res.status(401).json({ message: 'Identifiants incorrects.' });
-    }
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await pool.query(
-      'INSERT INTO member_sessions (memberId, token, expiresAt) VALUES ($1, $2, $3)',
-      [member.id, token, expiresAt]
-    );
-    await logMemberAction(member.id, 'login', { username: member.username }, req);
-    res.json({
-      token,
-      member: {
-        id: member.id,
-        username: member.username,
-        fullName: member.fullname || member.fullName,
-        role: member.role,
-        email: member.email,
-        phone: member.phone
-      }
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur serveur.' });
-  }
-});
-
-// Member profile
-app.get('/api/members/me', verifyMember, async (req, res) => {
-  res.json({ member: req.member });
-});
-
-app.put('/api/members/me', verifyMember, async (req, res) => {
-  try {
-    const { fullName, email, phone } = req.body || {};
-    const safeName = sanitizeString(fullName, 255) || req.member.fullName;
-    const safeEmail = sanitizeString(email, 120);
-    const safePhone = sanitizeString(phone, 30);
-    if (safeEmail && !validateEmail(safeEmail)) {
-      return res.status(400).json({ message: 'Email invalide.' });
-    }
-    await pool.query(
-      `UPDATE member_accounts
-       SET fullName = $1, email = $2, phone = $3, updatedAt = NOW()
-       WHERE id = $4`,
-      [safeName, safeEmail || null, safePhone || null, req.member.id]
-    );
-    await logMemberAction(req.member.id, 'profile_update', { fullName: safeName, email: safeEmail, phone: safePhone }, req);
-    res.json({ message: 'Profil mis à jour.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur serveur.' });
-  }
-});
-
-async function getDailyQuizConfig() {
-  try {
-    const result = await pool.query(
-      "SELECT value FROM admin_config WHERE key = 'daily_quiz' LIMIT 1"
-    );
-    const raw = result.rows[0]?.value;
-    if (!raw) return DEFAULT_DAILY_QUIZ;
-    const parsed = JSON.parse(raw);
-    return parsed && Array.isArray(parsed.questions) ? parsed : DEFAULT_DAILY_QUIZ;
-  } catch {
-    return DEFAULT_DAILY_QUIZ;
-  }
-}
-
-// Daily quiz (members only, 22:00–23:59)
-app.get('/api/members/daily-quiz', verifyMember, async (req, res) => {
-  const now = new Date();
-  if (!isQuizOpenNow(now)) {
-    return res.status(403).json({ open: false, message: 'Le quiz est ouvert de 22h00 à 23h59.' });
-  }
-  const quiz = await getDailyQuizConfig();
-  const quizDate = quizDateKey(now);
-  const attempt = await pool.query(
-    'SELECT score, total FROM daily_quiz_attempts WHERE memberId = $1 AND quizDate = $2',
-    [req.member.id, quizDate]
-  );
-  const attempted = attempt.rows[0];
-  const safeQuestions = quiz.questions.map(({ answerIndex, ...rest }) => rest);
-  res.json({
-    open: true,
-    title: quiz.title || 'Quiz du jour',
-    quizDate,
-    attempted: Boolean(attempted),
-    previousScore: attempted ? attempted.score : null,
-    previousTotal: attempted ? attempted.total : null,
-    questions: attempted ? [] : safeQuestions
-  });
-});
-
-app.post('/api/members/daily-quiz/submit', verifyMember, async (req, res) => {
-  const now = new Date();
-  if (!isQuizOpenNow(now)) {
-    return res.status(403).json({ message: 'Le quiz est ouvert de 22h00 à 23h59.' });
-  }
-  const quiz = await getDailyQuizConfig();
-  const quizDate = quizDateKey(now);
-  const existing = await pool.query(
-    'SELECT id FROM daily_quiz_attempts WHERE memberId = $1 AND quizDate = $2',
-    [req.member.id, quizDate]
-  );
-  if (existing.rows.length) {
-    return res.status(409).json({ message: 'Quiz déjà soumis pour aujourd’hui.' });
-  }
-  const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
-  let score = 0;
-  quiz.questions.forEach((q, idx) => {
-    if (Number(answers[idx]) === Number(q.answerIndex)) score += 1;
-  });
-  const total = quiz.questions.length;
-  await pool.query(
-    `INSERT INTO daily_quiz_attempts (memberId, quizDate, score, total, answersJson)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [req.member.id, quizDate, score, total, JSON.stringify(answers)]
-  );
-  await logMemberAction(req.member.id, 'daily_quiz_submit', { quizDate, score, total }, req);
-  res.json({ message: 'Quiz enregistré.', score, total });
-});
-
-// Admin: member accounts
-app.get('/api/admin/members', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT id, username, fullName, role, email, phone, active, createdAt, updatedAt FROM member_accounts ORDER BY id ASC'
-    );
-    const pwdRes = await pool.query(
-      "SELECT value FROM admin_config WHERE key = 'member_default_password' LIMIT 1"
-    );
-    const defaultPassword = pwdRes.rows[0]?.value || defaultMemberPassword();
-    res.json({ members: result.rows, defaultPassword });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-app.post('/api/admin/members', verifyAdmin, async (req, res) => {
-  try {
-    const { username, fullName, role, email, phone, password } = req.body || {};
-    const uname = normalizeUsername(username);
-    const name = sanitizeString(fullName, 255);
-    if (!uname || !name) return res.status(400).json({ message: 'Identifiant et nom requis.' });
-    if (email && !validateEmail(email)) return res.status(400).json({ message: 'Email invalide.' });
-    const passHash = await hashPassword(password || defaultMemberPassword());
-    await pool.query(
-      `INSERT INTO member_accounts (username, fullName, role, email, phone, passwordHash)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [uname, name, role || '', email || null, phone || null, passHash]
-    );
-    res.status(201).json({ message: 'Compte membre créé.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.put('/api/admin/members/:id', verifyAdmin, async (req, res) => {
-  try {
-    const memberId = Number(req.params.id);
-    if (!memberId) return res.status(400).json({ message: 'ID invalide.' });
-    const { username, fullName, role, email, phone, password, active } = req.body || {};
-    const uname = username ? normalizeUsername(username) : null;
-    const name = fullName ? sanitizeString(fullName, 255) : null;
-    if (email && !validateEmail(email)) return res.status(400).json({ message: 'Email invalide.' });
-    if (uname) {
-      await pool.query('UPDATE member_accounts SET username = $1 WHERE id = $2', [uname, memberId]);
-    }
-    if (name) {
-      await pool.query('UPDATE member_accounts SET fullName = $1 WHERE id = $2', [name, memberId]);
-    }
-    await pool.query(
-      `UPDATE member_accounts
-       SET role = COALESCE($1, role),
-           email = COALESCE($2, email),
-           phone = COALESCE($3, phone),
-           active = COALESCE($4, active),
-           updatedAt = NOW()
-       WHERE id = $5`,
-      [role ?? null, email ?? null, phone ?? null, typeof active === 'number' ? active : null, memberId]
-    );
-    if (password) {
-      const passHash = await hashPassword(password);
-      await pool.query('UPDATE member_accounts SET passwordHash = $1 WHERE id = $2', [passHash, memberId]);
-    }
-    res.json({ message: 'Compte membre mis à jour.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.delete('/api/admin/members/:id', verifyAdmin, async (req, res) => {
-  try {
-    const memberId = Number(req.params.id);
-    if (!memberId) return res.status(400).json({ message: 'ID invalide.' });
-    await pool.query('UPDATE member_accounts SET active = 0 WHERE id = $1', [memberId]);
-    res.json({ message: 'Compte membre désactivé.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.get('/api/admin/member-audit', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT a.id, a.action, a.payload, a.createdAt, m.fullName, m.username
-       FROM member_audit a
-       LEFT JOIN member_accounts m ON m.id = a.memberId
-       ORDER BY a.id DESC LIMIT 200`
-    );
-    res.json({ logs: result.rows });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Admin: member performance summary
-app.get('/api/admin/member-performance', verifyAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT memberId, COUNT(*)::int as count
-       FROM member_audit
-       GROUP BY memberId`
-    );
-    const items = {};
-    result.rows.forEach((row) => {
-      const count = Number(row.count || 0);
-      let label = 'Actif';
-      if (count >= 30) label = 'Excellent';
-      else if (count >= 15) label = 'Très actif';
-      else if (count === 0) label = 'Inactif';
-      items[String(row.memberid || row.memberId)] = label;
-    });
-    res.json({ items });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Admin: daily quiz config
-app.get('/api/admin/daily-quiz', verifyAdmin, async (req, res) => {
-  try {
-    const quiz = await getDailyQuizConfig();
-    res.json(quiz);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.put('/api/admin/daily-quiz', verifyAdmin, async (req, res) => {
-  try {
-    const title = sanitizeString(req.body?.title, 160) || 'Quiz du jour';
-    const questions = Array.isArray(req.body?.questions) ? req.body.questions : [];
-    const sanitized = questions
-      .map((q) => ({
-        id: q.id || `q${Math.random().toString(36).slice(2, 7)}`,
-        question: sanitizeString(q.question, 200),
-        options: Array.isArray(q.options) ? q.options.map((o) => sanitizeString(o, 120)).filter(Boolean) : [],
-        answerIndex: Number.isInteger(q.answerIndex) ? q.answerIndex : Number(q.answerIndex || 0)
-      }))
-      .filter((q) => q.question && q.options.length >= 2 && q.answerIndex >= 0 && q.answerIndex < q.options.length);
-    const payload = { title, questions: sanitized.length ? sanitized : DEFAULT_DAILY_QUIZ.questions };
-    await pool.query(
-      "INSERT INTO admin_config (key, value) VALUES ('daily_quiz', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
-      [JSON.stringify(payload)]
-    );
-    res.json({ message: 'Quiz mis à jour.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Admin: member tools (messages, tasks, documents)
-app.get('/api/admin/member-tools', verifyAdmin, async (req, res) => {
-  try {
-    const tools = await getMemberToolsConfig();
-    res.json(tools);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.put('/api/admin/member-tools', verifyAdmin, async (req, res) => {
-  try {
-    const sanitized = sanitizeMemberTools(req.body || {});
-    await pool.query(
-      "INSERT INTO admin_config (key, value) VALUES ('member_tools', $1)\n       ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
-      [JSON.stringify(sanitized)]
-    );
-    res.json({ message: 'Outils membres mis à jour.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.post('/api/admin/member-tools/whatsapp-log', verifyAdmin, async (req, res) => {
-  try {
-    const tools = await getMemberToolsConfig();
-    const entry = {
-      sentAt: new Date().toISOString(),
-      template: sanitizeString(req.body?.template, 800),
-      count: Number(req.body?.count || 0)
-    };
-    const updated = {
-      ...tools,
-      whatsappLogs: [entry, ...(tools.whatsappLogs || [])].slice(0, 20)
-    };
-    const sanitized = sanitizeMemberTools(updated);
-    await pool.query(
-      "INSERT INTO admin_config (key, value) VALUES ('member_tools', $1)\n       ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
-      [JSON.stringify(sanitized)]
-    );
-    res.json({ message: 'Log enregistré.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Member: tools + actions
-app.get('/api/members/member-tools', verifyMember, async (req, res) => {
-  try {
-    const tools = await getMemberToolsConfig();
-    const username = String(req.member?.username || '').toLowerCase();
-    const filteredMessages = (tools.messages || []).filter((m) => {
-      const scope = String(m.scope || 'all').toLowerCase();
-      return scope === 'all' || scope === username;
-    });
-    const filteredTasks = (tools.tasks || []).filter((t) => {
-      const assignee = String(t.assignee || 'all').toLowerCase();
-      return assignee === 'all' || assignee === username;
-    });
-    res.json({
-      messages: filteredMessages,
-      tasks: filteredTasks,
-      documents: tools.documents || []
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.get('/api/members/actions', verifyMember, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT action, details, createdAt FROM member_audit WHERE memberId = $1 ORDER BY createdAt DESC LIMIT 30',
-      [req.member.id]
-    );
-    res.json({ actions: result.rows || [] });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Member: log custom actions (downloads, etc.)
-app.post('/api/members/log', verifyMember, async (req, res) => {
-  try {
-    const action = sanitizeString(req.body?.action, 80);
-    const details = req.body?.details || {};
-    if (!action) return res.status(400).json({ message: 'Action requise.' });
-    await logMemberAction(req.member.id, action, details, req);
-    res.json({ message: 'Enregistré.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Admin: reset all member passwords to default
-app.post('/api/admin/members/reset-passwords', verifyAdmin, async (req, res) => {
-  try {
-    const requested = sanitizeString(req.body?.password, 200);
-    if (requested) {
-      memberDefaultPassword = requested;
-      await pool.query(
-        "INSERT INTO admin_config (key, value) VALUES ('member_default_password', $1)\n         ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()",
-        [requested]
-      );
-    }
-    const passHash = await hashPassword(defaultMemberPassword());
-    await pool.query('UPDATE member_accounts SET passwordHash = $1', [passHash]);
-    res.json({ message: 'Mots de passe réinitialisés.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
+registerAdminSecurityThrottleRoutes({ app, pool, verifyAdmin, sanitizeString });
+registerMemberRoutes({
+  app,
+  pool,
+  verifyAdmin,
+  verifyMember,
+  sanitizeString,
+  validateEmail,
+  hashPassword,
+  normalizeUsername,
+  defaultMemberPassword,
+  setMemberDefaultPassword: (value) => {
+    memberDefaultPassword = value;
+  },
+  logMemberAction,
+  isQuizOpenNow,
+  quizDateKey,
+  DEFAULT_DAILY_QUIZ,
+  getMemberToolsConfig,
+  sanitizeMemberTools
 });
 
 function classifyMediaType(filename = '') {

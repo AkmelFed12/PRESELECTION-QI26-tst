@@ -412,6 +412,61 @@
         <div id="memberAuditList" class="status">Chargement...</div>
       </section>
 
+      <section class="card admin-hidden" id="securityThrottleSection">
+        <h2>Sécurité — Blocages de connexion</h2>
+        <div class="form-grid" style="margin-bottom:10px;">
+          <div>
+            <label>Espace</label>
+            <select id="throttleNamespaceFilter">
+              <option value="">Tous</option>
+              <option value="admin">Admin</option>
+              <option value="member">Membre</option>
+            </select>
+          </div>
+          <div>
+            <label>IP</label>
+            <input id="throttleIpFilter" placeholder="Ex: 203.0.113.4" />
+          </div>
+          <div>
+            <label>Identifiant</label>
+            <input id="throttleUsernameFilter" placeholder="Ex: asaa2026" />
+          </div>
+          <div>
+            <label>Statut</label>
+            <select id="throttleBlockedFilter">
+              <option value="">Tous</option>
+              <option value="true">Bloqués uniquement</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+          <button class="btn outline" type="button" id="throttleFilterBtn">Filtrer</button>
+          <button class="btn outline" type="button" id="throttleResetBtn">Réinitialiser</button>
+          <button class="btn outline" type="button" id="throttleRefreshBtn">Rafraîchir</button>
+          <button class="btn-danger" type="button" id="throttlePurgeBtn">Purger les entrées filtrées</button>
+        </div>
+        <p id="throttleStatusMsg" class="status"></p>
+        <table class="table" id="throttleTable">
+          <thead>
+            <tr>
+              <th class="throttle-sortable" data-throttle-sort="namespace">Espace <span id="throttleSortNamespace"></span></th>
+              <th class="throttle-sortable" data-throttle-sort="ip">IP <span id="throttleSortIp"></span></th>
+              <th class="throttle-sortable" data-throttle-sort="username">Identifiant <span id="throttleSortUsername"></span></th>
+              <th class="throttle-sortable" data-throttle-sort="failures">Échecs <span id="throttleSortFailures"></span></th>
+              <th class="throttle-sortable" data-throttle-sort="blockedSeconds">Bloqué (sec) <span id="throttleSortBlocked"></span></th>
+              <th class="throttle-sortable" data-throttle-sort="updatedAt">MAJ <span id="throttleSortUpdatedAt"></span></th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div style="display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+          <button class="btn outline" type="button" id="throttlePrevPageBtn">Page précédente</button>
+          <button class="btn outline" type="button" id="throttleNextPageBtn">Page suivante</button>
+          <span id="throttlePageInfo" class="muted">Page 1</span>
+        </div>
+      </section>
+
       <section class="card admin-hidden" id="candidatesSection">
         <h2>Gestion des candidats</h2>
         <div class="nav-links" style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
@@ -938,7 +993,7 @@
       <div class="footer-signature">Design & Created by LMO Web Services</div>
     </footer>
 
-    <script src="admin.js?v=20260319"></script>
+    <script src="admin.js?v=20260427"></script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then((registrations) => {

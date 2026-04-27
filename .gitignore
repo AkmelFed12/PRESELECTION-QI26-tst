@@ -2,8 +2,6 @@
 node_modules/
 npm-debug.log
 yarn-error.log
-package-lock.json
-yarn.lock
 dist/
 build/
 
@@ -26,8 +24,7 @@ ENV/
 
 # Environment
 .env
-.env.local
-.env.*.local
+.env*.local
 
 # Database
 data.sqlite
@@ -63,4 +60,3 @@ Thumbs.db
 logs/
 
 .vercel
-.env*.local
