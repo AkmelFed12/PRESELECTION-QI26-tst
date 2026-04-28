@@ -1,11 +1,13 @@
-# Node.js
+# ==================== NODE.JS ====================
 node_modules/
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-error.log*
 dist/
 build/
+*.tgz
+package-lock.json
 
-# Python (legacy)
+# ==================== PYTHON ====================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -14,40 +16,105 @@ __pycache__/
 env/
 venv/
 ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
 
-# IDE
+# ==================== IDE & EDITORS ====================
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+*.iml
+.DS_Store
+Thumbs.db
 
-# Environment
+# ==================== 🔐 ENVIRONMENT (SENSITIVE) 🔐 ====================
+# NEVER commit these - they contain secrets, passwords, API keys!
 .env
-.env*.local
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+.env.test.local
+.env.*.example
 
-# Database
-data.sqlite
-*.db
+# ==================== CREDENTIALS & SECRETS ====================
+.aws/
+.ssh/
+credentials
+private_key
+*.pem
+*.key
+*.crt
+.vercel/
+.vercelignore
+**/vercel.json  # Can contain sensitive deploy config
+
+# ==================== DATABASE ====================
 *.sqlite
+*.sqlite3
+*.db
+data.sqlite
+*.pgdump
+backup/
+dumps/
 
-# Temporary files
+# ==================== LOGS & TEMPORARY ====================
+*.log
+logs/
 *.tmp
 *.bak
 *.temp
+*.swp
+tmp/
+temp/
 
-# Test files
+# ==================== BUILD & DIST ====================
+dist/
+build/
+out/
+.next/
+.nuxt/
+coverage/
+
+# ==================== TEST FILES ====================
 test_*.py
+test_*.js
 reset_*.py
 reset_*.bat
+reset_*.sh
 test_*.bat
+*.test.js
 
-# Documentation (temporary)
+# ==================== OS ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==================== DEPLOYMENT ====================
+.vercel
+.netlify
+.firebase
+.heroku
+
+# ==================== DOCUMENTATION (TEMPORARY/SENSITIVE) ====================
 AMELIORATIONS_PROFESSIONNELLES.md
 CONFIGURATION_EMAIL.md
 DIAGNOSTIC_DEPLOIEMENT.md
 ETAPE_FINALE_DB.md
 MISSION_ACCOMPLIE.md
+RESUME_CORRECTIONS.md
 RAPPORT_FINAL_INSPECTION.md
 RESUME_CORRECTIONS.md
 
