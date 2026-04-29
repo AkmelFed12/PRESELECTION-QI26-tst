@@ -23,43 +23,6 @@
 
     <main class="layout">
       <section class="card">
-        <h2>Tableau de bord rapide</h2>
-        <div class="stats-bar admin-stats" style="margin-bottom:12px;">
-          <div class="stat-card">
-            <div class="stat-label">Notifications</div>
-            <div class="stat-value" id="memberStatsMessages">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Tâches</div>
-            <div class="stat-value" id="memberStatsTasks">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Documents</div>
-            <div class="stat-value" id="memberStatsDocs">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Actions récentes</div>
-            <div class="stat-value" id="memberStatsActions">0</div>
-          </div>
-        </div>
-        <div class="card-subtitle">Téléchargements utiles</div>
-        <div id="memberQuickDownloads" class="admin-actions"></div>
-        <div class="admin-actions" style="margin-top:10px;">
-          <input id="memberSearchInput" placeholder="Rechercher messages, tâches, documents..." style="min-width:220px;" />
-          <button class="btn outline" type="button" id="memberQuickMode">Mode lecture rapide</button>
-          <button class="btn outline" type="button" id="memberDownloadAll">Télécharger tout</button>
-          <button class="btn outline" type="button" id="memberDarkToggle">Mode sombre</button>
-          <button class="btn outline" type="button" id="memberReminderToggle">Rappels auto</button>
-          <button class="btn outline" type="button" id="memberWhatsappReminder">Rappel WhatsApp</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Mes priorités du jour</h2>
-        <div id="memberPriorities" class="status">Aucune priorité.</div>
-      </section>
-
-      <section class="card quick-hide">
         <h2>Mon profil</h2>
         <form id="memberProfileForm" class="form-grid">
           <div>
@@ -81,18 +44,17 @@
         <p id="memberProfileMsg" class="status"></p>
       </section>
 
-      <section class="card quick-hide">
+      <section class="card">
         <h2>Mon rôle & statut</h2>
         <div id="memberRoleBadge" class="status">Chargement...</div>
-        <div id="memberPerformance" class="status" style="margin-top:8px;">Performance: ...</div>
       </section>
 
       <section class="card">
-        <h2>Notifications</h2>
+        <h2>Messages officiels</h2>
         <div id="memberMessages" class="status">Aucun message.</div>
       </section>
 
-      <section class="card quick-hide">
+      <section class="card">
         <h2>Mes tâches</h2>
         <div id="memberTasks" class="status">Aucune tâche.</div>
       </section>
@@ -102,61 +64,15 @@
         <div id="memberDocuments" class="status">Aucun document.</div>
       </section>
 
-      <section class="card quick-hide">
-        <h2>Calendrier personnel</h2>
-        <div id="memberCalendar" class="status">Chargement...</div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Historique des téléchargements</h2>
-        <div id="memberDownloadHistory" class="status">Aucun téléchargement.</div>
-      </section>
-
       <section class="card">
         <h2>Historique des actions</h2>
         <div id="memberActions" class="status">Aucune activité récente.</div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Historique des connexions</h2>
-        <div id="memberLoginHistory" class="status">Aucune connexion récente.</div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Suivi de présence</h2>
-        <div class="status">
-          <button class="btn outline" type="button" id="memberPresenceBtn">Je confirme ma présence</button>
-          <div id="memberPresenceStatus" class="muted" style="margin-top:8px;">Aucune présence confirmée.</div>
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>FAQ interne</h2>
-        <div class="status">
-          <strong>Comment télécharger les documents ?</strong><br />
-          Clique sur un bouton dans “Téléchargements utiles”.<br /><br />
-          <strong>Qui contacter en cas de problème ?</strong><br />
-          Utilise la rubrique Contact ou WhatsApp officiel.<br /><br />
-          <strong>Mot de passe oublié ?</strong><br />
-          Demande la réinitialisation à l’admin.
-        </div>
-      </section>
-
-      <section class="card quick-hide">
-        <h2>Centre d’aide</h2>
-        <div class="status">
-          Besoin d’aide rapide ? Contacte le support via WhatsApp ou par email.
-          <div style="margin-top:8px;">
-            <a class="btn outline" href="https://wa.me/2250150070083" target="_blank" rel="noopener">WhatsApp support</a>
-            <a class="btn outline" href="mailto:asaar@support.org">Email support</a>
-          </div>
-        </div>
       </section>
     </main>
 
     <footer>
       <div>Association des Serviteurs d'Allah Azawajal — ASAA</div>
-      <div class="footer-signature">Designed & Created by LMO Website Services</div>
+      <div class="footer-signature">Design & Created by LMO Website Services</div>
     </footer>
 
     <script src="member-portal.js"></script>
