@@ -25,7 +25,11 @@ import { registerNotificationRoutes, NotificationService } from './server-module
 import { registerAchievementRoutes, AchievementService } from './server-modules/achievements-service.js';
 import { registerReportRoutes } from './server-modules/reports-service.js';
 import { registerModerationRoutes, ModerationService } from './server-modules/moderation-service.js';
-import { sanitizeString } from './services/string-utils.js';
+import { registerSocialFeaturesRoutes } from './server-modules/social-features-routes.js';
+import { registerEnhancedSocialRoutes } from './server-modules/enhanced-social-routes.js';
+import { registerChatGroupsRoutes } from './server-modules/chat-groups-routes.js';
+import { registerCollaborativeQuizzesRoutes } from './server-modules/collaborative-quizzes-routes.js';
+import { sanitizeString, validateCandidateId } from './services/string-utils.js';
 
 dotenv.config();
 
@@ -4492,6 +4496,12 @@ registerNotificationRoutes(app, pool);
 registerAchievementRoutes(app, pool);
 registerReportRoutes(app, pool);
 registerModerationRoutes(app, pool);
+
+// ==================== SOCIAL FEATURES ====================
+registerSocialFeaturesRoutes({ app, pool, sanitizeString });
+registerEnhancedSocialRoutes({ app, pool, sanitizeString });
+registerChatGroupsRoutes({ app, pool, sanitizeString, validateCandidateId });
+registerCollaborativeQuizzesRoutes({ app, pool, sanitizeString, validateCandidateId });
 
 function classifyMediaType(filename = '') {
   const ext = (filename.split('.').pop() || '').toLowerCase();
