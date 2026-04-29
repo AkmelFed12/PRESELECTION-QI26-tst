@@ -909,11 +909,11 @@ function sanitizeSiteContent(payload = {}) {
       info: safeText(membership.info, 500)
     },
     phase: {
-      enabled: typeof phase.enabled === 'boolean' ? phase.enabled : true,
-      title: safeText(phase.title, 120),
-      body: safeText(phase.body, 1200),
-      northDate: safeText(phase.northDate, 80),
-      southDate: safeText(phase.southDate, 80)
+      enabled: typeof payload.phase?.enabled === 'boolean' ? payload.phase.enabled : true,
+      title: safeText(payload.phase?.title, 120),
+      body: safeText(payload.phase?.body, 1200),
+      northDate: safeText(payload.phase?.northDate, 80),
+      southDate: safeText(payload.phase?.southDate, 80)
     },
     footer: {
       address: safeText(footer.address, 200),
