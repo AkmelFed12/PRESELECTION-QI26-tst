@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASAA — Plateforme officielle du Quiz Islamique</title>
+    <meta name="description" content="Plateforme officielle du Quiz Islamique." />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0b6f4f" />
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="announcementBanner" class="announcement-banner" style="display:none;">
+      <span id="announcementBannerText"></span>
+    </div>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo Les Serviteurs d'Allah" class="logo" />
+      <div>
+        <h1>Association des Serviteurs d'Allah Azawajal</h1>
+        <p class="slogan">« La formation, c'est notre priorité. »</p>
+        <p class="subtitle">Plateforme officielle — Quiz Islamique</p>
+        <div class="hero-status">
+          <span class="pill" id="registrationBadge">Inscriptions: ...</span>
+          <span class="pill" id="votingBadge">Votes: ...</span>
+          <span class="pill">Candidats inscrits: <strong id="liveCountBadge">0</strong></span>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <a class="btn" href="#inscription">S'inscrire</a>
+        <a class="btn" href="#don">Faire un don</a>
+        <a class="btn outline" href="admin.html">Espace admin</a>
+        <a class="btn outline" href="reglement.html">Règlement</a>
+        <a class="btn outline" href="programme.html">Programme</a>
+        <a class="btn outline" href="resultats.html">Résultats</a>
+        <a class="btn outline" href="contact.html">Contact</a>
+        <a class="btn outline" href="galerie-2025.html">Galerie 2025</a>
+        <a class="btn outline" href="actualites.html">Actualités</a>
+        <a class="btn outline" href="sponsors.html">Sponsors</a>
+        <a class="btn outline" href="don.html">Don</a>
+        <button class="btn outline" id="quickModeToggle" type="button">Mode rapide</button>
+        <button class="btn outline" id="focusModeToggle" type="button">Mode focus inscription</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <div id="homeContent">
+      <section class="card highlight quick-hide">
+        <h2>Organisation des phases</h2>
+        <div class="grid-two">
+          <div>
+            <h3>Phases</h3>
+            <ul class="list-steps">
+              <li>Groupe unique : qualifiés directs.</li>
+              <li>Barrages : qualifiés pour la phase de groupes.</li>
+              <li>Phase de groupes : 8 groupes.</li>
+              <li>Finale : 10 finalistes.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Barème</h3>
+            <p>Chaque passage est noté sur 30 points (2 thèmes).</p>
+            <div class="status">Les notes et classements sont gérés par l'administration.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Calendrier officiel</h2>
+        <div id="calendarList" class="status">Chargement...</div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Résumé du programme</h2>
+        <div id="programmeSummary" class="status">Chargement...</div>
+        <div class="nav-links" style="margin-top:10px;">
+          <a href="programme.html">Voir le programme complet</a>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Programme du jour</h2>
+        <div id="programDay" class="status">Chargement...</div>
+      </section>
+
+      <section class="card highlight" id="announcementCard" style="display:none;">
+        <h2>Annonce</h2>
+        <div class="badge-important">URGENT</div>
+        <div id="announcementText" class="status"></div>
+      </section>
+
+      <section class="card" id="inscription">
+        <h2>Inscription des candidats</h2>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+          <button class="btn outline" id="focusExitBtn" type="button" style="display:none;">Quitter le mode focus</button>
+        </div>
+        <p class="muted">Remplissez le formulaire. Un message WhatsApp vers l'administrateur sera proposé après validation.</p>
+        <div id="registrationClosedNote" class="status" style="display:none;">
+          Les inscriptions sont actuellement fermées.
+        </div>
+        <form id="registrationForm" class="form-grid">
+          <div>
+            <label for="fullName">Nom et prénoms *</label>
+            <input id="fullName" name="fullName" placeholder="Nom complet" required />
+          </div>
+          <div>
+            <label for="age">Âge</label>
+            <input id="age" name="age" type="number" min="10" max="99" placeholder="Âge" />
+          </div>
+          <div>
+            <label for="city">Commune *</label>
+            <select id="city" name="city" required>
+              <option value="">Choisir une commune</option>
+              <option>TREICHVILLE</option>
+              <option>ADJAMÉ</option>
+              <option>YOPOUGON</option>
+              <option>ABOBO</option>
+              <option>PLATEAU</option>
+              <option>KOUMASSI</option>
+              <option>COCODY</option>
+              <option>PORT-BOUET</option>
+              <option>MARCORY</option>
+              <option>ANYAMA</option>
+              <option>BINGERVILLE</option>
+              <option>SONGON</option>
+              <option>ATTECOUBE</option>
+            </select>
+          </div>
+          <div>
+            <label for="whatsapp">WhatsApp *</label>
+            <input id="whatsapp" name="whatsapp" placeholder="+225..." required />
+          </div>
+          <div>
+            <label for="phone">Téléphone</label>
+            <input id="phone" name="phone" placeholder="Téléphone" />
+          </div>
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="Email" />
+          </div>
+          <div>
+            <label for="quranLevel">Niveau en culture islamique</label>
+            <select id="quranLevel" name="quranLevel">
+              <option value="">Sélectionnez un niveau</option>
+              <option>Débutant</option>
+              <option>Intermédiaire</option>
+              <option>Avancé</option>
+            </select>
+          </div>
+          <div class="full">
+            <label for="motivation">Motivation (optionnel)</label>
+            <textarea id="motivation" name="motivation" placeholder="Votre motivation"></textarea>
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Valider l'inscription</button>
+          </div>
+        </form>
+        <p id="registerMsg" class="status"></p>
+        <div id="registerToast" class="toast" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="card highlight quick-hide" id="qrSignupCard">
+        <h2>Inscription rapide (QR Code)</h2>
+        <p class="muted">Scannez pour ouvrir directement le formulaire d'inscription.</p>
+        <div style="display:flex; justify-content:center; align-items:center;">
+          <img id="qrSignup" alt="QR inscription" width="220" height="220" />
+        </div>
+      </section>
+
+      <section class="card highlight" id="don">
+        <h2>Faire un don</h2>
+        <p class="muted">Soutenez l'association via Wave, Orange Money, MTN Money, Moov Money ou Djamo.</p>
+        <form id="donationForm" class="form-grid">
+          <div>
+            <label for="donorName">Nom (optionnel)</label>
+            <input id="donorName" name="donorName" placeholder="Votre nom" />
+          </div>
+          <div>
+            <label for="donorAmount">Montant (XOF)</label>
+            <input id="donorAmount" name="donorAmount" type="number" step="0.01" placeholder="Ex: 5000" />
+          </div>
+          <div class="full">
+            <button class="btn-primary" type="submit">Faire un don</button>
+          </div>
+        </form>
+        <p id="donationMsg" class="status">Après paiement, envoyez votre reçu via WhatsApp pour validation.</p>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Sponsors officiels</h2>
+        <div id="sponsorCarousel" class="sponsor-carousel">
+          <div class="sponsor-track" id="sponsorTrack">Chargement...</div>
+        </div>
+      </section>
+
+      <section class="card highlight">
+        <h2>Recevoir les infos</h2>
+        <p class="muted">Abonnez-vous aux annonces via WhatsApp.</p>
+        <a class="btn-primary" href="https://wa.me/2250150070083?text=Je%20veux%20recevoir%20les%20infos%20du%20Quiz%20Islamique%202026" target="_blank" rel="noopener">S'abonner WhatsApp</a>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Candidats déjà inscrits</h2>
+        <p class="muted">Cette liste est synchronisée automatiquement.</p>
+        <div class="form-grid" style="margin-bottom:12px;">
+          <div>
+            <label for="publicCommuneFilter">Filtrer par commune</label>
+            <select id="publicCommuneFilter">
+              <option value="">Toutes les communes</option>
+            </select>
+          </div>
+          <div>
+            <label for="publicSearch">Recherche rapide</label>
+            <input id="publicSearch" placeholder="Nom ou WhatsApp" />
+          </div>
+        </div>
+        <div id="publicCandidates" class="status">Chargement...</div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Statistiques publiques</h2>
+        <div class="grid-three">
+          <div class="status">Candidats: <strong id="statPublicCandidates" class="stat-count" data-count="0">0</strong></div>
+          <div class="status">Communes: <strong id="statPublicCities" class="stat-count" data-count="0">0</strong></div>
+          <div class="status">Votes: <strong id="statPublicVotes" class="stat-count" data-count="0">0</strong></div>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Progression des inscriptions</h2>
+        <div class="status">Candidats inscrits: <strong id="progressCurrent">0</strong></div>
+        <div class="status">Objectif: <strong id="progressMax">Illimité</strong></div>
+        <div style="margin-top:10px; background:#efe6d6; border-radius:999px; height:12px; overflow:hidden;">
+          <div id="progressBar" style="height:12px; width:0%; background:var(--emerald);"></div>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Répartition par commune</h2>
+        <div id="communeStats" class="status">Chargement...</div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Classement rapide</h2>
+        <div id="publicRanking" class="status">Chargement...</div>
+        <div class="nav-links" style="margin-top:10px;">
+          <a href="resultats.html">Voir le classement complet</a>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Archives des éditions</h2>
+        <div class="nav-links">
+          <a href="galerie-2025.html">Galerie 2025</a>
+          <span class="muted">Galerie 2024: en préparation</span>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Moments du quiz</h2>
+        <p class="muted">Aperçu rapide des derniers moments forts.</p>
+        <div class="moment-grid">
+          <div class="moment-card">
+            <img src="galerie-2025/538316900_697643836624820_7120327836575396367_n.jpg" alt="Moment 1" loading="lazy" />
+          </div>
+          <div class="moment-card">
+            <img src="galerie-2025/538632761_697641279958409_7814683027562570105_n.jpg" alt="Moment 2" loading="lazy" />
+          </div>
+          <div class="moment-card">
+            <img src="galerie-2025/538864096_697642583291612_2071482017750279257_n.jpg" alt="Moment 3" loading="lazy" />
+          </div>
+          <div class="moment-card">
+            <img src="galerie-2025/539099643_697638779958659_8974364275030833175_n.jpg" alt="Moment 4" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      <section class="card quick-hide">
+        <h2>Communes en carte</h2>
+        <div class="nav-links" id="communeMapLinks">
+          <a href="https://www.google.com/maps/search/?api=1&query=TREICHVILLE+Abidjan" target="_blank" rel="noopener">TREICHVILLE</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=ADJAME+Abidjan" target="_blank" rel="noopener">ADJAMÉ</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=YOPOUGON+Abidjan" target="_blank" rel="noopener">YOPOUGON</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=ABOBO+Abidjan" target="_blank" rel="noopener">ABOBO</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=PLATEAU+Abidjan" target="_blank" rel="noopener">PLATEAU</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=KOUMASSI+Abidjan" target="_blank" rel="noopener">KOUMASSI</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=COCODY+Abidjan" target="_blank" rel="noopener">COCODY</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=PORT-BOUET+Abidjan" target="_blank" rel="noopener">PORT-BOUET</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=MARCORY+Abidjan" target="_blank" rel="noopener">MARCORY</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=ANYAMA+Abidjan" target="_blank" rel="noopener">ANYAMA</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=BINGERVILLE+Abidjan" target="_blank" rel="noopener">BINGERVILLE</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=SONGON+Abidjan" target="_blank" rel="noopener">SONGON</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=ATTECOUBE+Abidjan" target="_blank" rel="noopener">ATTECOUBE</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Liens utiles</h2>
+        <div class="nav-links">
+          <a href="reglement.html">Règlement & critères</a>
+          <a href="programme.html">Programme officiel</a>
+          <a href="assets/reglement.pdf" download>Règlement (PDF)</a>
+          <a href="resultats.html">Résultats & classement</a>
+          <a href="galerie-2025.html">Galerie 2025</a>
+          <a href="don.html">Faire un don</a>
+          <a href="partenaires-medias.html">Partenaires médias</a>
+          <a href="benevole.html">Devenir bénévole</a>
+          <a href="faq.html">FAQ</a>
+          <a href="contact.html">Contact & support</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Partager le quiz</h2>
+        <div class="share-actions">
+          <a class="btn outline" id="shareWhatsapp" href="#" target="_blank" rel="noopener">Partager WhatsApp</a>
+          <a class="btn outline" id="shareFacebook" href="#" target="_blank" rel="noopener">Partager Facebook</a>
+          <button class="btn outline" id="shareCopy" type="button">Copier le lien</button>
+        </div>
+      </section>
+      </div>
+    </main>
+
+    <button class="scroll-top" id="scrollTopBtn" type="button">↑</button>
+
+    <a class="whatsapp-float" href="https://wa.me/2250150070083?text=Bonjour%20ASAA%2C%20j%27ai%20besoin%20d%27aide%20pour%20le%20Quiz%20Islamique%202026." target="_blank" rel="noopener">
+      WhatsApp
+    </a>
+
+    <a class="whatsapp-fab" href="https://wa.me/2250150070083" target="_blank" rel="noopener">
+      WhatsApp
+    </a>
+
+    <footer>
+      <div>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</div>
+      <div class="footer-donate">
+        <span>Soutenir l’association :</span>
+        <a class="btn outline" href="https://pay.djamo.com/yga5x" target="_blank" rel="noopener">Faire un don</a>
+      </div>
+      <div class="social-links">
+        <a href="https://www.facebook.com/share/1HWB9Zh6pY/?mibextid=wwXIfr" target="_blank" rel="noopener" aria-label="Facebook">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 10h3V7h-3V6c0-1 .4-2 2-2h1V1h-2c-3 0-4 2-4 4v2H8v3h2v8h3v-8z"/></svg>
+          Facebook
+        </a>
+        <a href="https://www.tiktok.com/@asaa.islam01?_r=1&_t=ZS-94PUgTDVgFF" target="_blank" rel="noopener" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 3c.7 1.6 2 2.9 3.6 3.6V9c-1.4-.1-2.8-.6-4-1.4V15a6 6 0 1 1-6-6c.4 0 .8 0 1.2.1v3a2.8 2.8 0 1 0 2.8 2.8V3h2.4z"/></svg>
+          TikTok
+        </a>
+      </div>
+      <div class="footer-signature">Design & Created by LMO Website Services</div>
+    </footer>
+
+    <button class="dark-toggle" id="darkToggle">Mode sombre</button>
+
+    <script src="app.js"></script>
+    <script src="pwa.js"></script>
+  </body>
+</html>

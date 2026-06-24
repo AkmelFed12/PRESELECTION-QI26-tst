@@ -1,10 +1,10 @@
 {
-  "name": "Quiz Islamique 2026",
-  "short_name": "Quiz 2026",
+  "name": "ASAA Officiel",
+  "short_name": "ASAA",
   "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#f7f2e8",
-  "theme_color": "#0b6f4f",
+  "background_color": "#fffdf8",
+  "theme_color": "#064733",
   "icons": [
     {
       "src": "assets/logo.jpg",

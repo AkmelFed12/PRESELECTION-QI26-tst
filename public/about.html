@@ -3,49 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ASAA Officiel — À propos</title>
+    <title>À propos de l’ASAA | Mission, vision et valeurs</title>
+    <meta name="description" content="Découvrez l’histoire, la mission, la vision et les valeurs de l’Association des Serviteurs d’Allah Azawajal." />
+    <meta name="theme-color" content="#064733" />
+    <meta property="og:title" content="À propos de l’ASAA" />
+    <meta property="og:description" content="Mission, vision, valeurs et engagement communautaire de l’Association des Serviteurs d’Allah Azawajal." />
+    <meta property="og:image" content="https://asaaofficiel.vercel.app/assets/asaa-hero.jpg" />
+    <link rel="canonical" href="https://asaaofficiel.vercel.app/about.html" />
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="asaa-officiel.css" />
   </head>
-  <body>
-    <header class="hero">
-      <img src="assets/logo.jpg" alt="Logo ASAA" class="logo" />
-      <div>
-        <h1>À propos de l’ASAA</h1>
-        <p class="slogan">Association des Serviteurs d'Allah Azawajal</p>
-        <p class="subtitle">Site officiel</p>
-      </div>
-      <div class="hero-actions">
-        <a class="btn outline" href="index.html">Accueil</a>
-        <a class="btn outline" href="communiques.html">Communiqués</a>
-        <a class="btn outline" href="documents.html">Documents</a>
+  <body class="asaa-public">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="nav-shell">
+        <a class="brand" href="index.html">
+          <img src="assets/logo.jpg" alt="Logo ASAA" />
+          <span><strong>ASAA Officiel</strong><span>Association des Serviteurs d’Allah Azawajal</span></span>
+        </a>
+        <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false">Menu</button>
+        <nav class="main-nav" data-main-nav aria-label="Navigation principale">
+          <a href="index.html">Accueil</a>
+          <a href="about.html" aria-current="page">À propos</a>
+          <a href="quiz-islamique-2026.html">Quiz 2026</a>
+          <a href="finalistes-2026.html">Finalistes</a>
+          <a href="communication-qi26.html">Communication</a>
+          <a href="galerie-medias.html">Galerie</a>
+          <a href="contact.html">Contact</a>
+        </nav>
       </div>
     </header>
 
-    <main class="layout">
-      <section class="card">
-        <h2 id="aboutTitle">Présentation</h2>
-        <p id="aboutSubtitle" class="muted"></p>
-        <div id="aboutBody" class="status">L'Association des Serviteurs d'Allah Azawajal (ASAA) est une organisation qui vise à promouvoir les valeurs de l'Islam et à servir la communauté.</div>
+    <main id="contenu">
+      <section class="page-hero">
+        <div class="section">
+          <span class="eyebrow">À propos</span>
+          <h1>Une association qui place la formation au cœur de son engagement</h1>
+          <p>L’ASAA agit pour créer des cadres d’apprentissage sérieux, accessibles et fraternels, où la jeunesse peut progresser avec méthode et respect.</p>
+        </div>
       </section>
 
-      <section class="card">
-        <h2>Messages des responsables</h2>
-        <div id="leadersList" class="leaders-grid">Chargement...</div>
+      <section class="section">
+        <div class="grid-2">
+          <article class="notice-card">
+            <p class="kicker">Message institutionnel</p>
+            <h2>Former, c’est préparer des cœurs et des esprits responsables.</h2>
+            <p>
+              Cette phrase résume l’esprit de l’ASAA : apprendre, transmettre, corriger ses manquements et servir la communauté sans rechercher le bruit ni l’apparence.
+            </p>
+          </article>
+          <div class="notice-card">
+            <h2>Notre histoire</h2>
+            <p>
+              L’Association des Serviteurs d’Allah Azawajal est née d’un besoin concret : offrir à la jeunesse musulmane un cadre où l’on apprend avec sérieux, où l’effort est encouragé et où chacun peut trouver sa place dans le service communautaire.
+            </p>
+            <p>
+              Les activités de l’ASAA se construisent autour de rencontres de formation, de rappels, d’initiatives sociales et du Quiz Islamique, devenu un rendez-vous attendu par de nombreux jeunes.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt">
+        <div class="section">
+          <div class="section-title center">
+            <p class="kicker">Mission, vision, objectifs</p>
+            <h2>Un engagement clair et durable</h2>
+          </div>
+          <div class="grid-3 mt-lg">
+            <article class="info-card">
+              <span class="icon-dot">M</span>
+              <h3>Mission</h3>
+              <p>Former, sensibiliser et accompagner les jeunes musulmans à travers des actions utiles, bien organisées et fidèles aux valeurs de l’Islam.</p>
+            </article>
+            <article class="info-card">
+              <span class="icon-dot">V</span>
+              <h3>Vision</h3>
+              <p>Voir émerger une génération attachée à la science religieuse, responsable dans ses choix et active dans le service communautaire.</p>
+            </article>
+            <article class="info-card">
+              <span class="icon-dot">O</span>
+              <h3>Objectifs</h3>
+              <p>Renforcer les connaissances, encourager l’assiduité, valoriser les efforts et créer des liens solides entre apprentissage, famille et communauté.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <p class="kicker">Valeurs</p>
+          <h2>Ce qui guide nos activités</h2>
+        </div>
+        <div class="grid-4 mt-lg">
+          <article class="info-card">
+            <span class="icon-dot">01</span>
+            <h3>Recherche du savoir</h3>
+            <p>Apprendre progressivement, avec humilité, et donner à la formation une place réelle dans la vie quotidienne.</p>
+          </article>
+          <article class="info-card">
+            <span class="icon-dot">02</span>
+            <h3>Sérieux</h3>
+            <p>Préparer les activités avec soin, respecter les engagements pris et agir avec transparence.</p>
+          </article>
+          <article class="info-card">
+            <span class="icon-dot">03</span>
+            <h3>Fraternité</h3>
+            <p>Se soutenir, s’écouter et bâtir un climat qui facilite l’apprentissage comme le service.</p>
+          </article>
+          <article class="info-card">
+            <span class="icon-dot">04</span>
+            <h3>Excellence humble</h3>
+            <p>Faire de son mieux, sans excès ni orgueil, en gardant l’intention et le bon comportement au centre.</p>
+          </article>
+        </div>
       </section>
     </main>
 
-    <footer>
-      <div>Association des Serviteurs d'Allah Azawajal — ASAA</div>
-      <div class="footer-meta">
-        <span data-footer-address></span>
-        <span data-footer-phone></span>
-        <span data-footer-email></span>
-        <span data-footer-hours></span>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div><h2>ASAA Officiel</h2><p>« La formation est notre priorité !!! »</p></div>
+        <div><h3>Pages</h3><a href="quiz-islamique-2026.html">Quiz Islamique 2026</a><a href="finalistes-2026.html">Finalistes</a><a href="contact.html">Contact</a></div>
+        <div><h3>Réseaux</h3><a href="https://wa.me/2250150070083" target="_blank" rel="noopener">WhatsApp</a><a href="https://www.facebook.com/share/1HWB9Zh6pY/?mibextid=wwXIfr" target="_blank" rel="noopener">Facebook</a><a href="https://www.tiktok.com/@asaa.islam01?_r=1&_t=ZS-94PUgTDVgFF" target="_blank" rel="noopener">TikTok</a></div>
       </div>
-      <div class="footer-signature">Designed & Created by LMO Website Services</div>
+      <div class="footer-bottom">© 2026 Association des Serviteurs d’Allah Azawajal.</div>
     </footer>
-
-    <script src="site-content.js"></script>
+    <div class="floating-actions"><a href="https://wa.me/2250150070083" target="_blank" rel="noopener" aria-label="WhatsApp">WA</a><button type="button" data-scroll-top aria-label="Retour en haut">↑</button></div>
+    <script src="asaa-officiel.js"></script>
   </body>
 </html>

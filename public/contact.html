@@ -3,63 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ASAA Officiel — Contact — Quiz Islamique 2026</title>
+    <title>Contact | ASAA Officiel</title>
+    <meta name="description" content="Contactez l’ASAA pour les informations officielles, l’accompagnement, les partenariats ou la finale du Quiz Islamique." />
+    <meta name="theme-color" content="#064733" />
+    <meta property="og:title" content="Contact | ASAA Officiel" />
+    <meta property="og:description" content="WhatsApp, email, réseaux sociaux et formulaire de contact de l’ASAA." />
+    <meta property="og:image" content="https://asaaofficiel.vercel.app/assets/asaa-hero.jpg" />
+    <link rel="canonical" href="https://asaaofficiel.vercel.app/contact.html" />
     <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#0b6f4f" />
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="asaa-officiel.css" />
   </head>
-  <body>
-    <header class="hero">
-      <img src="assets/logo.jpg" alt="Logo" class="logo" />
-      <div>
-        <h1>Contact & support</h1>
-        <p class="subtitle">Association des Serviteurs d'Allah Azawajal</p>
-      </div>
-      <div class="hero-actions">
-        <a class="btn outline" href="index.html">Accueil</a>
-        <a class="btn outline" href="reglement.html">Règlement</a>
-        <a class="btn outline" href="index.html#don">Faire un don</a>
+  <body class="asaa-public">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="nav-shell">
+        <a class="brand" href="index.html"><img src="assets/logo.jpg" alt="Logo ASAA" /><span><strong>ASAA Officiel</strong><span>Association des Serviteurs d’Allah Azawajal</span></span></a>
+        <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false">Menu</button>
+        <nav class="main-nav" data-main-nav aria-label="Navigation principale">
+          <a href="index.html">Accueil</a><a href="about.html">À propos</a><a href="quiz-islamique-2026.html">Quiz 2026</a><a href="finalistes-2026.html">Finalistes</a><a href="communication-qi26.html">Communication</a><a href="galerie-medias.html">Galerie</a><a href="contact.html" aria-current="page">Contact</a>
+        </nav>
       </div>
     </header>
 
-    <main class="layout">
-      <section class="card">
-        <h2>Coordonnées</h2>
-        <p><strong>WhatsApp :</strong> +225 01 50 07 00 83</p>
-        <p><strong>Email :</strong> ouattaralm12@gamil.com</p>
-        <p><strong>Adresse :</strong> Abidjan, Côte d'Ivoire</p>
+    <main id="contenu">
+      <section class="page-hero">
+        <div class="section">
+          <span class="eyebrow">Contact</span>
+          <h1>Échanger avec l’équipe ASAA</h1>
+          <p>Pour une information officielle, une contribution, une demande de partenariat ou une question liée à la finale, l’équipe vous répondra avec attention.</p>
+        </div>
       </section>
 
-      <section class="card">
-        <h2>Questions fréquentes</h2>
-        <ul class="list-steps">
-          <li>Les inscriptions se font uniquement via le formulaire officiel.</li>
-          <li>Les résultats sont publiés par l’administration.</li>
-          <li>En cas de problème, contactez-nous sur WhatsApp.</li>
-        </ul>
+      <section class="section">
+        <div class="grid-2">
+          <div class="grid-2">
+            <article class="contact-card">
+              <span class="icon-dot">WA</span>
+              <h3>WhatsApp</h3>
+              <p><a href="https://wa.me/2250150070083" target="_blank" rel="noopener">+225 01 50 07 00 83</a></p>
+            </article>
+            <article class="contact-card">
+              <span class="icon-dot">@</span>
+              <h3>Email</h3>
+              <p><a href="mailto:ouattaralm12@gmail.com">ouattaralm12@gmail.com</a></p>
+            </article>
+            <article class="contact-card">
+              <span class="icon-dot">CI</span>
+              <h3>Localisation générale</h3>
+              <p>Abidjan, Côte d’Ivoire.</p>
+            </article>
+            <article class="contact-card">
+              <span class="icon-dot">QI</span>
+              <h3>Finale QI26</h3>
+              <p>Salle N’zassa, Treichville, non loin de l’Hôpital Général de Treichville.</p>
+            </article>
+            <article class="contact-card">
+              <span class="icon-dot">FB</span>
+              <h3>Facebook</h3>
+              <p><a href="https://www.facebook.com/share/1HWB9Zh6pY/?mibextid=wwXIfr" target="_blank" rel="noopener">Page officielle ASAA</a></p>
+            </article>
+            <article class="contact-card">
+              <span class="icon-dot">TT</span>
+              <h3>TikTok</h3>
+              <p><a href="https://www.tiktok.com/@asaa.islam01?_r=1&_t=ZS-94PUgTDVgFF" target="_blank" rel="noopener">@asaa.islam01</a></p>
+            </article>
+          </div>
+
+          <article class="notice-card">
+            <h2>Envoyer un message</h2>
+            <p>Remplissez ce formulaire. Il préparera votre message dans votre application email, avec les informations déjà organisées.</p>
+            <form class="contact-form" data-contact-form data-email="ouattaralm12@gmail.com">
+              <label>
+                Nom complet
+                <input name="name" type="text" required />
+              </label>
+              <label>
+                Sujet
+                <input name="subject" type="text" required />
+              </label>
+              <label>
+                Message
+                <textarea name="message" required></textarea>
+              </label>
+              <button class="btn-solid" type="submit">Préparer l’envoi</button>
+            </form>
+          </article>
+        </div>
       </section>
     </main>
 
-    <footer>
-      <div>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</div>
-      <div class="footer-donate">
-        <span>Soutenir l’association :</span>
-        <a class="btn outline" href="https://pay.djamo.com/yga5x" target="_blank" rel="noopener">Faire un don</a>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div><h2>ASAA Officiel</h2><p>Merci de privilégier les canaux officiels pour les informations liées à la finale.</p></div>
+        <div><h3>Pages</h3><a href="quiz-islamique-2026.html">Quiz 2026</a><a href="finalistes-2026.html">Finalistes</a><a href="galerie-medias.html">Galerie</a></div>
+        <div><h3>Réseaux</h3><a href="https://wa.me/2250150070083" target="_blank" rel="noopener">WhatsApp</a><a href="https://www.facebook.com/share/1HWB9Zh6pY/?mibextid=wwXIfr" target="_blank" rel="noopener">Facebook</a><a href="https://www.tiktok.com/@asaa.islam01?_r=1&_t=ZS-94PUgTDVgFF" target="_blank" rel="noopener">TikTok</a></div>
       </div>
-      <div class="social-links">
-        <a href="https://www.facebook.com/share/1HWB9Zh6pY/?mibextid=wwXIfr" target="_blank" rel="noopener" aria-label="Facebook">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 10h3V7h-3V6c0-1 .4-2 2-2h1V1h-2c-3 0-4 2-4 4v2H8v3h2v8h3v-8z"/></svg>
-          Facebook
-        </a>
-        <a href="https://www.tiktok.com/@asaa.islam01?_r=1&_t=ZS-94PUgTDVgFF" target="_blank" rel="noopener" aria-label="TikTok">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 3c.7 1.6 2 2.9 3.6 3.6V9c-1.4-.1-2.8-.6-4-1.4V15a6 6 0 1 1-6-6c.4 0 .8 0 1.2.1v3a2.8 2.8 0 1 0 2.8 2.8V3h2.4z"/></svg>
-          TikTok
-        </a>
-      </div>
-      <div class="footer-signature">Designed & Created by LMO Website Services</div>
+      <div class="footer-bottom">© 2026 Association des Serviteurs d’Allah Azawajal.</div>
     </footer>
+    <div class="floating-actions"><a href="https://wa.me/2250150070083" target="_blank" rel="noopener" aria-label="WhatsApp">WA</a><button type="button" data-scroll-top aria-label="Retour en haut">↑</button></div>
+    <script src="asaa-officiel.js"></script>
     <script src="pwa.js"></script>
   </body>
 </html>
-
