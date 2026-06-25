@@ -46,12 +46,15 @@
       const posterLink = data.poster
         ? `<p><a class="poster-link inline" href="${data.poster}" target="_blank" rel="noopener">Voir l’affiche officielle</a></p>`
         : '';
+      const details = fields.length > 1
+        ? fields.map(([label, value]) => `<p><strong>${label} :</strong> ${value}</p>`).join('')
+        : `${fields.map(([label, value]) => `<p><strong>${label} :</strong> ${value}</p>`).join('')}<p>La fiche détaillée de ce finaliste n’a pas encore été publiée par le comité d’organisation.</p>`;
 
       profileOutput.innerHTML = `
         <p class="kicker">Profil sélectionné</p>
         <h2>${data.name || ''}</h2>
         <div class="profile-detail-list">
-          ${fields.map(([label, value]) => `<p><strong>${label} :</strong> ${value}</p>`).join('')}
+          ${details}
         </div>
         ${posterLink}
       `;
