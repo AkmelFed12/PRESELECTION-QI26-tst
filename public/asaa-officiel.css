@@ -501,6 +501,109 @@ body.asaa-public a {
   box-shadow: var(--shadow-soft);
 }
 
+.finalist-photo {
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  aspect-ratio: 4 / 5;
+  background: var(--asaa-green-soft);
+}
+
+.finalist-photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.finalist-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.finalist-meta span {
+  border: 1px solid var(--asaa-line);
+  border-radius: 999px;
+  background: var(--asaa-green-soft);
+  color: var(--asaa-green-deep);
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.finalist-summary {
+  min-height: 96px;
+}
+
+.poster-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin: 4px 0 12px;
+  border: 1px solid var(--asaa-line);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--asaa-green-deep);
+  padding: 9px 12px;
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.poster-link:hover {
+  background: var(--asaa-green);
+  color: white;
+}
+
+.poster-link.inline {
+  width: auto;
+}
+
+.profile-detail-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.profile-detail-list p {
+  margin: 0;
+}
+
+.poster-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.poster-card {
+  border: 1px solid var(--asaa-line);
+  border-radius: var(--radius);
+  background: white;
+  padding: 16px;
+  box-shadow: 0 1px 0 rgba(6, 71, 51, 0.03);
+}
+
+.poster-card img {
+  width: 100%;
+  display: block;
+  border-radius: var(--radius);
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+}
+
+.poster-card h3 {
+  margin: 16px 0 0;
+  color: var(--asaa-green-deep);
+}
+
+.poster-card p {
+  color: var(--asaa-muted);
+  line-height: 1.7;
+}
+
 .avatar-placeholder {
   min-height: 148px;
   display: grid;
@@ -790,7 +893,8 @@ body.asaa-public a {
   .stats-grid,
   .grid-2,
   .grid-3,
-  .grid-4 {
+  .grid-4,
+  .poster-grid {
     grid-template-columns: 1fr;
   }
 

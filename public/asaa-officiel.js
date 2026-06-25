@@ -29,13 +29,31 @@
   document.querySelectorAll('[data-finalist]').forEach((button) => {
     button.addEventListener('click', () => {
       if (!profileOutput) return;
-      const name = button.getAttribute('data-name') || '';
-      const commune = button.getAttribute('data-commune') || '';
+      const data = button.dataset;
+      const fields = [
+        ['Commune de résidence', data.commune],
+        ['Âge', data.age],
+        ['Niveau d’études', data.level],
+        ['Établissement', data.school],
+        ['Contact public', data.contact],
+        ['Passion', data.passion],
+        ['Parcours et motivation', data.path],
+        ['Profil islamique', data.profile],
+        ['Grand objectif', data.goal],
+        ['Devise', data.motto],
+        ['Message à la jeunesse', data.message]
+      ].filter(([, value]) => value);
+      const posterLink = data.poster
+        ? `<p><a class="poster-link inline" href="${data.poster}" target="_blank" rel="noopener">Voir l’affiche officielle</a></p>`
+        : '';
+
       profileOutput.innerHTML = `
         <p class="kicker">Profil sélectionné</p>
-        <h2>${name}</h2>
-        <p>Commune de résidence : <strong>${commune}</strong></p>
-        <p>Ce finaliste fait partie des dix candidats retenus pour la finale du Quiz Islamique 2026. Les scores détaillés seront publiés uniquement par l’équipe d’organisation.</p>
+        <h2>${data.name || ''}</h2>
+        <div class="profile-detail-list">
+          ${fields.map(([label, value]) => `<p><strong>${label} :</strong> ${value}</p>`).join('')}
+        </div>
+        ${posterLink}
       `;
       profileOutput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
