@@ -815,6 +815,18 @@ body.asaa-public a {
   text-decoration: none;
 }
 
+.whatsapp-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  fill: currentColor;
+}
+
+.icon-dot .whatsapp-icon {
+  width: 22px;
+  height: 22px;
+}
+
 .floating-actions button {
   background: white;
   color: var(--asaa-green-deep);
