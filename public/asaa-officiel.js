@@ -25,6 +25,49 @@
     });
   }
 
+  const assetPrefix = document.body?.dataset.assetPrefix || '';
+  const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+  const absoluteUrl = (value) => {
+    try {
+      return new URL(value || window.location.href, window.location.href).href;
+    } catch {
+      return window.location.href;
+    }
+  };
+  const buildShareActions = (data) => {
+    const name = data.name || 'ce finaliste';
+    const shareUrl = absoluteUrl(data.profileUrl || window.location.href);
+    const shareText = data.shareText || `Découvrez le profil de ${name}, finaliste du Quiz Islamique 2026.`;
+    const fullMessage = `${shareText} ${shareUrl}`;
+
+    return `
+      <div class="share-actions" aria-label="Partager ce profil">
+        <a class="share-button whatsapp-share" href="https://wa.me/?text=${encodeURIComponent(fullMessage)}" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="share-button facebook-share" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">Facebook</a>
+        <button class="share-button copy-share" type="button" data-copy-link data-copy-value="${escapeHtml(shareUrl)}">Copier le lien</button>
+      </div>
+    `;
+  };
+  const startBrandedVideo = (stage, delay = 1100) => {
+    if (!stage) return;
+    const video = stage.querySelector('[data-finalist-video]');
+    if (!video) return;
+
+    window.setTimeout(() => {
+      stage.classList.add('is-ready');
+      const playRequest = video.play();
+      if (playRequest && typeof playRequest.catch === 'function') {
+        playRequest.catch(() => {});
+      }
+    }, delay);
+  };
+
   const profileOutput = document.querySelector('[data-finalist-profile]');
   document.querySelectorAll('[data-finalist]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -48,7 +91,10 @@
         ['Message à la jeunesse', data.message]
       ].filter(([, value]) => value);
       const posterLink = data.poster
-        ? `<p><a class="poster-link inline" href="${data.poster}" target="_blank" rel="noopener">Voir l’affiche officielle</a></p>`
+        ? `<p><a class="poster-link inline" href="${escapeHtml(data.poster)}" target="_blank" rel="noopener">Voir l’affiche officielle</a></p>`
+        : '';
+      const profileLink = data.profileUrl
+        ? `<p><a class="poster-link inline" href="${escapeHtml(data.profileUrl)}">Ouvrir la page du candidat</a></p>`
         : '';
       const videoBlock = data.video
         ? `
@@ -57,33 +103,37 @@
               <p class="kicker">Capsule vidéo</p>
               <h3>Présentation vidéo du finaliste</h3>
             </div>
-            <video class="finalist-video-player" data-finalist-video controls playsinline preload="metadata" poster="${data.videoPoster || ''}">
-              <source src="${data.video}" type="video/mp4" />
-              Votre navigateur ne permet pas de lire cette vidéo.
-            </video>
+            <div class="branded-video" data-branded-video>
+              <div class="video-intro" data-video-intro>
+                <img src="${assetPrefix}assets/logo.jpg" alt="" />
+                <span>ASAA Officiel</span>
+                <strong>Les Visages du Quiz Islamique 2026</strong>
+                <em>${escapeHtml(data.name || '')}</em>
+              </div>
+              <video class="finalist-video-player" data-finalist-video controls playsinline preload="metadata" poster="${escapeHtml(data.videoPoster || '')}">
+                <source src="${escapeHtml(data.video)}" type="video/mp4" />
+                Votre navigateur ne permet pas de lire cette vidéo.
+              </video>
+            </div>
           </div>
         `
         : '';
       const details = fields.length > 1
-        ? fields.map(([label, value]) => `<p><strong>${label} :</strong> ${value}</p>`).join('')
-        : `${fields.map(([label, value]) => `<p><strong>${label} :</strong> ${value}</p>`).join('')}<p>La fiche détaillée de ce finaliste n’a pas encore été publiée par le comité d’organisation.</p>`;
+        ? fields.map(([label, value]) => `<p><strong>${escapeHtml(label)} :</strong> ${escapeHtml(value)}</p>`).join('')
+        : `${fields.map(([label, value]) => `<p><strong>${escapeHtml(label)} :</strong> ${escapeHtml(value)}</p>`).join('')}<p>La fiche détaillée de ce finaliste n’a pas encore été publiée par le comité d’organisation.</p>`;
 
       profileOutput.innerHTML = `
         <p class="kicker">Profil sélectionné</p>
-        <h2>${data.name || ''}</h2>
+        <h2>${escapeHtml(data.name || '')}</h2>
         ${videoBlock}
         <div class="profile-detail-list">
           ${details}
         </div>
         ${posterLink}
+        ${profileLink}
+        ${buildShareActions(data)}
       `;
-      const videoPlayer = profileOutput.querySelector('[data-finalist-video]');
-      if (videoPlayer) {
-        const playRequest = videoPlayer.play();
-        if (playRequest && typeof playRequest.catch === 'function') {
-          playRequest.catch(() => {});
-        }
-      }
+      startBrandedVideo(profileOutput.querySelector('[data-branded-video]'));
       profileOutput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   });
@@ -94,6 +144,51 @@
       const profileButton = card?.querySelector('[data-finalist]');
       profileButton?.click();
     });
+  });
+
+  document.querySelectorAll('[data-finalist-open]').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      const slug = trigger.getAttribute('data-finalist-open');
+      const profileButton = document.querySelector(`[data-finalist][data-slug="${slug}"]`);
+      profileButton?.click();
+    });
+  });
+
+  document.querySelectorAll('[data-video-play]').forEach((button) => {
+    button.addEventListener('click', () => {
+      startBrandedVideo(button.closest('[data-branded-video]'), 700);
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    const copyButton = event.target.closest('[data-copy-link]');
+    if (!copyButton) return;
+    const value = copyButton.getAttribute('data-copy-value') || window.location.href;
+    const originalText = copyButton.textContent;
+    const markCopied = () => {
+      copyButton.textContent = 'Lien copié';
+      window.setTimeout(() => {
+        copyButton.textContent = originalText;
+      }, 1600);
+    };
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(value).then(markCopied).catch(() => {});
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      markCopied();
+    } catch {}
+    textarea.remove();
   });
 
   const filterButtons = document.querySelectorAll('[data-media-filter]');
