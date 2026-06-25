@@ -30,6 +30,10 @@
     button.addEventListener('click', () => {
       if (!profileOutput) return;
       const data = button.dataset;
+      document.querySelectorAll('.person-card.is-selected').forEach((card) => {
+        card.classList.remove('is-selected');
+      });
+      button.closest('.person-card')?.classList.add('is-selected');
       const fields = [
         ['Commune de résidence', data.commune],
         ['Âge', data.age],
@@ -46,6 +50,20 @@
       const posterLink = data.poster
         ? `<p><a class="poster-link inline" href="${data.poster}" target="_blank" rel="noopener">Voir l’affiche officielle</a></p>`
         : '';
+      const videoBlock = data.video
+        ? `
+          <div class="finalist-video-block">
+            <div class="finalist-video-heading">
+              <p class="kicker">Capsule vidéo</p>
+              <h3>Présentation vidéo du finaliste</h3>
+            </div>
+            <video class="finalist-video-player" data-finalist-video controls playsinline preload="metadata" poster="${data.videoPoster || ''}">
+              <source src="${data.video}" type="video/mp4" />
+              Votre navigateur ne permet pas de lire cette vidéo.
+            </video>
+          </div>
+        `
+        : '';
       const details = fields.length > 1
         ? fields.map(([label, value]) => `<p><strong>${label} :</strong> ${value}</p>`).join('')
         : `${fields.map(([label, value]) => `<p><strong>${label} :</strong> ${value}</p>`).join('')}<p>La fiche détaillée de ce finaliste n’a pas encore été publiée par le comité d’organisation.</p>`;
@@ -53,12 +71,28 @@
       profileOutput.innerHTML = `
         <p class="kicker">Profil sélectionné</p>
         <h2>${data.name || ''}</h2>
+        ${videoBlock}
         <div class="profile-detail-list">
           ${details}
         </div>
         ${posterLink}
       `;
+      const videoPlayer = profileOutput.querySelector('[data-finalist-video]');
+      if (videoPlayer) {
+        const playRequest = videoPlayer.play();
+        if (playRequest && typeof playRequest.catch === 'function') {
+          playRequest.catch(() => {});
+        }
+      }
       profileOutput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  });
+
+  document.querySelectorAll('[data-finalist-photo]').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      const card = trigger.closest('.person-card');
+      const profileButton = card?.querySelector('[data-finalist]');
+      profileButton?.click();
     });
   });
 
