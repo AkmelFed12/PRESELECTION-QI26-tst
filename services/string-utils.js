@@ -61,16 +61,6 @@ export function digitsOnly(value) {
 }
 
 /**
- * Normalize and validate candidate IDs
- */
-export function validateCandidateId(id) {
-  if (!id || typeof id !== 'string') return null;
-  const cleaned = id.trim().toUpperCase().substring(0, 50);
-  // Candidate IDs should be alphanumeric, usually like QI26XXXX
-  return /^[A-Z0-9]{3,}$/.test(cleaned) ? cleaned : null;
-}
-
-/**
  * Validate numeric IDs
  */
 export function validateNumericId(id) {
@@ -153,4 +143,3 @@ export function validatePasswordStrength(password) {
     checks
   };
 }
-
