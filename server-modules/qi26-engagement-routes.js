@@ -129,6 +129,18 @@ export async function ensureQi26EngagementTables(pool) {
   `);
 }
 
+let qi26TablesReadyPromise = null;
+
+async function ensureQi26TablesReady(pool) {
+  if (!qi26TablesReadyPromise) {
+    qi26TablesReadyPromise = ensureQi26EngagementTables(pool).catch((error) => {
+      qi26TablesReadyPromise = null;
+      throw error;
+    });
+  }
+  return qi26TablesReadyPromise;
+}
+
 export function registerQi26EngagementRoutes({
   app,
   pool,
@@ -160,6 +172,18 @@ export function registerQi26EngagementRoutes({
     legacyHeaders: false,
     message: { message: 'Enregistrements trop rapprochés. Merci de patienter.' }
   });
+
+  const ensureRuntimeTables = async (req, res, next) => {
+    try {
+      await ensureQi26TablesReady(pool);
+      next();
+    } catch (error) {
+      console.error('[QI26] table ensure error:', error.message);
+      res.status(500).json({ message: 'Service QI26 temporairement indisponible.' });
+    }
+  };
+
+  app.use(['/api/qi26', '/api/admin/qi26-audience', '/api/admin/qi26-engagement'], ensureRuntimeTables);
 
   app.get('/api/qi26/engagement/:slug', publicLimiter, async (req, res) => {
     const itemSlug = normalizeSlug(req.params.slug);

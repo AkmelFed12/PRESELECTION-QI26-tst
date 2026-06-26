@@ -53,6 +53,9 @@ for (const warning of envValidation.warnings) {
 const app = express();
 const parsedPort = Number.parseInt(process.env.PORT || '10000', 10);
 const PORT = Number.isInteger(parsedPort) && parsedPort > 0 && parsedPort <= 65535 ? parsedPort : 10000;
+if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 const SCORE_PHASE_FINAL_2026 = 'phase_finale_2026';
 const SCORE_PHASE_PREVIOUS = 'phase_precedente';
 const SITE_URL = (process.env.SITE_URL || '').trim().replace(/\/+$/, '');
