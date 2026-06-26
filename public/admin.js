@@ -181,6 +181,21 @@ const sponsorApprovedCount = document.getElementById('sponsorApprovedCount');
 const sponsorPendingCount = document.getElementById('sponsorPendingCount');
 const donationChart = document.getElementById('donationChart');
 const registrationChart = document.getElementById('registrationChart');
+const qi26AudienceSection = document.getElementById('qi26AudienceSection');
+const qi26AudienceTotal = document.getElementById('qi26AudienceTotal');
+const qi26AudienceBrothers = document.getElementById('qi26AudienceBrothers');
+const qi26AudienceSisters = document.getElementById('qi26AudienceSisters');
+const qi26AudienceCommunes = document.getElementById('qi26AudienceCommunes');
+const qi26AudienceTable = document.querySelector('#qi26AudienceTable tbody');
+const qi26AudienceRefresh = document.getElementById('qi26AudienceRefresh');
+const qi26AudienceExport = document.getElementById('qi26AudienceExport');
+const qi26AudienceMsg = document.getElementById('qi26AudienceMsg');
+const qi26CommentsPending = document.getElementById('qi26CommentsPending');
+const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
+const qi26CommentsRejected = document.getElementById('qi26CommentsRejected');
+const qi26CommentStatusFilter = document.getElementById('qi26CommentStatusFilter');
+const qi26CommentsRefresh = document.getElementById('qi26CommentsRefresh');
+const qi26CommentsTable = document.querySelector('#qi26CommentsTable tbody');
 
 const pollSection = document.getElementById('pollSection');
 const pollForm = document.getElementById('pollForm');
@@ -500,6 +515,7 @@ function showAdmin() {
     sponsorsSection,
     globalSearchSection,
     financeSection,
+    qi26AudienceSection,
     pollSection,
     securityThrottleSection
   ];
@@ -520,6 +536,7 @@ function hideAdmin() {
     sponsorsSection,
     globalSearchSection,
     financeSection,
+    qi26AudienceSection,
     pollSection,
     securityThrottleSection
   ];
@@ -959,6 +976,8 @@ async function loadDashboard() {
 
   renderGlobalSearch();
   await loadFinances();
+  await loadQi26Audience();
+  await loadQi26Comments();
   await loadPollAdmin();
   await loadSiteContentAdmin();
   updateAdminRegistrationStatus();
@@ -1004,6 +1023,108 @@ function renderFromCache(data) {
   updateAdminRegistrationStatus();
   finalPhaseLocked = false;
   applyFinalPhaseLockUI();
+}
+
+function formatAdminDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || '');
+  return date.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function renderQi26Audience(data = {}) {
+  const stats = data.stats || {};
+  const registrations = Array.isArray(data.registrations) ? data.registrations : [];
+  const communes = Array.isArray(stats.byCommune) ? stats.byCommune : [];
+
+  if (qi26AudienceTotal) qi26AudienceTotal.textContent = stats.total ?? 0;
+  if (qi26AudienceBrothers) qi26AudienceBrothers.textContent = stats.brothers ?? 0;
+  if (qi26AudienceSisters) qi26AudienceSisters.textContent = stats.sisters ?? 0;
+  if (qi26AudienceCommunes) {
+    qi26AudienceCommunes.innerHTML = communes.length
+      ? communes.map((item) => `${escapeHtml(item.commune)}: <strong>${Number(item.total || 0)}</strong>`).join(' · ')
+      : 'Aucune donnée.';
+  }
+  if (qi26AudienceTable) {
+    qi26AudienceTable.innerHTML = registrations.length
+      ? registrations.map((item) => `
+        <tr>
+          <td>${item.id || ''}</td>
+          <td>${escapeHtml(item.fullName || '')}</td>
+          <td>${item.gender === 'soeur' ? 'Sœur' : 'Frère'}</td>
+          <td>${escapeHtml(item.whatsapp || '')}</td>
+          <td>${escapeHtml(item.phone || '')}</td>
+          <td>${escapeHtml(item.commune || '')}</td>
+          <td>${formatAdminDateTime(item.createdAt)}</td>
+        </tr>
+      `).join('')
+      : '<tr><td colspan="7">Aucun enregistrement pour le moment.</td></tr>';
+  }
+}
+
+async function loadQi26Audience() {
+  if (!qi26AudienceSection) return;
+  try {
+    const res = await authedFetch('/api/admin/qi26-audience');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setStatus(qi26AudienceMsg, data.message || 'Audience QI26 indisponible.');
+      return;
+    }
+    renderQi26Audience(data);
+    setStatus(qi26AudienceMsg, 'Audience QI26 à jour.');
+  } catch {
+    setStatus(qi26AudienceMsg, 'Réseau indisponible pour Audience QI26.');
+  }
+}
+
+function renderQi26Comments(data = {}) {
+  const summary = data.summary || {};
+  const comments = Array.isArray(data.comments) ? data.comments : [];
+  if (qi26CommentsPending) qi26CommentsPending.textContent = summary.pending ?? 0;
+  if (qi26CommentsApproved) qi26CommentsApproved.textContent = summary.approved ?? 0;
+  if (qi26CommentsRejected) qi26CommentsRejected.textContent = summary.rejected ?? 0;
+  if (!qi26CommentsTable) return;
+  qi26CommentsTable.innerHTML = comments.length
+    ? comments.map((item) => `
+      <tr>
+        <td>${formatAdminDateTime(item.createdAt)}</td>
+        <td>${escapeHtml(item.itemSlug || '')}</td>
+        <td>${escapeHtml(item.authorName || 'Anonyme')}</td>
+        <td>${escapeHtml(item.content || '')}</td>
+        <td>${escapeHtml(item.status || '')}</td>
+        <td>
+          <button data-qi26-comment="${item.id}" data-status="approved">Approuver</button>
+          <button data-qi26-comment="${item.id}" data-status="rejected">Rejeter</button>
+        </td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="6">Aucun commentaire.</td></tr>';
+}
+
+async function loadQi26Comments() {
+  if (!qi26CommentsTable) return;
+  const status = qi26CommentStatusFilter?.value || '';
+  const url = status
+    ? `/api/admin/qi26-engagement/comments?status=${encodeURIComponent(status)}`
+    : '/api/admin/qi26-engagement/comments';
+  try {
+    const res = await authedFetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setStatus(qi26AudienceMsg, data.message || 'Commentaires indisponibles.');
+      return;
+    }
+    renderQi26Comments(data);
+  } catch {
+    setStatus(qi26AudienceMsg, 'Réseau indisponible pour les commentaires.');
+  }
 }
 
 function renderCandidates(list) {
@@ -4069,6 +4190,42 @@ setInterval(() => {
     loadDashboard();
   }
 }, 30000);
+
+qi26AudienceRefresh?.addEventListener('click', async () => {
+  await loadQi26Audience();
+  await loadQi26Comments();
+});
+
+qi26AudienceExport?.addEventListener('click', async () => {
+  try {
+    const res = await authedFetch('/api/admin/qi26-audience/export.csv');
+    if (!res.ok) {
+      setStatus(qi26AudienceMsg, 'Export indisponible.');
+      return;
+    }
+    const blob = await res.blob();
+    downloadBlob('audience-qi26.csv', blob);
+  } catch {
+    setStatus(qi26AudienceMsg, 'Réseau indisponible pour l’export.');
+  }
+});
+
+qi26CommentsRefresh?.addEventListener('click', loadQi26Comments);
+qi26CommentStatusFilter?.addEventListener('change', loadQi26Comments);
+
+qi26CommentsTable?.addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-qi26-comment]');
+  if (!button) return;
+  const id = button.dataset.qi26Comment;
+  const status = button.dataset.status;
+  const res = await authedFetch(`/api/admin/qi26-engagement/comments/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  });
+  const data = await res.json().catch(() => ({}));
+  setStatus(qi26AudienceMsg, data.message || (res.ok ? 'Commentaire mis à jour.' : 'Action impossible.'));
+  await loadQi26Comments();
+});
 
 scoresJudgeFilter?.addEventListener('input', applyScoresFilters);
 scoresDateFrom?.addEventListener('change', applyScoresFilters);

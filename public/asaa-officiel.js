@@ -40,6 +40,148 @@
       return window.location.href;
     }
   };
+  const getVisitorKey = () => {
+    const storageKey = 'qi26VisitorKey';
+    let key = localStorage.getItem(storageKey);
+    if (!key) {
+      key = window.crypto?.randomUUID
+        ? window.crypto.randomUUID()
+        : `qi26-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(storageKey, key);
+    }
+    return key;
+  };
+  const formatDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+  const buildEngagementPanel = (slug, title) => {
+    if (!slug) return '';
+    const safeTitle = title || 'ce profil';
+    return `
+      <section class="engagement-panel" data-qi26-engagement data-item-slug="${escapeHtml(slug)}" data-engagement-title="${escapeHtml(safeTitle)}">
+        <div class="engagement-header">
+          <div>
+            <p class="kicker">Espace communauté</p>
+            <h3>Encouragements et avis</h3>
+          </div>
+          <button class="like-button" type="button" data-like-button>J’aime <span data-like-count>0</span></button>
+        </div>
+        <div class="comment-list" data-comment-list>Chargement des commentaires...</div>
+        <form class="comment-form" data-comment-form>
+          <div>
+            <label>Nom</label>
+            <input name="authorName" autocomplete="name" placeholder="Anonyme" />
+          </div>
+          <div class="full">
+            <label>Commentaire</label>
+            <textarea name="content" rows="3" maxlength="700" required placeholder="Un encouragement, une remarque constructive..."></textarea>
+          </div>
+          <div class="full">
+            <button class="btn-solid" type="submit">Publier</button>
+            <p class="form-message" data-comment-message role="status"></p>
+          </div>
+        </form>
+      </section>
+    `;
+  };
+  const initEngagementPanel = (panel) => {
+    if (!panel || panel.dataset.ready === '1') return;
+    panel.dataset.ready = '1';
+    const slug = panel.dataset.itemSlug || '';
+    const likeButton = panel.querySelector('[data-like-button]');
+    const likeCount = panel.querySelector('[data-like-count]');
+    const commentList = panel.querySelector('[data-comment-list]');
+    const form = panel.querySelector('[data-comment-form]');
+    const commentMessage = panel.querySelector('[data-comment-message]');
+    const visitorKey = getVisitorKey();
+
+    const setCommentMessage = (text, tone = '') => {
+      if (!commentMessage) return;
+      commentMessage.textContent = text || '';
+      commentMessage.dataset.tone = tone;
+    };
+
+    const renderComments = (comments = []) => {
+      if (!commentList) return;
+      if (!comments.length) {
+        commentList.textContent = 'Aucun commentaire publié pour le moment.';
+        return;
+      }
+      commentList.innerHTML = comments
+        .map((comment) => `
+          <article class="comment-item">
+            <strong>${escapeHtml(comment.authorName || 'Anonyme')}</strong>
+            <time>${escapeHtml(formatDate(comment.createdAt))}</time>
+            <p>${escapeHtml(comment.content || '')}</p>
+          </article>
+        `)
+        .join('');
+    };
+
+    const renderEngagement = (data = {}) => {
+      if (likeCount) likeCount.textContent = Number(data.likes || 0);
+      if (likeButton) {
+        likeButton.classList.toggle('is-liked', !!data.liked);
+        likeButton.dataset.liked = data.liked ? '1' : '0';
+      }
+      renderComments(Array.isArray(data.comments) ? data.comments : []);
+    };
+
+    const loadEngagement = async () => {
+      try {
+        const res = await fetch(`/api/qi26/engagement/${encodeURIComponent(slug)}?visitorKey=${encodeURIComponent(visitorKey)}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderEngagement(data);
+      } catch {}
+    };
+
+    likeButton?.addEventListener('click', async () => {
+      const liked = likeButton.dataset.liked === '1';
+      try {
+        const res = await fetch(`/api/qi26/engagement/${encodeURIComponent(slug)}/like`, {
+          method: liked ? 'DELETE' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visitorKey })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) renderEngagement({ ...data, comments: [] });
+        await loadEngagement();
+      } catch {}
+    });
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setCommentMessage('Envoi en cours...');
+      const payload = Object.fromEntries(new FormData(form).entries());
+      payload.visitorKey = visitorKey;
+      try {
+        const res = await fetch(`/api/qi26/engagement/${encodeURIComponent(slug)}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setCommentMessage(data.message || 'Commentaire non envoyé.', 'error');
+          return;
+        }
+        form.reset();
+        setCommentMessage(data.message || 'Merci pour votre contribution.', 'success');
+        await loadEngagement();
+      } catch {
+        setCommentMessage('Réseau indisponible. Merci de réessayer.', 'error');
+      }
+    });
+
+    loadEngagement();
+  };
+  const initEngagementPanels = (root = document) => {
+    root.querySelectorAll('[data-qi26-engagement]').forEach(initEngagementPanel);
+  };
   const buildShareActions = (data) => {
     const name = data.name || 'ce finaliste';
     const shareUrl = absoluteUrl(data.profileUrl || window.location.href);
@@ -132,8 +274,10 @@
         ${posterLink}
         ${profileLink}
         ${buildShareActions(data)}
+        ${buildEngagementPanel(data.slug, data.name)}
       `;
       startBrandedVideo(profileOutput.querySelector('[data-branded-video]'));
+      initEngagementPanels(profileOutput);
       profileOutput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   });
@@ -219,4 +363,11 @@
       window.location.href = `mailto:${email}?subject=${encodeURIComponent(`Contact ASAA - ${subject || 'Message officiel'}`)}&body=${encodeURIComponent(body)}`;
     });
   }
+  const pageEngagementSlug = document.body?.dataset.qi26EngagementSlug || '';
+  if (pageEngagementSlug && !document.querySelector('[data-qi26-engagement]')) {
+    const anchor = document.querySelector('.profile-page-card .share-actions');
+    const title = document.body?.dataset.qi26EngagementTitle || document.querySelector('h1')?.textContent || '';
+    anchor?.insertAdjacentHTML('afterend', buildEngagementPanel(pageEngagementSlug, title));
+  }
+  initEngagementPanels();
 })();

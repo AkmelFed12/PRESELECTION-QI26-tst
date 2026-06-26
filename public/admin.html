@@ -962,6 +962,74 @@
         </table>
       </section>
 
+      <section class="card admin-hidden" id="qi26AudienceSection">
+        <h2>AUDIENCE QI26</h2>
+        <div class="grid-three">
+          <div class="status">Total Public: <strong id="qi26AudienceTotal">0</strong></div>
+          <div class="status">Nombre de Frères: <strong id="qi26AudienceBrothers">0</strong></div>
+          <div class="status">Nombre de Sœurs: <strong id="qi26AudienceSisters">0</strong></div>
+        </div>
+        <div class="status" style="margin-top:12px;">
+          <strong>Communes représentées</strong>
+          <div id="qi26AudienceCommunes" style="margin-top:8px;">Aucune donnée.</div>
+        </div>
+        <div class="hero-actions" style="margin-top:16px;">
+          <a class="btn outline" href="audience-qi26.html" target="_blank" rel="noopener">Ouvrir le formulaire public</a>
+          <button class="btn-primary" type="button" id="qi26AudienceRefresh">Actualiser</button>
+          <button class="btn-primary" type="button" id="qi26AudienceExport">Exporter CSV</button>
+        </div>
+        <h3 style="margin-top:16px;">Derniers enregistrements</h3>
+        <table class="table" id="qi26AudienceTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Catégorie</th>
+              <th>WhatsApp</th>
+              <th>Téléphone</th>
+              <th>Commune</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h3 style="margin-top:20px;">Commentaires publics</h3>
+        <div class="grid-three">
+          <div class="status">En attente: <strong id="qi26CommentsPending">0</strong></div>
+          <div class="status">Approuvés: <strong id="qi26CommentsApproved">0</strong></div>
+          <div class="status">Rejetés: <strong id="qi26CommentsRejected">0</strong></div>
+        </div>
+        <div class="form-grid" style="margin-top:14px;">
+          <div>
+            <label>Filtrer les commentaires</label>
+            <select id="qi26CommentStatusFilter">
+              <option value="">Tous</option>
+              <option value="pending">En attente</option>
+              <option value="approved">Approuvés</option>
+              <option value="rejected">Rejetés</option>
+            </select>
+          </div>
+          <div style="align-self:end;">
+            <button class="btn-primary" type="button" id="qi26CommentsRefresh">Actualiser commentaires</button>
+          </div>
+        </div>
+        <table class="table" id="qi26CommentsTable" style="margin-top:12px;">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Profil</th>
+              <th>Auteur</th>
+              <th>Commentaire</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="qi26AudienceMsg" class="status"></p>
+      </section>
+
       <section class="card admin-hidden" id="pollSection">
         <h2>Sondage (admin)</h2>
         <form id="pollForm" class="form-grid">

@@ -29,6 +29,7 @@ import { registerSocialFeaturesRoutes } from './server-modules/social-features-r
 import { registerEnhancedSocialRoutes } from './server-modules/enhanced-social-routes.js';
 import { registerChatGroupsRoutes } from './server-modules/chat-groups-routes.js';
 import { registerCollaborativeQuizzesRoutes } from './server-modules/collaborative-quizzes-routes.js';
+import { ensureQi26EngagementTables, registerQi26EngagementRoutes } from './server-modules/qi26-engagement-routes.js';
 import { sanitizeString, validateCandidateId } from './services/string-utils.js';
 
 dotenv.config();
@@ -2028,6 +2029,8 @@ async function initDatabase() {
       "INSERT INTO admin_config (key, value) VALUES ('daily_quiz', $1) ON CONFLICT (key) DO NOTHING",
       [JSON.stringify(DEFAULT_DAILY_QUIZ)]
     );
+
+    await ensureQi26EngagementTables(pool);
 
     // Seed member accounts from committee list (first name as username)
     const defaultPass = await hashPassword(defaultMemberPassword());
@@ -4502,6 +4505,14 @@ registerSocialFeaturesRoutes({ app, pool, sanitizeString });
 registerEnhancedSocialRoutes({ app, pool, sanitizeString });
 registerChatGroupsRoutes({ app, pool, sanitizeString, validateCandidateId });
 registerCollaborativeQuizzesRoutes({ app, pool, sanitizeString, validateCandidateId });
+registerQi26EngagementRoutes({
+  app,
+  pool,
+  verifyAdmin,
+  rateLimit,
+  ModerationService,
+  normalizeWhatsapp
+});
 
 function classifyMediaType(filename = '') {
   const ext = (filename.split('.').pop() || '').toLowerCase();
