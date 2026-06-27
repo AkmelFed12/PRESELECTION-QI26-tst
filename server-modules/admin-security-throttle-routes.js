@@ -1,6 +1,34 @@
 export function registerAdminSecurityThrottleRoutes({ app, pool, verifyAdmin, sanitizeString }) {
+  let throttleTableReadyPromise = null;
+
+  function ensureThrottleTable() {
+    if (!throttleTableReadyPromise) {
+      throttleTableReadyPromise = pool.query(`
+        CREATE TABLE IF NOT EXISTS auth_login_throttle (
+          key TEXT PRIMARY KEY,
+          namespace TEXT NOT NULL,
+          ip TEXT,
+          username TEXT,
+          failures INTEGER NOT NULL DEFAULT 0,
+          window_start TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          blocked_until TIMESTAMP WITH TIME ZONE,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_auth_login_throttle_namespace ON auth_login_throttle(namespace);
+        CREATE INDEX IF NOT EXISTS idx_auth_login_throttle_updated_at ON auth_login_throttle(updated_at);
+        CREATE INDEX IF NOT EXISTS idx_auth_login_throttle_blocked_until ON auth_login_throttle(blocked_until);
+      `).catch((error) => {
+        throttleTableReadyPromise = null;
+        throw error;
+      });
+    }
+    return throttleTableReadyPromise;
+  }
+
   app.get('/api/admin/security/throttle', verifyAdmin, async (req, res) => {
     try {
+      await ensureThrottleTable();
       const page = Math.max(1, Number.parseInt(String(req.query.page || '1'), 10) || 1);
       const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || '20'), 10) || 20));
       const offset = (page - 1) * limit;
@@ -101,6 +129,7 @@ export function registerAdminSecurityThrottleRoutes({ app, pool, verifyAdmin, sa
 
   app.delete('/api/admin/security/throttle/:key', verifyAdmin, async (req, res) => {
     try {
+      await ensureThrottleTable();
       const key = sanitizeString(req.params.key, 400);
       if (!key) return res.status(400).json({ message: 'Clé invalide.' });
 
@@ -120,6 +149,7 @@ export function registerAdminSecurityThrottleRoutes({ app, pool, verifyAdmin, sa
 
   app.delete('/api/admin/security/throttle', verifyAdmin, async (req, res) => {
     try {
+      await ensureThrottleTable();
       const namespaceRaw = sanitizeString(req.query.namespace, 30).toLowerCase();
       const namespace = ['admin', 'member'].includes(namespaceRaw) ? namespaceRaw : '';
       const ip = sanitizeString(req.query.ip, 80);
