@@ -598,7 +598,10 @@
       const nextPreview = document.querySelector('[data-next-preview]');
       const upcomingList = document.querySelector('[data-upcoming-list]');
       const techStatus = document.querySelector('[data-tech-status]');
-      const displayMode = new URLSearchParams(window.location.search).get('view') === 'public';
+      const params = new URLSearchParams(window.location.search);
+      const displayMode = params.get('view') === 'public';
+      const requestedCategory = params.get('category');
+      const requestedIndex = Number.parseInt(params.get('index') || '', 10);
       const channel = 'BroadcastChannel' in window ? new BroadcastChannel('asaa-qi26-projection') : null;
       const stateKey = 'asaa_qi26_projection_state';
       const imageCache = new Map();
@@ -929,6 +932,11 @@
         render();
       }
 
+      function applyUrlState() {
+        if (requestedCategory && collections[requestedCategory]) activeCategory = requestedCategory;
+        if (Number.isInteger(requestedIndex) && requestedIndex >= 0) activeIndex = requestedIndex;
+      }
+
       function publishState() {
         if (displayMode) return;
         const state = getState();
@@ -972,6 +980,9 @@
       document.querySelector('[data-open-display]')?.addEventListener('click', () => {
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'public');
+        url.searchParams.set('category', activeCategory);
+        url.searchParams.set('index', String(activeIndex));
+        localStorage.setItem(stateKey, JSON.stringify(getState()));
         window.open(url.toString(), 'asaa_qi26_public_projection', 'noopener');
         publishState();
       });
@@ -1036,7 +1047,10 @@
         try {
           const saved = JSON.parse(localStorage.getItem(stateKey) || '{}');
           applyState(saved);
+          applyUrlState();
+          render();
         } catch {
+          applyUrlState();
           render();
         }
       } else {
