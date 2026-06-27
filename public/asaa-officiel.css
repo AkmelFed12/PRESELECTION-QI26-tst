@@ -1208,6 +1208,17 @@ body.asaa-public a {
   font-weight: 800;
 }
 
+.winner-mark {
+  min-height: 220px;
+  width: 100%;
+}
+
+.video-portrait-thumb .winner-mark,
+.campaign-media .winner-mark {
+  min-height: 100%;
+  border-radius: inherit;
+}
+
 .winner-photo {
   width: 100%;
   display: block;

@@ -312,7 +312,7 @@ export function registerQi26EngagementRoutes({
     if (fullName.length < 2) return res.status(400).json({ message: 'Nom et prénom obligatoires.' });
     if (!VALID_AUDIENCE_GENDER.has(gender)) return res.status(400).json({ message: 'Merci de choisir Frère ou Sœur.' });
     if (!commune) return res.status(400).json({ message: 'Commune obligatoire.' });
-    if (!whatsapp && !phone) return res.status(400).json({ message: 'Un numéro WhatsApp ou téléphone est obligatoire.' });
+    if (!whatsapp) return res.status(400).json({ message: 'Numéro WhatsApp obligatoire.' });
 
     try {
       if (whatsapp || phone) {
@@ -401,6 +401,24 @@ export function registerQi26EngagementRoutes({
     } catch (error) {
       console.error('[QI26 Audience] export error:', error.message);
       res.status(500).json({ message: 'Export indisponible.' });
+    }
+  });
+
+  app.delete('/api/admin/qi26-audience/:id', verifyAdmin, async (req, res) => {
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Enregistrement invalide.' });
+    }
+
+    try {
+      const result = await pool.query('DELETE FROM qi26_audience_registrations WHERE id = $1 RETURNING id', [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: 'Enregistrement introuvable.' });
+      }
+      res.json({ message: 'Enregistrement supprimé.' });
+    } catch (error) {
+      console.error('[QI26 Audience] delete error:', error.message);
+      res.status(500).json({ message: 'Suppression indisponible.' });
     }
   });
 

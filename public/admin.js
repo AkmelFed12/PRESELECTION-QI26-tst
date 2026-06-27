@@ -1058,14 +1058,28 @@ function renderQi26Audience(data = {}) {
           <td>${item.id || ''}</td>
           <td>${escapeHtml(item.fullName || '')}</td>
           <td>${item.gender === 'soeur' ? 'Sœur' : 'Frère'}</td>
-          <td>${escapeHtml(item.whatsapp || '')}</td>
+          <td>
+            ${item.whatsapp ? `<a href="${buildQi26AudienceThanksUrl(item)}" target="_blank" rel="noopener">${escapeHtml(item.whatsapp)}</a>` : '—'}
+          </td>
           <td>${escapeHtml(item.phone || '')}</td>
           <td>${escapeHtml(item.commune || '')}</td>
           <td>${formatAdminDateTime(item.createdAt)}</td>
+          <td>
+            <button type="button" data-qi26-audience-thanks="${item.id}" data-qi26-audience-url="${buildQi26AudienceThanksUrl(item)}">Remercier</button>
+            <button type="button" data-qi26-audience-delete="${item.id}">Supprimer</button>
+          </td>
         </tr>
       `).join('')
-      : '<tr><td colspan="7">Aucun enregistrement pour le moment.</td></tr>';
+      : '<tr><td colspan="8">Aucun enregistrement pour le moment.</td></tr>';
   }
+}
+
+function buildQi26AudienceThanksUrl(item = {}) {
+  const phone = normalizePhone(item.whatsapp || item.phone || '');
+  const name = String(item.fullName || '').trim();
+  const greeting = name ? `Bonjour ${name},` : 'Bonjour,';
+  const message = `${greeting} merci d’avoir assisté à l’activité Quiz Islamique 2026 organisée par l’ASAA. Qu’Allah vous récompense et vous accorde davantage de science utile.`;
+  return phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : '#';
 }
 
 async function loadQi26Audience() {
@@ -4208,6 +4222,28 @@ qi26AudienceExport?.addEventListener('click', async () => {
   } catch {
     setStatus(qi26AudienceMsg, 'Réseau indisponible pour l’export.');
   }
+});
+
+qi26AudienceTable?.addEventListener('click', async (event) => {
+  const thanksBtn = event.target.closest('button[data-qi26-audience-thanks]');
+  if (thanksBtn) {
+    const url = thanksBtn.dataset.qi26AudienceUrl || '#';
+    if (url === '#') {
+      setStatus(qi26AudienceMsg, 'Numéro WhatsApp indisponible.');
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+
+  const deleteBtn = event.target.closest('button[data-qi26-audience-delete]');
+  if (!deleteBtn) return;
+  const id = deleteBtn.dataset.qi26AudienceDelete;
+  if (!id || !confirm('Supprimer cet enregistrement du public QI26 ?')) return;
+  const res = await authedFetch(`/api/admin/qi26-audience/${id}`, { method: 'DELETE' });
+  const data = await res.json().catch(() => ({}));
+  setStatus(qi26AudienceMsg, data.message || (res.ok ? 'Enregistrement supprimé.' : 'Suppression impossible.'));
+  if (res.ok) await loadQi26Audience();
 });
 
 qi26CommentsRefresh?.addEventListener('click', loadQi26Comments);
