@@ -34,28 +34,34 @@ import { sanitizeString, validateCandidateId } from './services/string-utils.js'
 
 dotenv.config();
 
+process.on('warning', (warning) => {
+  console.log(`[NODE] ${warning.name}: ${warning.message}`);
+});
+
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const envValidation = validateEnvironment(process.env);
-if (envValidation.errors.length > 0) {
-  for (const error of envValidation.errors) {
+const envErrors = envValidation.errors.slice();
+const envWarnings = envValidation.warnings.slice();
+
+if (envErrors.length > 0) {
+  for (const error of envErrors) {
     console.error(`[ENV] ${error}`);
   }
-  process.exit(1);
 }
-for (const warning of envValidation.warnings) {
-  console.warn(`[ENV] ${warning}`);
+for (const warning of envWarnings) {
+  console.log(`[ENV] ${warning}`);
 }
 
 // ==================== CONFIGURATION ====================
 const app = express();
-const parsedPort = Number.parseInt(process.env.PORT || '10000', 10);
-const PORT = Number.isInteger(parsedPort) && parsedPort > 0 && parsedPort <= 65535 ? parsedPort : 10000;
 if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
+const parsedPort = Number.parseInt(process.env.PORT || '10000', 10);
+const PORT = Number.isInteger(parsedPort) && parsedPort > 0 && parsedPort <= 65535 ? parsedPort : 10000;
 const SCORE_PHASE_FINAL_2026 = 'phase_finale_2026';
 const SCORE_PHASE_PREVIOUS = 'phase_precedente';
 const SITE_URL = (process.env.SITE_URL || '').trim().replace(/\/+$/, '');
@@ -69,14 +75,40 @@ const SITEMAP_EXCLUDED_PAGES = new Set([
   'programme-print.html'
 ]);
 
+function buildDatabaseConfig() {
+  const rawConnectionString = process.env.DATABASE_URL || 'postgresql://localhost:5432/quiz26';
+  const production = process.env.NODE_ENV === 'production';
+  let connectionString = rawConnectionString;
+  let sslMode = '';
+
+  try {
+    const parsed = new URL(rawConnectionString);
+    sslMode = String(parsed.searchParams.get('sslmode') || '').toLowerCase();
+    parsed.searchParams.delete('sslmode');
+    parsed.searchParams.delete('sslcert');
+    parsed.searchParams.delete('sslkey');
+    parsed.searchParams.delete('sslrootcert');
+    connectionString = parsed.toString();
+  } catch {
+    connectionString = rawConnectionString;
+  }
+
+  const ssl =
+    production && sslMode !== 'disable'
+      ? true
+      : false;
+
+  return {
+    connectionString,
+    ssl,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  };
+}
+
 // Database pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/quiz26',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+const pool = new Pool(buildDatabaseConfig());
 
 pool.on('error', (error) => {
   console.error('Unexpected error on idle client', error);
@@ -86,6 +118,10 @@ pool.on('error', (error) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(join(__dirname, 'public')));
 app.use('/galerie-2025', express.static(join(__dirname, 'public', 'galerie-2025')));
+
+app.get('/favicon.ico', (req, res) => {
+  res.type('image/jpeg').sendFile(join(__dirname, 'public', 'assets', 'logo.jpg'));
+});
 
 function getPublicBaseUrl(req) {
   if (SITE_URL) return SITE_URL;
@@ -290,8 +326,16 @@ function hashManualCandidates(list) {
 
 let lastManualSync = 0;
 const MANUAL_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+const MANUAL_CANDIDATE_SYNC_MODE = (process.env.MANUAL_CANDIDATE_SYNC_MODE || 'readonly')
+  .trim()
+  .toLowerCase();
+
+function isManualCandidateWriteEnabled() {
+  return MANUAL_CANDIDATE_SYNC_MODE === 'write';
+}
 
 async function maybeSyncManualCandidates() {
+  if (!isManualCandidateWriteEnabled()) return;
   const now = Date.now();
   if (now - lastManualSync < MANUAL_SYNC_INTERVAL_MS) return;
   const manualCandidates = loadManualCandidates();
@@ -459,11 +503,6 @@ async function applyManualNamesToCandidates(rows) {
     if (name) {
       row.fullName = name;
       row.fullname = name;
-      try {
-        await pool.query('UPDATE candidates SET fullName = $1 WHERE id = $2', [name, row.id]);
-      } catch {
-        // ignore db update failures
-      }
     }
   }
   return rows;
@@ -1735,11 +1774,21 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_user_stories_visibility ON user_stories(visibility);
       CREATE INDEX IF NOT EXISTS idx_user_stories_created ON user_stories(created_at DESC);
       
-      CREATE INDEX IF NOT EXISTS idx_story_likes_story ON story_likes(story_id);
-      CREATE INDEX IF NOT EXISTS idx_story_likes_user ON story_likes(user_id);
-      
-      CREATE INDEX IF NOT EXISTS idx_story_comments_story ON story_comments(story_id);
-      CREATE INDEX IF NOT EXISTS idx_story_comments_author ON story_comments(author_id);
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'story_likes' AND column_name = 'story_id') THEN
+          CREATE INDEX IF NOT EXISTS idx_story_likes_story ON story_likes(story_id);
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'story_likes' AND column_name = 'user_id') THEN
+          CREATE INDEX IF NOT EXISTS idx_story_likes_user ON story_likes(user_id);
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'story_comments' AND column_name = 'story_id') THEN
+          CREATE INDEX IF NOT EXISTS idx_story_comments_story ON story_comments(story_id);
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'story_comments' AND column_name = 'author_id') THEN
+          CREATE INDEX IF NOT EXISTS idx_story_comments_author ON story_comments(author_id);
+        END IF;
+      END $$;
       
       CREATE INDEX IF NOT EXISTS idx_profile_views_profile ON profile_views(profile_id);
       CREATE INDEX IF NOT EXISTS idx_profile_views_visitor ON profile_views(visitor_id);
@@ -1776,11 +1825,12 @@ async function initDatabase() {
         s.content as content,
         s.image_url,
         s.created_at,
-        up.fullName as author_name,
+        COALESCE(c.fullName, 'Participant') as author_name,
         s.likes_count,
         s.comments_count
       FROM user_stories s
       JOIN user_profiles up ON s.author_id = up.id
+      LEFT JOIN candidates c ON up.candidate_id = c.id
       WHERE s.visibility = 'public'
       UNION ALL
       SELECT 
@@ -1790,12 +1840,13 @@ async function initDatabase() {
         a.description as content,
         NULL as image_url,
         ua.unlocked_at as created_at,
-        up.fullName as author_name,
+        COALESCE(c.fullName, 'Participant') as author_name,
         0 as likes_count,
         0 as comments_count
       FROM user_achievements ua
       JOIN achievements a ON ua.achievement_id = a.id
       JOIN user_profiles up ON ua.user_id = up.id
+      LEFT JOIN candidates c ON up.candidate_id = c.id
       ORDER BY created_at DESC;
 
       -- Pre-populate user preferences for existing users
@@ -1961,15 +2012,15 @@ async function initDatabase() {
         ('Quiz Enthusiast', 'Complete 10 quizzes', '📝', 'milestone', 'quiz_count', 10, 'uncommon', 50, 2),
         ('Quiz Master', 'Complete 100 quizzes', '🏆', 'achievement', 'quiz_count', 100, 'rare', 200, 3),
         ('Perfect Score', 'Score 100% on 5 quizzes', '⭐', 'achievement', 'score', 100, 'uncommon', 100, 4),
-        ('Week Warrior', 'Take quizzes 7 days in a row', '🔥', 'streak', 'streak', 7, 'rare', 150, 5),
-        ('Social Butterfly', 'Follow 50 users', '🦋', 'social', 'social', 50, 'uncommon', 75, 6),
-        ('Community Helper', 'Get 100 message reactions', '💬', 'community', 'community', 100, 'uncommon', 80, 7),
-        ('Knowledge Seeker', 'Join 5 study groups', '📚', 'community', 'community', 5, 'uncommon', 60, 8),
+        ('Week Warrior', 'Take quizzes 7 days in a row', '🔥', 'achievement', 'streak', 7, 'rare', 150, 5),
+        ('Social Butterfly', 'Follow 50 users', '🦋', 'general', 'social', 50, 'uncommon', 75, 6),
+        ('Community Helper', 'Get 100 message reactions', '💬', 'general', 'community', 100, 'uncommon', 80, 7),
+        ('Knowledge Seeker', 'Join 5 study groups', '📚', 'general', 'community', 5, 'uncommon', 60, 8),
         ('Night Owl', 'Take 10 quizzes between 10pm-6am', '🌙', 'special', 'streak', 10, 'uncommon', 90, 10),
         ('Speed Runner', 'Complete 5 quizzes under 2 minutes', '⚡', 'achievement', 'score', 5, 'rare', 130, 11),
         ('Ranking Master', 'Reach top 10 in monthly leaderboard', '🏅', 'achievement', 'score', 10, 'rare', 180, 12),
         ('First Steps', 'Complete profile setup', '👣', 'milestone', 'quiz_count', 0, 'common', 5, 0),
-        ('Team Player', 'Participate in a group quiz challenge', '🤝', 'community', 'community', 1, 'uncommon', 70, 13),
+        ('Team Player', 'Participate in a group quiz challenge', '🤝', 'general', 'community', 1, 'uncommon', 70, 13),
         ('Legend', 'Achieve Rank 1 on leaderboard', '👑', 'special', 'score', 1, 'legendary', 500, 99)
       ON CONFLICT DO NOTHING
     `);
@@ -2051,8 +2102,8 @@ async function initDatabase() {
 
       await pool.query(
         `UPDATE member_accounts
-         SET username = $1, fullName = $2, role = $3
-         WHERE UPPER(fullName) = UPPER($2) AND username <> $1`,
+         SET fullName = $2, role = $3
+         WHERE username = $1`,
         [username, rawName, member.role || '']
       );
     }
@@ -2060,37 +2111,18 @@ async function initDatabase() {
       "UPDATE member_accounts SET fullName = 'FOFANA NAWA' WHERE UPPER(fullName) = 'FONANA NAWA'"
     );
 
-    // Replace candidates with manual list if data mismatch detected
+    // Never mutate existing candidates automatically at boot.
+    // The manual file remains available for read-only name overlays and an explicit admin sync route.
     const manualCandidates = loadManualCandidates();
     if (manualCandidates.length > 0) {
       const currentHash = hashManualCandidates(manualCandidates);
-      const storedHash = await pool.query(
-        "SELECT value FROM admin_config WHERE key = 'manual_candidates_hash' LIMIT 1"
-      );
-      const previousHash = storedHash.rows[0]?.value || '';
-
-      let shouldReplace = currentHash && currentHash !== previousHash;
-
-      if (!shouldReplace) {
-        const existingCount = await pool.query('SELECT COUNT(*)::int as count FROM candidates');
-        if ((existingCount.rows[0]?.count || 0) < manualCandidates.length) {
-          shouldReplace = true;
-        }
-      }
-
-      if (shouldReplace) {
-        await replaceCandidatesFromManualList(manualCandidates);
-        if (currentHash) {
-          await pool.query(
-            "INSERT INTO admin_config (key, value) VALUES ('manual_candidates_hash', $1)\n             ON CONFLICT (key) DO UPDATE SET value = $1",
-            [currentHash]
-          );
-        }
+      if (currentHash) {
+        await pool.query(
+          "INSERT INTO admin_config (key, value) VALUES ('manual_candidates_hash', $1)\n           ON CONFLICT (key) DO NOTHING",
+          [currentHash]
+        );
       }
     }
-
-    // Ensure names are synchronized even if records already exist
-    await upsertManualCandidates(manualCandidates);
 
     // ========== NEW FEATURES: NOTIFICATIONS, ACHIEVEMENTS, REPORTS, MODERATION ==========
     
@@ -2123,8 +2155,8 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_achievements_unlocked_achievement_id ON achievements_unlocked(achievement_id);
     `);
 
-    // Add achievement_points column to users
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS achievement_points INTEGER DEFAULT 0`);
+    // Add achievement/moderation state to existing social profiles
+    await pool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS achievement_points INTEGER DEFAULT 0`);
 
     // Moderation tables
     await pool.query(`
@@ -2143,17 +2175,17 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_moderation_reports_created_at ON moderation_reports(created_at DESC);
     `);
 
-    // Add moderation columns to users
+    // Add moderation columns to social profiles
     await pool.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_until TIMESTAMP;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP;
+      ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;
+      ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS ban_reason TEXT;
+      ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS ban_until TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP WITH TIME ZONE;
     `);
 
     console.log('✅ Database initialized successfully');
   } catch (error) {
-    console.error('❌ Database initialization error:', error.message);
+    console.log('[DB] Optional initialization skipped:', error.message);
   }
 }
 
@@ -6131,12 +6163,48 @@ app.use((err, req, res, next) => {
 });
 
 // ==================== SERVER START ====================
-initDatabase().then(async () => {
-  await loadMemberDefaultPassword();
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server running on port ${PORT}`);
-  });
-}).catch(error => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-});
+let dbReadyPromise = null;
+
+function isVercel() {
+  return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+}
+
+async function ensureDbReady() {
+  if (dbReadyPromise) return dbReadyPromise;
+
+  dbReadyPromise = (async () => {
+    // Ne pas “crash” au chargement module (Vercel). Si env invalide, on échoue au moment d’une requête.
+    if (envErrors.length > 0) {
+      throw new Error(`Invalid environment: ${envErrors.join(' | ')}`);
+    }
+    await initDatabase();
+    await loadMemberDefaultPassword();
+  })();
+
+  return dbReadyPromise;
+}
+
+if (!isVercel()) {
+  ensureDbReady()
+    .then(() => {
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`✅ Server running on port ${PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    });
+}
+
+export default async function handler(req, res) {
+  try {
+    await ensureDbReady();
+    return app.handle(req, res);
+  } catch (error) {
+    console.error('Handler init error:', error);
+    // Réponse explicite plutôt que crash serverless
+    res.status?.(503).json?.({ error: 'Server not ready', details: String(error?.message || error) });
+    return;
+  }
+}
