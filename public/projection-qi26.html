@@ -35,6 +35,10 @@
         overflow: hidden;
       }
 
+      body.display-view {
+        cursor: none;
+      }
+
       .stage {
         min-height: 100svh;
         display: grid;
@@ -44,25 +48,35 @@
           var(--green);
       }
 
+      body.display-view .topbar,
+      body.display-view .sidebar,
+      body.display-view .bottombar,
       body.public-mode .topbar,
       body.public-mode .sidebar,
       body.public-mode .bottombar {
         display: none;
       }
 
+      body.display-view .stage,
       body.public-mode .stage {
         grid-template-rows: 1fr;
       }
 
+      body.display-view .workspace,
       body.public-mode .workspace {
         grid-template-columns: 1fr;
         padding: 0;
       }
 
+      body.display-view .screen,
       body.public-mode .screen {
         min-height: 100svh;
         border: 0;
         border-radius: 0;
+      }
+
+      body.display-view video::-webkit-media-controls {
+        display: none !important;
       }
 
       body.black-screen .blackout {
@@ -437,10 +451,12 @@
           <button type="button" data-prev>Précédent</button>
           <button type="button" data-next>Suivant</button>
           <button type="button" data-home>Accueil</button>
+          <button type="button" data-back>Retour</button>
           <button type="button" data-play>Lire</button>
           <button type="button" data-stop>Stop</button>
           <button type="button" data-black>Écran noir</button>
           <button type="button" data-public>Écran public</button>
+          <button type="button" data-open-display>Ouvrir projecteur</button>
           <button type="button" data-countdown-start="10">10 min</button>
           <button type="button" data-countdown-start="5">5 min</button>
           <button type="button" data-countdown-start="1">1 min</button>
@@ -462,6 +478,9 @@
       const playButton = document.querySelector('[data-play]');
       const currentPreview = document.querySelector('[data-current-preview]');
       const nextPreview = document.querySelector('[data-next-preview]');
+      const displayMode = new URLSearchParams(window.location.search).get('view') === 'public';
+      const channel = 'BroadcastChannel' in window ? new BroadcastChannel('asaa-qi26-projection') : null;
+      const stateKey = 'asaa_qi26_projection_state';
       const collections = {
         home: [
           {
@@ -534,6 +553,11 @@
       let activeIndex = 0;
       let countdownTimer = null;
       let countdownRemaining = 600;
+      let blackScreen = false;
+
+      if (displayMode) {
+        document.body.classList.add('display-view');
+      }
 
       function escapeHtml(value) {
         return String(value || '').replace(/[&<>"']/g, (char) => ({
@@ -559,7 +583,8 @@
 
       function renderMedia(item) {
         if (item.type === 'video') {
-          return `<div class="media-frame portrait"><video src="${escapeHtml(item.src)}" ${item.poster ? `poster="${escapeHtml(item.poster)}"` : ''} controls playsinline preload="metadata"></video></div>`;
+          const videoControls = displayMode ? '' : 'controls';
+          return `<div class="media-frame portrait"><video src="${escapeHtml(item.src)}" ${item.poster ? `poster="${escapeHtml(item.poster)}"` : ''} ${videoControls} playsinline preload="metadata"></video></div>`;
         }
         if (item.type === 'image') {
           return `<div class="media-frame ${item.fit === 'landscape' ? 'landscape' : 'portrait'}"><img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.title)}" /></div>`;
@@ -580,7 +605,7 @@
 
       function render() {
         stopMedia();
-        document.body.classList.remove('black-screen');
+        document.body.classList.toggle('black-screen', blackScreen);
         const items = collections[activeCategory] || [];
         const item = items[activeIndex] || items[0];
         const counter = items.length > 1 ? `${activeIndex + 1} / ${items.length}` : 'Prêt';
@@ -613,25 +638,56 @@
         stopMedia();
         activeCategory = category;
         activeIndex = 0;
+        blackScreen = false;
         render();
+        publishState();
       }
 
       function move(step) {
         const items = collections[activeCategory] || [];
         if (!items.length) return;
+        stopMedia();
         activeIndex = (activeIndex + step + items.length) % items.length;
+        blackScreen = false;
         render();
+        publishState();
       }
 
       function startCountdown(minutes) {
         window.clearInterval(countdownTimer);
         countdownRemaining = Math.max(0, Math.round(Number(minutes || 0) * 60));
         renderCountdown();
+        publishState();
         countdownTimer = window.setInterval(() => {
           countdownRemaining = Math.max(0, countdownRemaining - 1);
           renderCountdown();
+          publishState();
           if (countdownRemaining === 0) window.clearInterval(countdownTimer);
         }, 1000);
+      }
+
+      function getState() {
+        return { activeCategory, activeIndex, blackScreen, countdownRemaining };
+      }
+
+      function applyState(state = {}) {
+        if (state.activeCategory && collections[state.activeCategory]) activeCategory = state.activeCategory;
+        if (Number.isInteger(state.activeIndex)) activeIndex = state.activeIndex;
+        if (typeof state.blackScreen === 'boolean') blackScreen = state.blackScreen;
+        if (Number.isFinite(state.countdownRemaining)) countdownRemaining = Math.max(0, Number(state.countdownRemaining));
+        render();
+      }
+
+      function publishState() {
+        if (displayMode) return;
+        const state = getState();
+        localStorage.setItem(stateKey, JSON.stringify(state));
+        channel?.postMessage(state);
+      }
+
+      function publishCommand(command) {
+        if (displayMode) return;
+        channel?.postMessage({ command, state: getState() });
       }
 
       categoryButtons.forEach((button) => {
@@ -640,17 +696,32 @@
       document.querySelector('[data-prev]')?.addEventListener('click', () => move(-1));
       document.querySelector('[data-next]')?.addEventListener('click', () => move(1));
       document.querySelector('[data-home]')?.addEventListener('click', () => setCategory('home'));
+      document.querySelector('[data-back]')?.addEventListener('click', () => {
+        window.location.href = 'regie-qi26.html';
+      });
       document.querySelector('[data-play]')?.addEventListener('click', () => {
         const video = screen.querySelector('video');
         if (video) video.play().catch(() => {});
+        publishCommand('play');
       });
-      document.querySelector('[data-stop]')?.addEventListener('click', stopMedia);
+      document.querySelector('[data-stop]')?.addEventListener('click', () => {
+        stopMedia();
+        publishCommand('stop');
+      });
       document.querySelector('[data-black]')?.addEventListener('click', () => {
         stopMedia();
-        document.body.classList.toggle('black-screen');
+        blackScreen = !blackScreen;
+        render();
+        publishState();
       });
       document.querySelector('[data-public]')?.addEventListener('click', () => {
         document.body.classList.toggle('public-mode');
+      });
+      document.querySelector('[data-open-display]')?.addEventListener('click', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'public');
+        window.open(url.toString(), 'asaa_qi26_public_projection', 'noopener');
+        publishState();
       });
       document.querySelectorAll('[data-countdown-start]').forEach((button) => {
         button.addEventListener('click', () => startCountdown(button.dataset.countdownStart));
@@ -659,16 +730,23 @@
         if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
         else document.exitFullscreen?.();
       });
+      screen.addEventListener('click', () => {
+        if (displayMode && !document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      });
       document.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowRight') move(1);
         if (event.key === 'ArrowLeft') move(-1);
         if (event.key === 'Escape') {
           document.body.classList.remove('public-mode');
-          document.body.classList.remove('black-screen');
+          blackScreen = false;
+          render();
+          publishState();
         }
         if (event.key.toLowerCase() === 'b') {
           stopMedia();
-          document.body.classList.toggle('black-screen');
+          blackScreen = !blackScreen;
+          render();
+          publishState();
         }
         if (event.key.toLowerCase() === 'h') setCategory('home');
         if (event.key.toLowerCase() === 'f') document.querySelector('[data-fullscreen]')?.click();
@@ -678,7 +756,30 @@
         }
       });
 
-      render();
+      channel?.addEventListener('message', (event) => {
+        if (!displayMode) return;
+        const payload = event.data || {};
+        applyState(payload.state || payload);
+        if (payload.command === 'play') screen.querySelector('video')?.play().catch(() => {});
+        if (payload.command === 'stop') stopMedia();
+      });
+      window.addEventListener('storage', (event) => {
+        if (!displayMode || event.key !== stateKey || !event.newValue) return;
+        try {
+          applyState(JSON.parse(event.newValue));
+        } catch {}
+      });
+      if (displayMode) {
+        try {
+          const saved = JSON.parse(localStorage.getItem(stateKey) || '{}');
+          applyState(saved);
+        } catch {
+          render();
+        }
+      } else {
+        render();
+        publishState();
+      }
     </script>
   </body>
 </html>
