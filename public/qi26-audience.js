@@ -6,6 +6,7 @@
   const brothersEl = document.querySelector('[data-audience-brothers]');
   const sistersEl = document.querySelector('[data-audience-sisters]');
   const communesEl = document.querySelector('[data-audience-communes]');
+  const offlineKey = 'asaa_qi26_audience_pending';
 
   const setMessage = (text, tone = '') => {
     if (!message) return;
@@ -70,6 +71,71 @@
     return text;
   };
 
+  const readQueue = () => {
+    try {
+      const rows = JSON.parse(localStorage.getItem(offlineKey) || '[]');
+      return Array.isArray(rows) ? rows : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeQueue = (rows) => {
+    localStorage.setItem(offlineKey, JSON.stringify(rows.slice(0, 100)));
+  };
+
+  const updateOfflineNotice = () => {
+    const count = readQueue().length;
+    let notice = document.getElementById('audienceOfflineNotice');
+    if (!count) {
+      notice?.remove();
+      return;
+    }
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'audienceOfflineNotice';
+      notice.className = 'form-message';
+      notice.dataset.tone = 'error';
+      notice.innerHTML = '<span></span> <button class="btn-outline" type="button">Synchroniser</button>';
+      form?.insertAdjacentElement('afterend', notice);
+      notice.querySelector('button')?.addEventListener('click', syncQueue);
+    }
+    notice.querySelector('span').textContent = `${count} présence(s) en attente de synchronisation.`;
+  };
+
+  const saveOffline = (payload) => {
+    const queue = readQueue();
+    queue.push({ ...payload, queuedAt: new Date().toISOString() });
+    writeQueue(queue);
+    updateOfflineNotice();
+  };
+
+  async function syncQueue() {
+    const queue = readQueue();
+    if (!queue.length) return;
+    const remaining = [];
+    for (const payload of queue) {
+      try {
+        const res = await fetch('/api/qi26/audience', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await readResponse(res);
+        if (res.ok || res.status === 409) {
+          if (data.stats) renderStats(data.stats);
+        } else {
+          remaining.push(payload);
+        }
+      } catch {
+        remaining.push(payload);
+      }
+    }
+    writeQueue(remaining);
+    updateOfflineNotice();
+    setMessage(remaining.length ? 'Certaines présences restent en attente.' : 'Présences en attente synchronisées.', remaining.length ? 'error' : 'success');
+  }
+
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     setMessage('Enregistrement en cours...');
@@ -91,10 +157,14 @@
       renderStats(data.stats || {});
       setMessage(data.message || 'Présence enregistrée.', 'success');
     } catch {
-      setMessage('Réseau indisponible. Merci de réessayer.', 'error');
+      saveOffline(payload);
+      form.reset();
+      setMessage('Connexion indisponible. La présence est gardée en attente sur cet appareil.', 'error');
     }
   });
 
   loadStats();
+  updateOfflineNotice();
+  syncQueue();
   window.setInterval(loadStats, 15000);
 })();

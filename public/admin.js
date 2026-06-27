@@ -191,6 +191,9 @@ const qi26AudienceRefresh = document.getElementById('qi26AudienceRefresh');
 const qi26AudienceExport = document.getElementById('qi26AudienceExport');
 const qi26AudienceExportPdf = document.getElementById('qi26AudienceExportPdf');
 const qi26AudienceMsg = document.getElementById('qi26AudienceMsg');
+let qi26AudienceCache = [];
+let qi26AudienceFiltered = [];
+let qi26AudienceStatsCache = {};
 const qi26CommentsPending = document.getElementById('qi26CommentsPending');
 const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
 const qi26CommentsRejected = document.getElementById('qi26CommentsRejected');
@@ -1039,14 +1042,133 @@ function formatAdminDateTime(value) {
   });
 }
 
+function installQi26AudienceAdminTools() {
+  if (!qi26AudienceSection || qi26AudienceSection.dataset.toolsReady === '1') return;
+  qi26AudienceSection.dataset.toolsReady = '1';
+
+  const credentialHint = loginCard?.querySelector('.muted');
+  if (credentialHint) {
+    credentialHint.textContent = 'Accès réservé au comité d’organisation.';
+  }
+
+  const dashboardActions = dashboard?.querySelector('.grid-three');
+  if (dashboardActions && !document.getElementById('qi26AdminQuickAccess')) {
+    const quick = document.createElement('div');
+    quick.id = 'qi26AdminQuickAccess';
+    quick.className = 'status';
+    quick.style.marginTop = '12px';
+    quick.innerHTML = `
+      <strong>Accès QI26</strong>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <a class="btn outline" href="#qi26AudienceSection">AUDIENCE QI26</a>
+        <a class="btn outline" href="audience-dashboard-qi26.html" target="_blank" rel="noopener">Dashboard public</a>
+        <a class="btn outline" href="qr-audience-qi26.html" target="_blank" rel="noopener">QR code</a>
+        <a class="btn outline" href="projection-qi26.html" target="_blank" rel="noopener">Projection</a>
+      </div>
+    `;
+    dashboardActions.insertAdjacentElement('afterend', quick);
+  }
+
+  const actions = qi26AudienceSection.querySelector('.hero-actions');
+  if (actions && !document.getElementById('qi26AudienceExportExcel')) {
+    actions.insertAdjacentHTML('beforeend', `
+      <button class="btn-primary" type="button" id="qi26AudienceExportExcel">Exporter Excel</button>
+      <button class="btn-primary" type="button" id="qi26AudienceThanksAll">Messages WhatsApp</button>
+      <a class="btn outline" href="qr-audience-qi26.html" target="_blank" rel="noopener">QR imprimable</a>
+      <a class="btn outline" href="audience-dashboard-qi26.html" target="_blank" rel="noopener">Dashboard live</a>
+    `);
+  }
+
+  const table = document.getElementById('qi26AudienceTable');
+  if (table && !document.getElementById('qi26AudienceFilters')) {
+    const filters = document.createElement('div');
+    filters.id = 'qi26AudienceFilters';
+    filters.className = 'form-grid';
+    filters.style.marginTop = '14px';
+    filters.innerHTML = `
+      <div>
+        <label>Recherche</label>
+        <input id="qi26AudienceSearch" placeholder="Nom, commune ou numéro" />
+      </div>
+      <div>
+        <label>Catégorie</label>
+        <select id="qi26AudienceGenderFilter">
+          <option value="">Tous</option>
+          <option value="frere">Frères</option>
+          <option value="soeur">Sœurs</option>
+        </select>
+      </div>
+      <div>
+        <label>Commune</label>
+        <input id="qi26AudienceCommuneFilter" placeholder="Ex: Yopougon" />
+      </div>
+      <div>
+        <label>Tri</label>
+        <select id="qi26AudienceSort">
+          <option value="recent">Plus récents</option>
+          <option value="oldest">Plus anciens</option>
+          <option value="name">Nom A-Z</option>
+          <option value="commune">Commune A-Z</option>
+        </select>
+      </div>
+    `;
+    table.insertAdjacentElement('beforebegin', filters);
+  }
+
+  document.getElementById('qi26AudienceSearch')?.addEventListener('input', () => renderQi26Audience({ registrations: qi26AudienceCache }));
+  document.getElementById('qi26AudienceGenderFilter')?.addEventListener('change', () => renderQi26Audience({ registrations: qi26AudienceCache }));
+  document.getElementById('qi26AudienceCommuneFilter')?.addEventListener('input', () => renderQi26Audience({ registrations: qi26AudienceCache }));
+  document.getElementById('qi26AudienceSort')?.addEventListener('change', () => renderQi26Audience({ registrations: qi26AudienceCache }));
+  document.getElementById('qi26AudienceExportExcel')?.addEventListener('click', exportQi26AudienceExcel);
+  document.getElementById('qi26AudienceThanksAll')?.addEventListener('click', copyQi26AudienceWhatsappMessages);
+}
+
+function getQi26AudienceFilterValues() {
+  return {
+    search: String(document.getElementById('qi26AudienceSearch')?.value || '').trim().toLowerCase(),
+    gender: String(document.getElementById('qi26AudienceGenderFilter')?.value || ''),
+    commune: String(document.getElementById('qi26AudienceCommuneFilter')?.value || '').trim().toLowerCase(),
+    sort: String(document.getElementById('qi26AudienceSort')?.value || 'recent')
+  };
+}
+
+function applyQi26AudienceFilters(registrations = []) {
+  const filters = getQi26AudienceFilterValues();
+  const filtered = registrations.filter((item) => {
+    const haystack = [item.fullName, item.whatsapp, item.phone, item.commune, item.ageRange]
+      .map((value) => String(value || '').toLowerCase())
+      .join(' ');
+    if (filters.search && !haystack.includes(filters.search)) return false;
+    if (filters.gender && item.gender !== filters.gender) return false;
+    if (filters.commune && !String(item.commune || '').toLowerCase().includes(filters.commune)) return false;
+    return true;
+  });
+
+  return filtered.sort((a, b) => {
+    if (filters.sort === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+    if (filters.sort === 'name') return String(a.fullName || '').localeCompare(String(b.fullName || ''), 'fr');
+    if (filters.sort === 'commune') return String(a.commune || '').localeCompare(String(b.commune || ''), 'fr');
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
+}
+
+function hasQi26AudienceFilters() {
+  const filters = getQi26AudienceFilterValues();
+  return Boolean(filters.search || filters.gender || filters.commune || filters.sort !== 'recent');
+}
+
 function renderQi26Audience(data = {}) {
-  const stats = data.stats || {};
-  const registrations = Array.isArray(data.registrations) ? data.registrations : [];
+  installQi26AudienceAdminTools();
+  if (data.stats) qi26AudienceStatsCache = data.stats;
+  const stats = qi26AudienceStatsCache || {};
+  if (Array.isArray(data.registrations)) qi26AudienceCache = data.registrations;
+  const registrations = applyQi26AudienceFilters(qi26AudienceCache);
+  qi26AudienceFiltered = registrations;
   const communes = Array.isArray(stats.byCommune) ? stats.byCommune : [];
 
-  if (qi26AudienceTotal) qi26AudienceTotal.textContent = stats.total ?? 0;
-  if (qi26AudienceBrothers) qi26AudienceBrothers.textContent = stats.brothers ?? 0;
-  if (qi26AudienceSisters) qi26AudienceSisters.textContent = stats.sisters ?? 0;
+  if (qi26AudienceTotal) qi26AudienceTotal.textContent = stats.total ?? qi26AudienceCache.length;
+  if (qi26AudienceBrothers) qi26AudienceBrothers.textContent = stats.brothers ?? qi26AudienceCache.filter((item) => item.gender === 'frere').length;
+  if (qi26AudienceSisters) qi26AudienceSisters.textContent = stats.sisters ?? qi26AudienceCache.filter((item) => item.gender === 'soeur').length;
   if (qi26AudienceCommunes) {
     qi26AudienceCommunes.innerHTML = communes.length
       ? communes.map((item) => `${escapeHtml(item.commune)}: <strong>${Number(item.total || 0)}</strong>`).join(' · ')
@@ -1105,12 +1227,95 @@ function exportQi26AudiencePdf() {
   );
 }
 
+function buildQi26AudienceExportRows() {
+  const rows = hasQi26AudienceFilters() ? qi26AudienceFiltered : qi26AudienceCache;
+  return rows.map((item) => ({
+    id: item.id || '',
+    fullName: item.fullName || '',
+    gender: item.gender === 'soeur' ? 'Sœur' : 'Frère',
+    whatsapp: item.whatsapp || '',
+    phone: item.phone || '',
+    commune: item.commune || '',
+    ageRange: item.ageRange || '',
+    note: item.note || '',
+    createdAt: formatAdminDateTime(item.createdAt)
+  }));
+}
+
+function exportQi26AudienceExcel() {
+  const rows = buildQi26AudienceExportRows();
+  const body = rows.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.id)}</td>
+      <td>${escapeHtml(item.fullName)}</td>
+      <td>${escapeHtml(item.gender)}</td>
+      <td>${escapeHtml(item.whatsapp)}</td>
+      <td>${escapeHtml(item.phone)}</td>
+      <td>${escapeHtml(item.commune)}</td>
+      <td>${escapeHtml(item.ageRange)}</td>
+      <td>${escapeHtml(item.note)}</td>
+      <td>${escapeHtml(item.createdAt)}</td>
+    </tr>
+  `).join('');
+  const html = `
+    <html>
+      <head><meta charset="utf-8" /></head>
+      <body>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Nom et prénom</th><th>Catégorie</th><th>WhatsApp</th><th>Téléphone</th><th>Commune</th><th>Âge</th><th>Avis</th><th>Date</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+  downloadBlob('audience-qi26.xls', new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' }));
+}
+
 function buildQi26AudienceThanksUrl(item = {}) {
   const phone = normalizePhone(item.whatsapp || item.phone || '');
   const name = String(item.fullName || '').trim();
   const greeting = name ? `Bonjour ${name},` : 'Bonjour,';
   const message = `${greeting} merci d’avoir assisté à l’activité Quiz Islamique 2026 organisée par l’ASAA. Qu’Allah vous récompense et vous accorde davantage de science utile.`;
   return phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : '#';
+}
+
+function buildQi26AudienceThanksMessage(item = {}) {
+  const name = String(item.fullName || '').trim();
+  const greeting = name ? `Bonjour ${name},` : 'Bonjour,';
+  return `${greeting} merci d’avoir assisté à l’activité Quiz Islamique 2026 organisée par l’ASAA. Qu’Allah vous récompense et vous accorde davantage de science utile.`;
+}
+
+async function copyQi26AudienceWhatsappMessages() {
+  const source = hasQi26AudienceFilters() ? qi26AudienceFiltered : qi26AudienceCache;
+  const rows = source
+    .map((item) => {
+      const phone = normalizePhone(item.whatsapp || item.phone || '');
+      if (!phone) return null;
+      return `${item.fullName || 'Public'} | ${phone} | ${buildQi26AudienceThanksMessage(item)}`;
+    })
+    .filter(Boolean);
+
+  if (!rows.length) {
+    setStatus(qi26AudienceMsg, 'Aucun numéro WhatsApp disponible dans la sélection.');
+    return;
+  }
+
+  const text = rows.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus(qi26AudienceMsg, `${rows.length} message(s) WhatsApp copiés.`);
+  } catch {
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(`<pre style="white-space:pre-wrap;font-family:Arial,sans-serif;">${escapeHtml(text)}</pre>`);
+      win.document.close();
+    }
+    setStatus(qi26AudienceMsg, `${rows.length} message(s) préparés.`);
+  }
 }
 
 async function loadQi26Audience() {
@@ -4867,6 +5072,8 @@ memberWhatsappCopy?.addEventListener('click', async () => {
     alert(text);
   }
 });
+
+installQi26AudienceAdminTools();
 
 // Force login each time for security
 hideAdmin();
