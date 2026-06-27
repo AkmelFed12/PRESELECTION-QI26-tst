@@ -107,7 +107,7 @@
     const renderComments = (comments = []) => {
       if (!commentList) return;
       if (!comments.length) {
-        commentList.textContent = 'Aucun commentaire publié pour le moment.';
+        commentList.textContent = 'Aucun avis visible pour le moment.';
         return;
       }
       commentList.innerHTML = comments
@@ -242,7 +242,7 @@
         ? `
           <div class="finalist-video-block">
             <div class="finalist-video-heading">
-              <p class="kicker">Capsule vidéo</p>
+              <p class="kicker">Présentation vidéo</p>
               <h3>Présentation vidéo du finaliste</h3>
             </div>
             <div class="branded-video" data-branded-video>
@@ -262,7 +262,7 @@
         : '';
       const details = fields.length > 1
         ? fields.map(([label, value]) => `<p><strong>${escapeHtml(label)} :</strong> ${escapeHtml(value)}</p>`).join('')
-        : `${fields.map(([label, value]) => `<p><strong>${escapeHtml(label)} :</strong> ${escapeHtml(value)}</p>`).join('')}<p>La fiche détaillée de ce finaliste n’a pas encore été publiée par le comité d’organisation.</p>`;
+        : `${fields.map(([label, value]) => `<p><strong>${escapeHtml(label)} :</strong> ${escapeHtml(value)}</p>`).join('')}<p>La fiche de ce finaliste sera complétée par le comité d’organisation.</p>`;
 
       profileOutput.innerHTML = `
         <p class="kicker">Profil sélectionné</p>

@@ -1151,6 +1151,43 @@ body.asaa-public a {
   color: var(--asaa-green-deep);
 }
 
+.audience-qr-card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  border: 1px solid var(--asaa-line);
+  border-radius: var(--radius);
+  background: var(--asaa-green-soft);
+  padding: 18px;
+  text-align: center;
+}
+
+.audience-qr-card img {
+  width: min(220px, 100%);
+  height: auto;
+  border: 10px solid white;
+  border-radius: var(--radius);
+  box-shadow: 0 12px 28px rgba(6, 71, 51, 0.12);
+}
+
+.audience-qr-card strong {
+  color: var(--asaa-green-deep);
+}
+
+.audience-qr-card span,
+.privacy-note {
+  color: var(--asaa-muted);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.privacy-note {
+  margin: 14px 0 0;
+  border-top: 1px solid var(--asaa-line);
+  padding-top: 14px;
+}
+
 .poster-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

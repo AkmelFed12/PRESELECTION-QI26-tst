@@ -52,6 +52,24 @@
     } catch {}
   };
 
+  const readResponse = async (res) => {
+    const text = await res.text().catch(() => '');
+    if (!text) return {};
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { message: text };
+    }
+  };
+
+  const friendlyError = (data = {}) => {
+    const text = String(data.message || '').trim();
+    if (!text || /^not found$/i.test(text)) {
+      return 'Enregistrement indisponible pour le moment. Merci de réessayer dans un instant.';
+    }
+    return text;
+  };
+
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     setMessage('Enregistrement en cours...');
@@ -63,9 +81,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json().catch(() => ({}));
+      const data = await readResponse(res);
       if (!res.ok) {
-        setMessage(data.message || 'Enregistrement impossible.', 'error');
+        setMessage(friendlyError(data), 'error');
         if (data.stats) renderStats(data.stats);
         return;
       }

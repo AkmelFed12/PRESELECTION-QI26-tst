@@ -25,6 +25,19 @@ function normalizePhone(value) {
   return String(value || '').replace(/[^\d+]/g, '').slice(0, 30);
 }
 
+function normalizeAudienceWhatsapp(value, normalizer) {
+  const raw = String(value || '').trim();
+  const normalized = normalizer ? normalizer(raw) : '';
+  if (normalized) return normalized;
+
+  const digits = normalizePhone(raw);
+  if (!digits) return '';
+  if (digits.startsWith('225')) return `+${digits}`;
+  if (digits.length === 10 && digits.startsWith('0')) return `+225${digits}`;
+  if (digits.length === 10) return `+225${digits}`;
+  return digits.length >= 8 ? `+${digits}` : '';
+}
+
 function parseAudienceRow(row = {}) {
   return {
     id: Number(row.id || 0),
@@ -291,8 +304,8 @@ export function registerQi26EngagementRoutes({
       res.status(201).json({
         comment: parseCommentRow(result.rows[0]),
         message: status === 'approved'
-          ? 'Commentaire publié. Merci pour votre contribution.'
-          : 'Commentaire reçu. Il sera visible après validation.'
+          ? 'Merci pour votre contribution.'
+          : 'Merci. Votre message sera visible après validation.'
       });
     } catch (error) {
       console.error('[QI26 Engagement] comment error:', error.message);
@@ -303,7 +316,7 @@ export function registerQi26EngagementRoutes({
   app.post('/api/qi26/audience', audienceLimiter, async (req, res) => {
     const fullName = clean(req.body?.fullName, 120);
     const gender = clean(req.body?.gender, 12).toLowerCase();
-    const whatsapp = normalizeWhatsapp ? normalizeWhatsapp(req.body?.whatsapp) : normalizePhone(req.body?.whatsapp);
+    const whatsapp = normalizeAudienceWhatsapp(req.body?.whatsapp, normalizeWhatsapp);
     const phone = normalizePhone(req.body?.phone);
     const commune = clean(req.body?.commune, 80);
     const ageRange = clean(req.body?.ageRange, 40);

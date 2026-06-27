@@ -189,6 +189,7 @@ const qi26AudienceCommunes = document.getElementById('qi26AudienceCommunes');
 const qi26AudienceTable = document.querySelector('#qi26AudienceTable tbody');
 const qi26AudienceRefresh = document.getElementById('qi26AudienceRefresh');
 const qi26AudienceExport = document.getElementById('qi26AudienceExport');
+const qi26AudienceExportPdf = document.getElementById('qi26AudienceExportPdf');
 const qi26AudienceMsg = document.getElementById('qi26AudienceMsg');
 const qi26CommentsPending = document.getElementById('qi26CommentsPending');
 const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
@@ -1065,13 +1066,43 @@ function renderQi26Audience(data = {}) {
           <td>${escapeHtml(item.commune || '')}</td>
           <td>${formatAdminDateTime(item.createdAt)}</td>
           <td>
-            <button type="button" data-qi26-audience-thanks="${item.id}" data-qi26-audience-url="${buildQi26AudienceThanksUrl(item)}">Remercier</button>
+            <button type="button" data-qi26-audience-thanks="${item.id}" data-qi26-audience-url="${buildQi26AudienceThanksUrl(item)}">Message WhatsApp</button>
             <button type="button" data-qi26-audience-delete="${item.id}">Supprimer</button>
           </td>
         </tr>
       `).join('')
       : '<tr><td colspan="8">Aucun enregistrement pour le moment.</td></tr>';
   }
+}
+
+function exportQi26AudiencePdf() {
+  const rows = Array.from(document.querySelectorAll('#qi26AudienceTable tbody tr'))
+    .filter((row) => row.querySelectorAll('td').length > 1)
+    .map((row) => {
+      const cells = row.querySelectorAll('td');
+      return `<tr>
+        <td>${escapeHtml(cells[0]?.textContent || '')}</td>
+        <td>${escapeHtml(cells[1]?.textContent || '')}</td>
+        <td>${escapeHtml(cells[2]?.textContent || '')}</td>
+        <td>${escapeHtml(cells[3]?.textContent || '')}</td>
+        <td>${escapeHtml(cells[4]?.textContent || '')}</td>
+        <td>${escapeHtml(cells[5]?.textContent || '')}</td>
+        <td>${escapeHtml(cells[6]?.textContent || '')}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const total = qi26AudienceTotal?.textContent || '0';
+  const brothers = qi26AudienceBrothers?.textContent || '0';
+  const sisters = qi26AudienceSisters?.textContent || '0';
+  const subtitle = `Total public: ${total} · Frères: ${brothers} · Sœurs: ${sisters} · ${new Date().toLocaleString('fr-FR')}`;
+
+  openPdfPrintWindow(
+    'AUDIENCE QI26',
+    subtitle,
+    ['ID', 'Nom', 'Catégorie', 'WhatsApp', 'Téléphone', 'Commune', 'Date'],
+    rows || '<tr><td colspan="7">Aucun enregistrement.</td></tr>'
+  );
 }
 
 function buildQi26AudienceThanksUrl(item = {}) {
@@ -4223,6 +4254,8 @@ qi26AudienceExport?.addEventListener('click', async () => {
     setStatus(qi26AudienceMsg, 'Réseau indisponible pour l’export.');
   }
 });
+
+qi26AudienceExportPdf?.addEventListener('click', exportQi26AudiencePdf);
 
 qi26AudienceTable?.addEventListener('click', async (event) => {
   const thanksBtn = event.target.closest('button[data-qi26-audience-thanks]');
