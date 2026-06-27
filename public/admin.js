@@ -1075,12 +1075,15 @@ function installQi26AudienceAdminTools() {
     actions.insertAdjacentHTML('beforeend', `
       <button class="btn-primary" type="button" id="qi26AudienceExportExcel">Exporter Excel</button>
       <button class="btn-primary" type="button" id="qi26AudienceFinalReport">Bilan final PDF</button>
+      <button class="btn-primary" type="button" id="qi26AudienceWhatsappTxt">Export WhatsApp TXT</button>
+      <button class="btn-primary" type="button" id="qi26AudienceArchive">Archive QI26</button>
       <button class="btn-primary" type="button" id="qi26AudienceThanksAll">Messages WhatsApp</button>
       <button class="btn-danger" type="button" id="qi26AudienceClose">Clôturer audience</button>
       <button class="btn-primary" type="button" id="qi26AudienceOpen">Rouvrir audience</button>
       <a class="btn outline" href="qr-audience-qi26.html" target="_blank" rel="noopener">QR imprimable</a>
       <a class="btn outline" href="audience-dashboard-qi26.html" target="_blank" rel="noopener">Dashboard live</a>
       <a class="btn outline" href="feuille-presence-qi26.html" target="_blank" rel="noopener">Feuille papier</a>
+      <a class="btn outline" href="regie-qi26.html" target="_blank" rel="noopener">Régie QI26</a>
     `);
   }
 
@@ -1134,6 +1137,8 @@ function installQi26AudienceAdminTools() {
   document.getElementById('qi26AudienceSort')?.addEventListener('change', () => renderQi26Audience({ registrations: qi26AudienceCache }));
   document.getElementById('qi26AudienceExportExcel')?.addEventListener('click', exportQi26AudienceExcel);
   document.getElementById('qi26AudienceFinalReport')?.addEventListener('click', exportQi26AudienceFinalReport);
+  document.getElementById('qi26AudienceWhatsappTxt')?.addEventListener('click', exportQi26AudienceWhatsappTxt);
+  document.getElementById('qi26AudienceArchive')?.addEventListener('click', exportQi26AudienceArchive);
   document.getElementById('qi26AudienceThanksAll')?.addEventListener('click', copyQi26AudienceWhatsappMessages);
   document.getElementById('qi26AudienceClose')?.addEventListener('click', () => updateQi26AudienceStatus(true));
   document.getElementById('qi26AudienceOpen')?.addEventListener('click', () => updateQi26AudienceStatus(false));
@@ -1418,6 +1423,79 @@ async function copyQi26AudienceWhatsappMessages() {
     }
     setStatus(qi26AudienceMsg, `${rows.length} message(s) préparés.`);
   }
+}
+
+function getQi26AudienceWhatsappLines() {
+  const source = hasQi26AudienceFilters() ? qi26AudienceFiltered : qi26AudienceCache;
+  return source
+    .map((item) => {
+      const phone = normalizePhone(item.whatsapp || item.phone || '');
+      if (!phone) return null;
+      return `${item.fullName || 'Public'} | ${phone} | ${buildQi26AudienceThanksMessage(item)}`;
+    })
+    .filter(Boolean);
+}
+
+function exportQi26AudienceWhatsappTxt() {
+  const rows = getQi26AudienceWhatsappLines();
+  if (!rows.length) {
+    setStatus(qi26AudienceMsg, 'Aucun message WhatsApp à exporter.');
+    return;
+  }
+  downloadBlob('messages-whatsapp-audience-qi26.txt', new Blob([rows.join('\n')], { type: 'text/plain;charset=utf-8' }));
+  setStatus(qi26AudienceMsg, `${rows.length} message(s) WhatsApp exportés.`);
+}
+
+function exportQi26AudienceArchive() {
+  const rows = buildQi26AudienceExportRows();
+  const stats = qi26AudienceStatsCache || {};
+  const messages = getQi26AudienceWhatsappLines();
+  const tableRows = rows.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.id)}</td>
+      <td>${escapeHtml(item.fullName)}</td>
+      <td>${escapeHtml(item.gender)}</td>
+      <td>${escapeHtml(item.whatsapp)}</td>
+      <td>${escapeHtml(item.phone)}</td>
+      <td>${escapeHtml(item.commune)}</td>
+      <td>${escapeHtml(item.ageRange)}</td>
+      <td>${escapeHtml(item.source)}</td>
+      <td>${escapeHtml(item.note)}</td>
+      <td>${escapeHtml(item.createdAt)}</td>
+    </tr>
+  `).join('');
+  const html = `
+    <!doctype html>
+    <html lang="fr">
+      <head>
+        <meta charset="utf-8" />
+        <title>Archive QI26 - Audience</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; color: #10231d; }
+          h1, h2 { color: #064733; }
+          table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; }
+          th, td { border: 1px solid #ddd; padding: 7px; text-align: left; font-size: 12px; }
+          th { background: #edf7f1; }
+          pre { white-space: pre-wrap; border: 1px solid #ddd; padding: 12px; background: #f8faf7; }
+        </style>
+      </head>
+      <body>
+        <h1>Archive QI26 - Audience</h1>
+        <p>Générée le ${new Date().toLocaleString('fr-FR')} · ${qi26AudienceClosed ? 'Audience clôturée' : 'Audience ouverte'}</p>
+        <h2>Résumé</h2>
+        <p>Total public: ${stats.total ?? rows.length} · Frères: ${stats.brothers ?? 0} · Sœurs: ${stats.sisters ?? 0}</p>
+        <h2>Présences</h2>
+        <table>
+          <thead><tr><th>ID</th><th>Nom</th><th>Catégorie</th><th>WhatsApp</th><th>Téléphone</th><th>Commune</th><th>Âge</th><th>Comment connu</th><th>Avis</th><th>Date</th></tr></thead>
+          <tbody>${tableRows || '<tr><td colspan="10">Aucune présence.</td></tr>'}</tbody>
+        </table>
+        <h2>Messages WhatsApp</h2>
+        <pre>${escapeHtml(messages.join('\n') || 'Aucun message.')}</pre>
+      </body>
+    </html>
+  `;
+  downloadBlob('archive-audience-qi26.html', new Blob([html], { type: 'text/html;charset=utf-8' }));
+  setStatus(qi26AudienceMsg, 'Archive QI26 téléchargée.');
 }
 
 async function loadQi26Audience() {

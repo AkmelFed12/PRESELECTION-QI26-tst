@@ -160,6 +160,32 @@
         font-weight: 850;
       }
 
+      .countdown-box {
+        display: grid;
+        justify-items: center;
+        gap: 8px;
+        margin-top: 26px;
+        border: 1px solid rgba(201, 154, 53, 0.4);
+        border-radius: 8px;
+        background: rgba(201, 154, 53, 0.12);
+        padding: clamp(16px, 3vw, 26px);
+      }
+
+      .countdown-box span {
+        color: #ffe7a3;
+        font-size: 0.84rem;
+        font-weight: 950;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .countdown-box strong {
+        color: white;
+        font-size: clamp(3rem, 9vw, 8rem);
+        line-height: 0.9;
+        font-variant-numeric: tabular-nums;
+      }
+
       .media-frame {
         position: relative;
         overflow: hidden;
@@ -292,6 +318,10 @@
             <span class="slide-kicker">Quiz Islamique 2026</span>
             <h1>Début dans quelques instants</h1>
             <p>Merci de vous installer dans le calme. Qu’Allah mette la bénédiction dans cette rencontre et dans la recherche de la science utile.</p>
+            <div class="countdown-box" aria-live="polite">
+              <span>Compte à rebours</span>
+              <strong data-countdown>10:00</strong>
+            </div>
             <div class="meta-row"><span>ASAA Officiel</span><span>Finale QI26</span><span>Mode cérémonie</span></div>
           </div>
         </div>
@@ -305,6 +335,18 @@
             <h1>Présentation officielle</h1>
             <p>Association des Serviteurs d’Allah Azawajal. Une jeunesse musulmane engagée dans la recherche de la science utile, l’excellence et le bon comportement.</p>
             <div class="meta-row"><span>Salle N’zassa, Treichville</span><span>Dimanche 23 août 2026</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide intro-slide" data-duration="9000">
+        <div class="slide-inner">
+          <img class="intro-mark" src="assets/logo.jpg" alt="Logo ASAA" />
+          <div class="slide-copy">
+            <span class="slide-kicker">Reconnaissance</span>
+            <h2>Merci aux partenaires et soutiens</h2>
+            <p>L’ASAA remercie les personnes, familles, bénévoles et partenaires qui accompagnent cette édition du Quiz Islamique et soutiennent la transmission de la science utile.</p>
+            <div class="meta-row"><span>Partenaires</span><span>Bénévoles</span><span>Communauté</span></div>
           </div>
         </div>
       </section>
@@ -424,6 +466,9 @@
           <button type="button" data-prev>Précédent</button>
           <button type="button" data-toggle>Pause</button>
           <button type="button" data-next>Suivant</button>
+          <button type="button" data-countdown-start="10">10 min</button>
+          <button type="button" data-countdown-start="5">5 min</button>
+          <button type="button" data-countdown-start="1">1 min</button>
           <button type="button" data-fullscreen>Plein écran</button>
           <a href="audience-qi26.html">Audience QI26</a>
         </div>
@@ -437,6 +482,9 @@
       let index = 0;
       let timer = null;
       let playing = true;
+      let countdownTimer = null;
+      let countdownRemaining = 600;
+      const countdown = document.querySelector('[data-countdown]');
 
       function stopVideos() {
         document.querySelectorAll('video').forEach((video) => {
@@ -462,8 +510,29 @@
         timer = window.setTimeout(() => showSlide(index + 1), duration);
       }
 
+      function renderCountdown() {
+        if (!countdown) return;
+        const minutes = Math.floor(countdownRemaining / 60);
+        const seconds = countdownRemaining % 60;
+        countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }
+
+      function startCountdown(minutes) {
+        window.clearInterval(countdownTimer);
+        countdownRemaining = Math.max(0, Math.round(Number(minutes || 0) * 60));
+        renderCountdown();
+        countdownTimer = window.setInterval(() => {
+          countdownRemaining = Math.max(0, countdownRemaining - 1);
+          renderCountdown();
+          if (countdownRemaining === 0) window.clearInterval(countdownTimer);
+        }, 1000);
+      }
+
       document.querySelector('[data-prev]')?.addEventListener('click', () => showSlide(index - 1));
       document.querySelector('[data-next]')?.addEventListener('click', () => showSlide(index + 1));
+      document.querySelectorAll('[data-countdown-start]').forEach((button) => {
+        button.addEventListener('click', () => startCountdown(button.dataset.countdownStart));
+      });
       document.querySelector('[data-toggle]')?.addEventListener('click', () => {
         playing = !playing;
         if (toggle) toggle.textContent = playing ? 'Pause' : 'Lecture';
@@ -489,6 +558,7 @@
         }
       });
 
+      renderCountdown();
       showSlide(0);
     </script>
   </body>
