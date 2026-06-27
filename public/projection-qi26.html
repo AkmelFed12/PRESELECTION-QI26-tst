@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mode projection QI26 | ASAA</title>
-    <meta name="description" content="Séquence de projection ASAA pour présenter les finalistes et anciens vainqueurs du Quiz Islamique 2026." />
+    <title>Régie projection QI26 | ASAA</title>
+    <meta name="description" content="Régie de projection ASAA pour la finale du Quiz Islamique 2026." />
     <meta name="theme-color" content="#03251d" />
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <script src="qi26-regie-guard.js" defer></script>
@@ -13,8 +13,8 @@
         --green: #03251d;
         --green-2: #064733;
         --gold: #c99a35;
-        --paper: #fffdf8;
-        --muted: rgba(255, 255, 255, 0.72);
+        --line: rgba(255, 255, 255, 0.16);
+        --muted: rgba(255, 255, 255, 0.74);
       }
 
       * {
@@ -36,27 +36,27 @@
       }
 
       .stage {
-        position: relative;
         min-height: 100svh;
         display: grid;
         grid-template-rows: auto 1fr auto;
         background:
-          linear-gradient(120deg, rgba(3, 37, 29, 0.98), rgba(6, 71, 51, 0.92)),
+          linear-gradient(120deg, rgba(3, 37, 29, 0.98), rgba(6, 71, 51, 0.94)),
           var(--green);
       }
 
-      .stage-header,
-      .stage-footer {
+      .topbar,
+      .bottombar {
         position: relative;
-        z-index: 5;
+        z-index: 4;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 18px;
-        padding: 18px clamp(18px, 4vw, 46px);
+        gap: 16px;
+        padding: 16px clamp(16px, 3vw, 40px);
       }
 
-      .brand {
+      .brand,
+      .status {
         display: inline-flex;
         align-items: center;
         gap: 12px;
@@ -64,95 +64,129 @@
       }
 
       .brand img {
-        width: 52px;
-        height: 52px;
-        border: 2px solid rgba(201, 154, 53, 0.75);
+        width: 50px;
+        height: 50px;
+        border: 2px solid rgba(201, 154, 53, 0.74);
         border-radius: 8px;
         object-fit: cover;
       }
 
       .brand strong,
-      .slide-kicker {
+      .kicker {
         display: block;
         color: #ffe7a3;
         font-size: 0.78rem;
-        font-weight: 900;
+        font-weight: 950;
         letter-spacing: 0.12em;
         text-transform: uppercase;
       }
 
-      .brand span {
-        display: block;
-        margin-top: 2px;
+      .brand span,
+      .status {
         color: var(--muted);
-        font-size: 0.9rem;
-        font-weight: 700;
+        font-size: 0.92rem;
+        font-weight: 850;
       }
 
-      .slide-count {
+      .workspace {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+        gap: clamp(16px, 2.4vw, 28px);
+        padding: 0 clamp(16px, 3vw, 40px) 18px;
+      }
+
+      .panel {
+        min-height: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .sidebar {
+        align-self: stretch;
+        display: grid;
+        align-content: start;
+        gap: 12px;
+        padding: 16px;
+      }
+
+      .category-button {
+        width: 100%;
+        min-height: 58px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .category-button strong {
+        display: block;
+        font-size: 1rem;
+        font-weight: 950;
+      }
+
+      .category-button span {
+        display: block;
+        margin-top: 3px;
         color: var(--muted);
+        font-size: 0.82rem;
         font-weight: 800;
       }
 
-      .slide {
-        display: none;
+      .category-button.is-active,
+      .category-button:hover {
+        border-color: rgba(201, 154, 53, 0.76);
+        background: rgba(201, 154, 53, 0.18);
+      }
+
+      .screen {
+        position: relative;
         min-height: 0;
-        padding: clamp(18px, 3vw, 46px);
-      }
-
-      .slide.is-active {
+        overflow: hidden;
         display: grid;
-      }
-
-      .slide-inner {
-        width: min(1320px, 100%);
-        margin: auto;
-        display: grid;
-        grid-template-columns: minmax(0, 0.96fr) minmax(320px, 1.04fr);
-        gap: clamp(24px, 4vw, 60px);
+        grid-template-columns: minmax(0, 0.86fr) minmax(300px, 1.14fr);
+        gap: clamp(20px, 3vw, 44px);
         align-items: center;
+        padding: clamp(20px, 3vw, 42px);
       }
 
-      .intro-slide .slide-inner,
-      .qr-slide .slide-inner {
-        grid-template-columns: 1fr;
-        justify-items: center;
-        text-align: center;
-      }
-
-      .slide-copy {
+      .copy {
         min-width: 0;
       }
 
-      .slide h1,
-      .slide h2 {
-        margin: 14px 0 0;
-        max-width: 900px;
+      .copy h1,
+      .copy h2 {
+        margin: 12px 0 0;
         color: white;
-        font-size: clamp(2.3rem, 6.4vw, 6.6rem);
-        line-height: 0.95;
+        font-size: clamp(2.1rem, 5.8vw, 6rem);
+        line-height: 0.96;
         letter-spacing: 0;
       }
 
-      .slide h2 {
-        font-size: clamp(2.1rem, 5.5vw, 5.4rem);
+      .copy h2 {
+        font-size: clamp(2rem, 4.6vw, 4.8rem);
       }
 
-      .slide p {
+      .copy p {
         max-width: 760px;
         color: var(--muted);
-        font-size: clamp(1rem, 1.7vw, 1.34rem);
-        line-height: 1.75;
+        font-size: clamp(1rem, 1.45vw, 1.22rem);
+        line-height: 1.72;
       }
 
-      .meta-row {
+      .tags {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
         margin-top: 22px;
       }
 
-      .meta-row span {
+      .tags span {
         border: 1px solid rgba(255, 255, 255, 0.16);
         border-radius: 999px;
         background: rgba(255, 255, 255, 0.08);
@@ -161,12 +195,52 @@
         font-weight: 850;
       }
 
+      .media-frame {
+        position: relative;
+        justify-self: center;
+        overflow: hidden;
+        width: min(100%, 520px);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: #020d0a;
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
+      }
+
+      .media-frame.portrait {
+        aspect-ratio: 9 / 16;
+        max-height: min(70svh, 760px);
+      }
+
+      .media-frame.landscape {
+        width: min(100%, 780px);
+        aspect-ratio: 16 / 9;
+      }
+
+      .media-frame.logo {
+        width: min(310px, 70vw);
+        aspect-ratio: 1;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .media-frame img,
+      .media-frame video {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
+      }
+
+      .media-frame.logo img {
+        object-fit: cover;
+      }
+
       .countdown-box {
         display: grid;
-        justify-items: center;
+        justify-items: start;
         gap: 8px;
+        width: min(430px, 100%);
         margin-top: 26px;
-        border: 1px solid rgba(201, 154, 53, 0.4);
+        border: 1px solid rgba(201, 154, 53, 0.42);
         border-radius: 8px;
         background: rgba(201, 154, 53, 0.12);
         padding: clamp(16px, 3vw, 26px);
@@ -182,72 +256,15 @@
 
       .countdown-box strong {
         color: white;
-        font-size: clamp(3rem, 9vw, 8rem);
+        font-size: clamp(3rem, 8vw, 7rem);
         line-height: 0.9;
         font-variant-numeric: tabular-nums;
-      }
-
-      .media-frame {
-        position: relative;
-        overflow: hidden;
-        width: min(100%, 520px);
-        justify-self: center;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 8px;
-        background: #020d0a;
-        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
-      }
-
-      .media-frame.portrait {
-        aspect-ratio: 9 / 16;
-        max-height: min(74svh, 780px);
-      }
-
-      .media-frame.landscape {
-        width: min(100%, 760px);
-        aspect-ratio: 16 / 9;
-      }
-
-      .media-frame img,
-      .media-frame video {
-        width: 100%;
-        height: 100%;
-        display: block;
-        object-fit: contain;
-      }
-
-      .media-frame img {
-        object-fit: cover;
-      }
-
-      .intro-mark {
-        width: min(190px, 36vw);
-        border: 3px solid rgba(201, 154, 53, 0.75);
-        border-radius: 28px;
-      }
-
-      .qr-box {
-        display: grid;
-        justify-items: center;
-        gap: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.08);
-        padding: clamp(18px, 4vw, 34px);
-      }
-
-      .qr-box img {
-        width: min(280px, 70vw);
-        border: 12px solid white;
-        border-radius: 8px;
-        background: white;
       }
 
       .controls {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
-        justify-content: flex-end;
       }
 
       .controls button,
@@ -270,7 +287,7 @@
         color: var(--green);
       }
 
-      @media (max-width: 900px) {
+      @media (max-width: 980px) {
         body {
           overflow: auto;
         }
@@ -279,18 +296,15 @@
           min-height: 100vh;
         }
 
-        .slide-inner {
+        .workspace,
+        .screen {
           grid-template-columns: 1fr;
         }
 
-        .stage-header,
-        .stage-footer {
+        .topbar,
+        .bottombar {
           align-items: flex-start;
           flex-direction: column;
-        }
-
-        .controls {
-          justify-content: flex-start;
         }
 
         .media-frame.portrait {
@@ -301,233 +315,221 @@
   </head>
   <body>
     <main class="stage">
-      <header class="stage-header">
+      <header class="topbar">
         <div class="brand">
           <img src="assets/logo.jpg" alt="Logo ASAA" />
           <div>
             <strong>ASAA Officiel</strong>
-            <span>Quiz Islamique 2026</span>
+            <span>Finale du Quiz Islamique 2026</span>
           </div>
         </div>
-        <div class="slide-count" data-slide-count>1 / 1</div>
+        <div class="status" data-status>Accueil</div>
       </header>
 
-      <section class="slide intro-slide is-active" data-duration="16000">
-        <div class="slide-inner">
-          <img class="intro-mark" src="assets/logo.jpg" alt="Logo ASAA" />
-          <div class="slide-copy">
-            <span class="slide-kicker">Quiz Islamique 2026</span>
-            <h1>Début dans quelques instants</h1>
-            <p>Merci de vous installer dans le calme. Qu’Allah mette la bénédiction dans cette rencontre et dans la recherche de la science utile.</p>
-            <div class="countdown-box" aria-live="polite">
-              <span>Compte à rebours</span>
-              <strong data-countdown>10:00</strong>
-            </div>
-            <div class="meta-row"><span>ASAA Officiel</span><span>Finale QI26</span><span>Mode cérémonie</span></div>
-          </div>
-        </div>
+      <section class="workspace">
+        <aside class="panel sidebar" aria-label="Commandes de projection">
+          <button class="category-button is-active" type="button" data-category="home">
+            <strong>Accueil</strong>
+            <span>Écran d’attente et compte à rebours</span>
+          </button>
+          <button class="category-button" type="button" data-category="finalistVideos">
+            <strong>Vidéos des finalistes</strong>
+            <span>Lecture contrôlée par la régie</span>
+          </button>
+          <button class="category-button" type="button" data-category="finalistImages">
+            <strong>Images des finalistes</strong>
+            <span>Photos et affiches officielles</span>
+          </button>
+          <button class="category-button" type="button" data-category="winners">
+            <strong>Anciens vainqueurs</strong>
+            <span>Éditions précédentes</span>
+          </button>
+          <button class="category-button" type="button" data-category="qr">
+            <strong>QR Audience</strong>
+            <span>Enregistrement du public</span>
+          </button>
+          <button class="category-button" type="button" data-category="thanks">
+            <strong>Remerciements</strong>
+            <span>Bénévoles, soutiens et public</span>
+          </button>
+        </aside>
+
+        <section class="panel screen" data-screen></section>
       </section>
 
-      <section class="slide intro-slide" data-duration="9000">
-        <div class="slide-inner">
-          <img class="intro-mark" src="assets/logo.jpg" alt="Logo ASAA" />
-          <div class="slide-copy">
-            <span class="slide-kicker">Finale du Quiz Islamique 2026</span>
-            <h1>Présentation officielle</h1>
-            <p>Association des Serviteurs d’Allah Azawajal. Une jeunesse musulmane engagée dans la recherche de la science utile, l’excellence et le bon comportement.</p>
-            <div class="meta-row"><span>Salle N’zassa, Treichville</span><span>Dimanche 23 août 2026</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="slide intro-slide" data-duration="9000">
-        <div class="slide-inner">
-          <img class="intro-mark" src="assets/logo.jpg" alt="Logo ASAA" />
-          <div class="slide-copy">
-            <span class="slide-kicker">Reconnaissance</span>
-            <h2>Merci aux partenaires et soutiens</h2>
-            <p>L’ASAA remercie les personnes, familles, bénévoles et partenaires qui accompagnent cette édition du Quiz Islamique et soutiennent la transmission de la science utile.</p>
-            <div class="meta-row"><span>Partenaires</span><span>Bénévoles</span><span>Communauté</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="slide" data-duration="14000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Finaliste QI26</span>
-            <h2>Kouyaté Amara</h2>
-            <p>Port-Bouët. Il participe au Quiz Islamique pour approfondir ses connaissances religieuses et transmettre le goût de la science utile.</p>
-            <div class="meta-row"><span>Finaliste</span><span>Présentation vidéo</span></div>
-          </div>
-          <div class="media-frame portrait"><video src="assets/finalistes/kouyate-amara-video.mp4" poster="assets/finalistes/kouyate-amara-photo.jpeg" controls playsinline></video></div>
-        </div>
-      </section>
-
-      <section class="slide" data-duration="12000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Finaliste QI26</span>
-            <h2>Sidibé Mohamed</h2>
-            <p>Yopougon. Présentation officielle dans la série Les Visages du Quiz Islamique 2026.</p>
-            <div class="meta-row"><span>Finaliste</span><span>Présentation vidéo</span></div>
-          </div>
-          <div class="media-frame portrait"><video src="assets/finalistes/sidibe-mohamed-video.mp4" poster="assets/finalistes/sidibe-mohamed-photo.jpeg" controls playsinline></video></div>
-        </div>
-      </section>
-
-      <section class="slide" data-duration="12000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Finaliste QI26</span>
-            <h2>Kouyaté Fatoumata Ramadan</h2>
-            <p>Adjamé. Présentation officielle dans la série Les Visages du Quiz Islamique 2026.</p>
-            <div class="meta-row"><span>Finaliste</span><span>Présentation vidéo</span></div>
-          </div>
-          <div class="media-frame portrait"><video src="assets/finalistes/kouyate-fatoumata-ramadan-video.mp4" poster="assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg" controls playsinline></video></div>
-        </div>
-      </section>
-
-      <section class="slide" data-duration="12000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Finaliste QI26</span>
-            <h2>Sib Abdoulaye</h2>
-            <p>Cocody. Finaliste engagé, attaché à l’apprentissage, à l’humilité et à la promotion de l’islam.</p>
-            <div class="meta-row"><span>Finaliste</span><span>Présentation vidéo</span></div>
-          </div>
-          <div class="media-frame portrait"><video src="assets/finalistes/sib-abdoulaye-video.mp4" poster="assets/finalistes/sib-abdoulaye-photo.jpeg" controls playsinline></video></div>
-        </div>
-      </section>
-
-      <section class="slide" data-duration="11000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Finaliste QI26</span>
-            <h2>Sayore Nassiratou</h2>
-            <p>Plateau. Présentation officielle dans la série Les Visages du Quiz Islamique 2026.</p>
-            <div class="meta-row"><span>Finaliste</span><span>Présentation vidéo</span></div>
-          </div>
-          <div class="media-frame portrait"><video src="assets/finalistes/sayore-nassiratou-video.mp4" poster="assets/finalistes/sayore-nassiratou-photo.jpeg" controls playsinline></video></div>
-        </div>
-      </section>
-
-      <section class="slide" data-duration="9000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Finalistes QI26</span>
-            <h2>Supports officiels</h2>
-            <p>Traoré Mouhammad Aboubakr, Kokora Mohamed Ouattara et les autres finalistes sont présentés dans la campagne officielle QI26.</p>
-            <div class="meta-row"><span>Affiches</span><span>Mobilisation</span><span>Finale</span></div>
-          </div>
-          <div class="media-frame landscape"><img src="assets/finalistes/traore-mouhammad-aboubakr-affiche.jpeg" alt="Affiche Traoré Mouhammad Aboubakr" /></div>
-        </div>
-      </section>
-
-      <section class="slide" data-duration="12000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Ancien vainqueur</span>
-            <h2>Amina Ouattara</h2>
-            <p>Vainqueure de l’édition 2023. Un témoignage pour encourager les candidats et rappeler la valeur de l’effort.</p>
-            <div class="meta-row"><span>QI23</span><span>Inspiration</span></div>
-          </div>
-          <div class="media-frame portrait"><video src="assets/anciens-vainqueurs/amina-ouattara-vainqueur-qi23-video.mp4" controls playsinline></video></div>
-        </div>
-      </section>
-
-      <section class="slide" data-duration="12000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Ancien vainqueur</span>
-            <h2>Bamba Moriba</h2>
-            <p>Vainqueur de l’édition 2025. Son parcours rappelle que la constance, la préparation et la confiance en Allah portent leurs fruits.</p>
-            <div class="meta-row"><span>QI25</span><span>Vainqueur</span></div>
-          </div>
-          <div class="media-frame portrait"><video src="assets/anciens-vainqueurs/bamba-moriba-vainqueur-qi25-video.mp4" poster="assets/anciens-vainqueurs/bamba-moriba-photo.jpg" controls playsinline></video></div>
-        </div>
-      </section>
-
-      <section class="slide qr-slide" data-duration="14000">
-        <div class="slide-inner">
-          <div class="slide-copy">
-            <span class="slide-kicker">Accueil du public</span>
-            <h2>Enregistrer votre présence</h2>
-            <p>Scannez le QR code pour aider l’ASAA à suivre la participation du public et améliorer l’organisation des prochaines éditions.</p>
-          </div>
-          <div class="qr-box">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=https%3A%2F%2Fasaaofficiel.vercel.app%2Faudience-qi26.html" alt="QR code Audience QI26" />
-            <strong>asaaofficiel.vercel.app/audience-qi26.html</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="slide intro-slide" data-duration="10000">
-        <div class="slide-inner">
-          <img class="intro-mark" src="assets/logo.jpg" alt="Logo ASAA" />
-          <div class="slide-copy">
-            <span class="slide-kicker">Remerciements</span>
-            <h2>Merci aux bénévoles</h2>
-            <p>Qu’Allah récompense toutes les personnes mobilisées pour l’accueil, l’organisation, la communication, la technique et l’accompagnement des candidats.</p>
-            <div class="meta-row"><span>Service</span><span>Discipline</span><span>Communauté</span></div>
-          </div>
-        </div>
-      </section>
-
-      <footer class="stage-footer">
+      <footer class="bottombar">
         <div class="controls">
           <button type="button" data-prev>Précédent</button>
-          <button type="button" data-toggle>Pause</button>
           <button type="button" data-next>Suivant</button>
+          <button type="button" data-play>Lire</button>
+          <button type="button" data-stop>Stop</button>
           <button type="button" data-countdown-start="10">10 min</button>
           <button type="button" data-countdown-start="5">5 min</button>
           <button type="button" data-countdown-start="1">1 min</button>
           <button type="button" data-fullscreen>Plein écran</button>
-          <a href="audience-qi26.html">Audience QI26</a>
+        </div>
+        <div class="controls">
+          <a href="regie-qi26.html">Régie</a>
+          <a href="audience-dashboard-qi26.html">Dashboard</a>
         </div>
       </footer>
     </main>
 
     <script>
-      const slides = Array.from(document.querySelectorAll('.slide'));
-      const count = document.querySelector('[data-slide-count]');
-      const toggle = document.querySelector('[data-toggle]');
-      let index = 0;
-      let timer = null;
-      let playing = true;
+      const screen = document.querySelector('[data-screen]');
+      const statusLabel = document.querySelector('[data-status]');
+      const categoryButtons = Array.from(document.querySelectorAll('[data-category]'));
+      const playButton = document.querySelector('[data-play]');
+      const collections = {
+        home: [
+          {
+            type: 'home',
+            kicker: 'Quiz Islamique 2026',
+            title: 'Début dans quelques instants',
+            text: 'Merci de vous installer dans le calme. Qu’Allah mette la bénédiction dans cette rencontre et dans la recherche de la science utile.',
+            tags: ['ASAA Officiel', 'Finale QI26', 'Salle N’zassa']
+          }
+        ],
+        finalistVideos: [
+          { type: 'video', title: 'Kouyaté Amara', text: 'Port-Bouët. Finaliste du Quiz Islamique 2026.', src: 'assets/finalistes/kouyate-amara-video.mp4', poster: 'assets/finalistes/kouyate-amara-photo.jpeg' },
+          { type: 'video', title: 'Sidibé Mohamed', text: 'Yopougon. Finaliste du Quiz Islamique 2026.', src: 'assets/finalistes/sidibe-mohamed-video.mp4', poster: 'assets/finalistes/sidibe-mohamed-photo.jpeg' },
+          { type: 'video', title: 'Kouyaté Fatoumata Ramadan', text: 'Adjamé. Finaliste du Quiz Islamique 2026.', src: 'assets/finalistes/kouyate-fatoumata-ramadan-video.mp4', poster: 'assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg' },
+          { type: 'video', title: 'Sib Abdoulaye', text: 'Cocody. Finaliste du Quiz Islamique 2026.', src: 'assets/finalistes/sib-abdoulaye-video.mp4', poster: 'assets/finalistes/sib-abdoulaye-photo.jpeg' },
+          { type: 'video', title: 'Sayore Nassiratou', text: 'Plateau. Finaliste du Quiz Islamique 2026.', src: 'assets/finalistes/sayore-nassiratou-video.mp4', poster: 'assets/finalistes/sayore-nassiratou-photo.jpeg' }
+        ],
+        finalistImages: [
+          { type: 'image', title: 'Kouyaté Amara', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/kouyate-amara-affiche.png', fit: 'portrait' },
+          { type: 'image', title: 'Kouyaté Amara', text: 'Photo officielle.', src: 'assets/finalistes/kouyate-amara-photo.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Sidibé Mohamed', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/sidibe-mohamed-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Sidibé Mohamed', text: 'Photo officielle.', src: 'assets/finalistes/sidibe-mohamed-photo.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Kouyaté Fatoumata Ramadan', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Kouyaté Fatoumata Ramadan', text: 'Photo officielle.', src: 'assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Sib Abdoulaye', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/sib-abdoulaye-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Sib Abdoulaye', text: 'Photo officielle.', src: 'assets/finalistes/sib-abdoulaye-photo.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Sayore Nassiratou', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/sayore-nassiratou-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Sayore Nassiratou', text: 'Photo officielle.', src: 'assets/finalistes/sayore-nassiratou-photo.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Kokora Mohamed Ouattara', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Kokora Mohamed Ouattara', text: 'Photo officielle.', src: 'assets/finalistes/kokora-mohamed-ouattara-photo.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Traoré Mouhammad Aboubakr', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/traore-mouhammad-aboubakr-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Traoré Mouhammad Aboubakr', text: 'Photo officielle.', src: 'assets/finalistes/traore-mouhammad-aboubakr-photo.jpeg', fit: 'portrait' }
+        ],
+        winners: [
+          { type: 'video', title: 'Amina Ouattara', text: 'Vainqueure de l’édition 2023.', src: 'assets/anciens-vainqueurs/amina-ouattara-vainqueur-qi23-video.mp4' },
+          { type: 'video', title: 'Bamba Moriba', text: 'Vainqueur de l’édition 2025.', src: 'assets/anciens-vainqueurs/bamba-moriba-vainqueur-qi25-video.mp4', poster: 'assets/anciens-vainqueurs/bamba-moriba-photo.jpg' },
+          { type: 'image', title: 'Bamba Moriba', text: 'Vainqueur de l’édition 2025.', src: 'assets/anciens-vainqueurs/bamba-moriba-photo.jpg', fit: 'portrait' }
+        ],
+        qr: [
+          {
+            type: 'qr',
+            kicker: 'Audience QI26',
+            title: 'Enregistrer la présence',
+            text: 'Scanner le QR code pour enregistrer sa présence et aider l’équipe à suivre la participation du public.',
+            tags: ['Formulaire public', 'Comptage live', 'ASAA']
+          }
+        ],
+        thanks: [
+          {
+            type: 'logo',
+            kicker: 'Remerciements',
+            title: 'Merci à toutes les équipes',
+            text: 'Qu’Allah récompense les bénévoles, les soutiens, les familles, les candidats et le public pour leur participation.',
+            tags: ['Service', 'Discipline', 'Communauté']
+          }
+        ]
+      };
+      const labels = {
+        home: 'Accueil',
+        finalistVideos: 'Vidéos des finalistes',
+        finalistImages: 'Images des finalistes',
+        winners: 'Anciens vainqueurs',
+        qr: 'QR Audience',
+        thanks: 'Remerciements'
+      };
+      let activeCategory = 'home';
+      let activeIndex = 0;
       let countdownTimer = null;
       let countdownRemaining = 600;
-      const countdown = document.querySelector('[data-countdown]');
 
-      function stopVideos() {
+      function escapeHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[char]);
+      }
+
+      function stopMedia() {
         document.querySelectorAll('video').forEach((video) => {
           video.pause();
           video.currentTime = 0;
         });
       }
 
-      function showSlide(nextIndex) {
-        stopVideos();
-        index = (nextIndex + slides.length) % slides.length;
-        slides.forEach((slide, slideIndex) => slide.classList.toggle('is-active', slideIndex === index));
-        if (count) count.textContent = `${index + 1} / ${slides.length}`;
-        const video = slides[index].querySelector('video');
-        if (video && playing) video.play().catch(() => {});
-        schedule();
+      function renderTags(tags = []) {
+        return tags.length ? `<div class="tags">${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}</div>` : '';
       }
 
-      function schedule() {
-        window.clearTimeout(timer);
-        if (!playing) return;
-        const duration = Number(slides[index]?.dataset.duration || 10000);
-        timer = window.setTimeout(() => showSlide(index + 1), duration);
+      function renderMedia(item) {
+        if (item.type === 'video') {
+          return `<div class="media-frame portrait"><video src="${escapeHtml(item.src)}" ${item.poster ? `poster="${escapeHtml(item.poster)}"` : ''} controls playsinline preload="metadata"></video></div>`;
+        }
+        if (item.type === 'image') {
+          return `<div class="media-frame ${item.fit === 'landscape' ? 'landscape' : 'portrait'}"><img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.title)}" /></div>`;
+        }
+        if (item.type === 'qr') {
+          return `<div class="media-frame logo"><img src="https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=14&data=https%3A%2F%2Fasaaofficiel.vercel.app%2Faudience-qi26.html" alt="QR code Audience QI26" /></div>`;
+        }
+        return `<div class="media-frame logo"><img src="assets/logo.jpg" alt="Logo ASAA" /></div>`;
       }
 
       function renderCountdown() {
+        const countdown = document.querySelector('[data-countdown]');
         if (!countdown) return;
         const minutes = Math.floor(countdownRemaining / 60);
         const seconds = countdownRemaining % 60;
         countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }
+
+      function render() {
+        stopMedia();
+        const items = collections[activeCategory] || [];
+        const item = items[activeIndex] || items[0];
+        const counter = items.length > 1 ? `${activeIndex + 1} / ${items.length}` : 'Prêt';
+        if (statusLabel) statusLabel.textContent = `${labels[activeCategory]} · ${counter}`;
+        categoryButtons.forEach((button) => button.classList.toggle('is-active', button.dataset.category === activeCategory));
+        const kicker = item.kicker || labels[activeCategory];
+        const titleTag = item.type === 'home' ? 'h1' : 'h2';
+        const extra = item.type === 'home'
+          ? `<div class="countdown-box" aria-live="polite"><span>Compte à rebours</span><strong data-countdown>10:00</strong></div>`
+          : '';
+        screen.innerHTML = `
+          <div class="copy">
+            <span class="kicker">${escapeHtml(kicker)}</span>
+            <${titleTag}>${escapeHtml(item.title)}</${titleTag}>
+            <p>${escapeHtml(item.text)}</p>
+            ${extra}
+            ${renderTags(item.tags || ['Finale QI26', 'ASAA Officiel'])}
+          </div>
+          ${renderMedia(item)}
+        `;
+        renderCountdown();
+        if (playButton) playButton.disabled = item.type !== 'video';
+      }
+
+      function setCategory(category) {
+        if (!collections[category]) return;
+        activeCategory = category;
+        activeIndex = 0;
+        render();
+      }
+
+      function move(step) {
+        const items = collections[activeCategory] || [];
+        if (!items.length) return;
+        activeIndex = (activeIndex + step + items.length) % items.length;
+        render();
       }
 
       function startCountdown(minutes) {
@@ -541,38 +543,34 @@
         }, 1000);
       }
 
-      document.querySelector('[data-prev]')?.addEventListener('click', () => showSlide(index - 1));
-      document.querySelector('[data-next]')?.addEventListener('click', () => showSlide(index + 1));
+      categoryButtons.forEach((button) => {
+        button.addEventListener('click', () => setCategory(button.dataset.category));
+      });
+      document.querySelector('[data-prev]')?.addEventListener('click', () => move(-1));
+      document.querySelector('[data-next]')?.addEventListener('click', () => move(1));
+      document.querySelector('[data-play]')?.addEventListener('click', () => {
+        const video = screen.querySelector('video');
+        if (video) video.play().catch(() => {});
+      });
+      document.querySelector('[data-stop]')?.addEventListener('click', stopMedia);
       document.querySelectorAll('[data-countdown-start]').forEach((button) => {
         button.addEventListener('click', () => startCountdown(button.dataset.countdownStart));
-      });
-      document.querySelector('[data-toggle]')?.addEventListener('click', () => {
-        playing = !playing;
-        if (toggle) toggle.textContent = playing ? 'Pause' : 'Lecture';
-        if (playing) {
-          const video = slides[index].querySelector('video');
-          if (video) video.play().catch(() => {});
-          schedule();
-        } else {
-          window.clearTimeout(timer);
-          slides[index].querySelector('video')?.pause();
-        }
       });
       document.querySelector('[data-fullscreen]')?.addEventListener('click', () => {
         if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
         else document.exitFullscreen?.();
       });
       document.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowRight') showSlide(index + 1);
-        if (event.key === 'ArrowLeft') showSlide(index - 1);
+        if (event.key === 'ArrowRight') move(1);
+        if (event.key === 'ArrowLeft') move(-1);
+        if (event.key.toLowerCase() === 'f') document.querySelector('[data-fullscreen]')?.click();
         if (event.key === ' ') {
           event.preventDefault();
-          toggle?.click();
+          document.querySelector('[data-play]')?.click();
         }
       });
 
-      renderCountdown();
-      showSlide(0);
+      render();
     </script>
   </body>
 </html>
