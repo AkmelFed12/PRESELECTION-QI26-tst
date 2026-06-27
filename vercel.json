@@ -14,6 +14,17 @@
       "destination": "/server.js"
     }
   ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    }
+  ],
   "functions": {
     "server.js": {
       "excludeFiles": "public/galerie-2024/**"
