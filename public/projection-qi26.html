@@ -102,6 +102,20 @@
         box-shadow: none;
       }
 
+      body.card-display .screen {
+        grid-template-columns: 1fr;
+        place-items: center;
+      }
+
+      body.card-display .copy {
+        width: min(980px, 92vw);
+        text-align: center;
+      }
+
+      body.card-display .copy h2 {
+        font-size: clamp(3rem, 8vw, 8rem);
+      }
+
       body.black-screen .blackout {
         display: grid;
       }
@@ -246,6 +260,31 @@
         margin-top: 4px;
         color: white;
         font-size: 0.96rem;
+      }
+
+      .upcoming-list {
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .upcoming-list li {
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 850;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .tech-status {
+        min-height: 18px;
+        color: #ffe7a3;
+        font-size: 0.78rem;
+        font-weight: 850;
+        white-space: nowrap;
       }
 
       .screen {
@@ -482,6 +521,10 @@
             <strong>Accueil</strong>
             <span>Écran d’attente et compte à rebours</span>
           </button>
+          <button class="category-button" type="button" data-category="candidateCards">
+            <strong>Cartons candidats</strong>
+            <span>Annonce avant passage</span>
+          </button>
           <button class="category-button" type="button" data-category="finalistVideos">
             <strong>Vidéos des finalistes</strong>
             <span>Lecture contrôlée par la régie</span>
@@ -508,7 +551,10 @@
           </button>
           <div class="preview-box" aria-live="polite">
             <div class="preview-item"><span>À l’écran</span><strong data-current-preview>Accueil</strong></div>
+            <div class="preview-item"><span>Sortie publique</span><strong data-public-preview>Accueil</strong></div>
             <div class="preview-item"><span>Suivant</span><strong data-next-preview>Prêt</strong></div>
+            <div class="preview-item"><span>À venir</span><ul class="upcoming-list" data-upcoming-list></ul></div>
+            <div class="tech-status" data-tech-status></div>
           </div>
         </aside>
 
@@ -526,6 +572,8 @@
           <button type="button" data-black>Écran noir</button>
           <button type="button" data-public>Écran public</button>
           <button type="button" data-open-display>Ouvrir projecteur</button>
+          <button type="button" data-preload>Précharger</button>
+          <button type="button" data-test-media>Test médias</button>
           <button type="button" data-countdown-start="10">10 min</button>
           <button type="button" data-countdown-start="5">5 min</button>
           <button type="button" data-countdown-start="1">1 min</button>
@@ -546,7 +594,10 @@
       const categoryButtons = Array.from(document.querySelectorAll('[data-category]'));
       const playButton = document.querySelector('[data-play]');
       const currentPreview = document.querySelector('[data-current-preview]');
+      const publicPreview = document.querySelector('[data-public-preview]');
       const nextPreview = document.querySelector('[data-next-preview]');
+      const upcomingList = document.querySelector('[data-upcoming-list]');
+      const techStatus = document.querySelector('[data-tech-status]');
       const displayMode = new URLSearchParams(window.location.search).get('view') === 'public';
       const channel = 'BroadcastChannel' in window ? new BroadcastChannel('asaa-qi26-projection') : null;
       const stateKey = 'asaa_qi26_projection_state';
@@ -561,6 +612,15 @@
             text: 'Merci de vous installer dans le calme. Qu’Allah mette la bénédiction dans cette rencontre et dans la recherche de la science utile.',
             tags: ['ASAA Officiel', 'Finale QI26', 'Salle N’zassa']
           }
+        ],
+        candidateCards: [
+          { type: 'card', title: 'Kouyaté Amara', text: 'Finaliste du Quiz Islamique 2026.', tags: ['Finaliste QI26', 'ASAA Officiel'] },
+          { type: 'card', title: 'Sidibé Mohamed', text: 'Finaliste du Quiz Islamique 2026.', tags: ['Finaliste QI26', 'ASAA Officiel'] },
+          { type: 'card', title: 'Kouyaté Fatoumata Ramadan', text: 'Finaliste du Quiz Islamique 2026.', tags: ['Finaliste QI26', 'ASAA Officiel'] },
+          { type: 'card', title: 'Sib Abdoulaye', text: 'Finaliste du Quiz Islamique 2026.', tags: ['Finaliste QI26', 'ASAA Officiel'] },
+          { type: 'card', title: 'Sayore Nassiratou', text: 'Finaliste du Quiz Islamique 2026.', tags: ['Finaliste QI26', 'ASAA Officiel'] },
+          { type: 'card', title: 'Kokora Mohamed Ouattara', text: 'Finaliste du Quiz Islamique 2026.', tags: ['Finaliste QI26', 'ASAA Officiel'] },
+          { type: 'card', title: 'Traoré Mouhammad Aboubakr', text: 'Finaliste du Quiz Islamique 2026.', tags: ['Finaliste QI26', 'ASAA Officiel'] }
         ],
         finalistVideos: [
           { type: 'video', title: 'Kouyaté Amara', text: 'Port-Bouët. Finaliste du Quiz Islamique 2026.', src: 'assets/finalistes/kouyate-amara-video.mp4', poster: 'assets/finalistes/kouyate-amara-photo.jpeg' },
@@ -613,6 +673,7 @@
       };
       const labels = {
         home: 'Accueil',
+        candidateCards: 'Cartons candidats',
         finalistVideos: 'Vidéos des finalistes',
         finalistPhotos: 'Photos des finalistes',
         finalistPosters: 'Affiches officielles',
@@ -717,6 +778,34 @@
         warmNextVideo();
       }
 
+      function getAssetUrls() {
+        const urls = new Set(['assets/logo.jpg']);
+        Object.values(collections).flat().forEach((item) => {
+          if (item?.src && (item.type === 'image' || item.type === 'video')) urls.add(item.src);
+          if (item?.poster) urls.add(item.poster);
+        });
+        return Array.from(urls);
+      }
+
+      async function testProjectionAssets() {
+        const urls = getAssetUrls();
+        if (techStatus) techStatus.textContent = `Test médias : 0 / ${urls.length}`;
+        let ok = 0;
+        for (const url of urls) {
+          try {
+            const response = await fetch(url, { method: 'HEAD', cache: 'no-cache' });
+            if (!response.ok) throw new Error(String(response.status));
+            ok += 1;
+          } catch {
+            if (techStatus) techStatus.textContent = `Média à vérifier : ${url}`;
+            return false;
+          }
+          if (techStatus) techStatus.textContent = `Test médias : ${ok} / ${urls.length}`;
+        }
+        if (techStatus) techStatus.textContent = 'Médias prêts';
+        return true;
+      }
+
       function renderTags(tags = []) {
         return tags.length ? `<div class="tags">${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}</div>` : '';
       }
@@ -732,6 +821,7 @@
         if (item.type === 'qr') {
           return `<div class="media-frame logo"><img src="https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=14&data=https%3A%2F%2Fasaaofficiel.vercel.app%2Faudience-qi26.html" alt="QR code Audience QI26" /></div>`;
         }
+        if (item.type === 'card') return '';
         return `<div class="media-frame logo"><img src="assets/logo.jpg" alt="Logo ASAA" /></div>`;
       }
 
@@ -762,9 +852,16 @@
         if (statusLabel) statusLabel.textContent = `${labels[activeCategory]} · ${counter}`;
         const nextItem = items.length > 1 ? items[(activeIndex + 1) % items.length] : null;
         if (currentPreview) currentPreview.textContent = item?.title || labels[activeCategory] || 'Accueil';
+        if (publicPreview) publicPreview.textContent = displayItem?.title ? `${displayItem.title} · ${displayItem.type === 'image' ? 'Affiche' : labels[activeCategory]}` : labels[activeCategory];
         if (nextPreview) nextPreview.textContent = nextItem?.title || 'Prêt';
+        if (upcomingList) {
+          upcomingList.innerHTML = items.length > 1
+            ? [1, 2, 3].map((step) => `<li>${escapeHtml(items[(activeIndex + step) % items.length]?.title || '')}</li>`).join('')
+            : '<li>Prêt</li>';
+        }
         categoryButtons.forEach((button) => button.classList.toggle('is-active', button.dataset.category === activeCategory));
         const projectPoster = (displayMode || document.body.classList.contains('public-mode')) && ['finalistPhotos', 'finalistPosters'].includes(activeCategory);
+        document.body.classList.toggle('card-display', displayItem.type === 'card');
         document.body.classList.toggle('poster-display', projectPoster);
         const kicker = displayItem.kicker || (projectPoster ? labels.finalistPosters : labels[activeCategory]);
         const titleTag = displayItem.type === 'home' ? 'h1' : 'h2';
@@ -878,6 +975,14 @@
         window.open(url.toString(), 'asaa_qi26_public_projection', 'noopener');
         publishState();
       });
+      document.querySelector('[data-preload]')?.addEventListener('click', () => {
+        warmProjectionAssets();
+        if (techStatus) techStatus.textContent = 'Préchargement lancé';
+      });
+      document.querySelector('[data-test-media]')?.addEventListener('click', () => {
+        warmProjectionAssets();
+        testProjectionAssets();
+      });
       document.querySelectorAll('[data-countdown-start]').forEach((button) => {
         button.addEventListener('click', () => startCountdown(button.dataset.countdownStart));
       });
@@ -904,6 +1009,9 @@
           publishState();
         }
         if (event.key.toLowerCase() === 'h') setCategory('home');
+        if (event.key.toLowerCase() === 'a') setCategory('finalistPosters');
+        if (event.key.toLowerCase() === 'c') setCategory('candidateCards');
+        if (event.key.toLowerCase() === 'v') setCategory('finalistVideos');
         if (event.key.toLowerCase() === 'f') document.querySelector('[data-fullscreen]')?.click();
         if (event.key === ' ') {
           event.preventDefault();
