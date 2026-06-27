@@ -80,6 +80,28 @@
         display: none !important;
       }
 
+      body.poster-display .screen {
+        grid-template-columns: 1fr;
+        place-items: center;
+        gap: 0;
+        padding: 0;
+        background: #020d0a;
+      }
+
+      body.poster-display .copy {
+        display: none;
+      }
+
+      body.poster-display .media-frame,
+      body.poster-display .media-frame.portrait {
+        width: min(100vw, calc(100dvh * 9 / 16));
+        height: 100dvh;
+        max-height: 100dvh;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
       body.black-screen .blackout {
         display: grid;
       }
@@ -598,6 +620,7 @@
         qr: 'QR Audience',
         thanks: 'Remerciements'
       };
+      const posterByTitle = new Map(collections.finalistPosters.map((item) => [item.title, item]));
       let activeCategory = 'home';
       let activeIndex = 0;
       let countdownTimer = null;
@@ -712,6 +735,15 @@
         return `<div class="media-frame logo"><img src="assets/logo.jpg" alt="Logo ASAA" /></div>`;
       }
 
+      function resolveDisplayItem(item) {
+        if (!item) return item;
+        if ((displayMode || document.body.classList.contains('public-mode')) && activeCategory === 'finalistPhotos') {
+          const poster = posterByTitle.get(item.title);
+          if (poster) return poster;
+        }
+        return item;
+      }
+
       function renderCountdown() {
         const countdown = document.querySelector('[data-countdown]');
         if (!countdown) return;
@@ -725,30 +757,34 @@
         document.body.classList.toggle('black-screen', blackScreen);
         const items = collections[activeCategory] || [];
         const item = items[activeIndex] || items[0];
+        const displayItem = resolveDisplayItem(item);
         const counter = items.length > 1 ? `${activeIndex + 1} / ${items.length}` : 'Prêt';
         if (statusLabel) statusLabel.textContent = `${labels[activeCategory]} · ${counter}`;
         const nextItem = items.length > 1 ? items[(activeIndex + 1) % items.length] : null;
         if (currentPreview) currentPreview.textContent = item?.title || labels[activeCategory] || 'Accueil';
         if (nextPreview) nextPreview.textContent = nextItem?.title || 'Prêt';
         categoryButtons.forEach((button) => button.classList.toggle('is-active', button.dataset.category === activeCategory));
-        const kicker = item.kicker || labels[activeCategory];
-        const titleTag = item.type === 'home' ? 'h1' : 'h2';
-        const extra = item.type === 'home'
+        const projectPoster = (displayMode || document.body.classList.contains('public-mode')) && ['finalistPhotos', 'finalistPosters'].includes(activeCategory);
+        document.body.classList.toggle('poster-display', projectPoster);
+        const kicker = displayItem.kicker || (projectPoster ? labels.finalistPosters : labels[activeCategory]);
+        const titleTag = displayItem.type === 'home' ? 'h1' : 'h2';
+        const extra = displayItem.type === 'home'
           ? `<div class="countdown-box" aria-live="polite"><span>Compte à rebours</span><strong data-countdown>10:00</strong></div>`
           : '';
         screen.innerHTML = `
           <div class="copy">
             <span class="kicker">${escapeHtml(kicker)}</span>
-            <${titleTag}>${escapeHtml(item.title)}</${titleTag}>
-            <p>${escapeHtml(item.text)}</p>
+            <${titleTag}>${escapeHtml(displayItem.title)}</${titleTag}>
+            <p>${escapeHtml(displayItem.text)}</p>
             ${extra}
-            ${renderTags(item.tags || ['Finale QI26', 'ASAA Officiel'])}
+            ${renderTags(displayItem.tags || ['Finale QI26', 'ASAA Officiel'])}
           </div>
-          ${renderMedia(item)}
+          ${renderMedia(displayItem)}
         `;
         renderCountdown();
+        warmItem(displayItem);
         warmCurrentCategory();
-        if (playButton) playButton.disabled = item.type !== 'video';
+        if (playButton) playButton.disabled = displayItem.type !== 'video';
       }
 
       function setCategory(category) {
@@ -834,6 +870,7 @@
       });
       document.querySelector('[data-public]')?.addEventListener('click', () => {
         document.body.classList.toggle('public-mode');
+        render();
       });
       document.querySelector('[data-open-display]')?.addEventListener('click', () => {
         const url = new URL(window.location.href);
