@@ -528,6 +528,8 @@
       const displayMode = new URLSearchParams(window.location.search).get('view') === 'public';
       const channel = 'BroadcastChannel' in window ? new BroadcastChannel('asaa-qi26-projection') : null;
       const stateKey = 'asaa_qi26_projection_state';
+      const imageCache = new Map();
+      const videoCache = new Map();
       const collections = {
         home: [
           {
@@ -617,11 +619,79 @@
       }
 
       function stopMedia() {
-        document.querySelectorAll('video').forEach((video) => {
+        screen.querySelectorAll('video').forEach((video) => {
           video.pause();
           video.muted = false;
           video.currentTime = 0;
         });
+      }
+
+      function preloadImage(src) {
+        if (!src || imageCache.has(src)) return imageCache.get(src);
+        const task = new Promise((resolve) => {
+          const image = new Image();
+          image.decoding = 'async';
+          image.onload = () => {
+            image.decode?.().catch(() => undefined).finally(resolve);
+          };
+          image.onerror = resolve;
+          image.src = src;
+        });
+        imageCache.set(src, task);
+        return task;
+      }
+
+      function preloadVideo(src) {
+        if (!src || videoCache.has(src)) return videoCache.get(src);
+        const video = document.createElement('video');
+        video.preload = 'auto';
+        video.muted = true;
+        video.playsInline = true;
+        video.src = src;
+        video.style.position = 'fixed';
+        video.style.width = '1px';
+        video.style.height = '1px';
+        video.style.opacity = '0';
+        video.style.pointerEvents = 'none';
+        video.style.left = '-9999px';
+        video.addEventListener('canplaythrough', () => video.pause(), { once: true });
+        document.body.appendChild(video);
+        video.load();
+        videoCache.set(src, video);
+        return video;
+      }
+
+      function warmItem(item) {
+        if (!item) return;
+        if (item.poster) preloadImage(item.poster);
+        if (item.type === 'image') preloadImage(item.src);
+        if (item.type === 'video') preloadVideo(item.src);
+      }
+
+      function warmCurrentCategory() {
+        const items = collections[activeCategory] || [];
+        if (!items.length) return;
+        warmItem(items[activeIndex]);
+        warmItem(items[(activeIndex + 1) % items.length]);
+        warmItem(items[(activeIndex + 2) % items.length]);
+      }
+
+      function warmProjectionAssets() {
+        Object.values(collections).flat().forEach((item) => {
+          if (item?.poster) preloadImage(item.poster);
+          if (item?.type === 'image') preloadImage(item.src);
+        });
+
+        const videos = Object.values(collections).flat().filter((item) => item?.type === 'video');
+        let index = 0;
+        const warmNextVideo = () => {
+          const item = videos[index];
+          if (!item) return;
+          preloadVideo(item.src);
+          index += 1;
+          window.setTimeout(warmNextVideo, 450);
+        };
+        warmNextVideo();
       }
 
       function renderTags(tags = []) {
@@ -631,7 +701,7 @@
       function renderMedia(item) {
         if (item.type === 'video') {
           const videoControls = displayMode ? '' : 'controls';
-          return `<div class="media-frame portrait"><video src="${escapeHtml(item.src)}" ${item.poster ? `poster="${escapeHtml(item.poster)}"` : ''} ${videoControls} playsinline preload="metadata"></video></div>`;
+          return `<div class="media-frame portrait"><video src="${escapeHtml(item.src)}" ${item.poster ? `poster="${escapeHtml(item.poster)}"` : ''} ${videoControls} playsinline preload="auto"></video></div>`;
         }
         if (item.type === 'image') {
           return `<div class="media-frame ${item.fit === 'landscape' ? 'landscape' : 'portrait'}"><img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.title)}" /></div>`;
@@ -677,6 +747,7 @@
           ${renderMedia(item)}
         `;
         renderCountdown();
+        warmCurrentCategory();
         if (playButton) playButton.disabled = item.type !== 'video';
       }
 
@@ -827,6 +898,7 @@
         render();
         publishState();
       }
+      window.setTimeout(warmProjectionAssets, 250);
     </script>
   </body>
 </html>

@@ -116,6 +116,14 @@ pool.on('error', (error) => {
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
+app.use('/assets', express.static(join(__dirname, 'public', 'assets'), {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true,
+  setHeaders(res) {
+    res.setHeader('Cache-Control', 'public, max-age=604800');
+  }
+}));
 app.use(express.static(join(__dirname, 'public')));
 app.use('/galerie-2025', express.static(join(__dirname, 'public', 'galerie-2025')));
 
