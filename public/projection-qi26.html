@@ -40,8 +40,8 @@
       }
 
       .stage {
-        height: 100svh;
-        min-height: 620px;
+        height: 100dvh;
+        min-height: 0;
         display: grid;
         grid-template-rows: auto minmax(0, 1fr) auto;
         background:
@@ -91,8 +91,15 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
-        padding: 12px clamp(16px, 2.4vw, 32px);
+        gap: 12px;
+        padding: 10px clamp(12px, 1.8vw, 28px);
+      }
+
+      .bottombar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        overflow: hidden;
       }
 
       .brand,
@@ -104,8 +111,8 @@
       }
 
       .brand img {
-        width: 46px;
-        height: 46px;
+        width: 42px;
+        height: 42px;
         border: 2px solid rgba(201, 154, 53, 0.74);
         border-radius: 8px;
         object-fit: cover;
@@ -132,9 +139,9 @@
         min-height: 0;
         overflow: hidden;
         display: grid;
-        grid-template-columns: minmax(230px, 310px) minmax(0, 1fr);
-        gap: clamp(16px, 2.4vw, 28px);
-        padding: 0 clamp(16px, 2.4vw, 32px) 10px;
+        grid-template-columns: minmax(220px, 285px) minmax(0, 1fr);
+        gap: clamp(12px, 1.8vw, 24px);
+        padding: 0 clamp(12px, 1.8vw, 28px) 8px;
       }
 
       .panel {
@@ -148,19 +155,21 @@
         align-self: stretch;
         display: grid;
         align-content: start;
-        gap: 10px;
+        gap: 8px;
         overflow: auto;
-        padding: 14px;
+        padding: 12px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.36) transparent;
       }
 
       .category-button {
         width: 100%;
-        min-height: 52px;
+        min-height: 48px;
         border: 1px solid rgba(255, 255, 255, 0.16);
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.08);
         color: white;
-        padding: 10px 12px;
+        padding: 9px 11px;
         text-align: left;
         font: inherit;
         cursor: pointer;
@@ -168,7 +177,7 @@
 
       .category-button strong {
         display: block;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         font-weight: 950;
       }
 
@@ -176,7 +185,7 @@
         display: block;
         margin-top: 3px;
         color: var(--muted);
-        font-size: 0.82rem;
+        font-size: 0.76rem;
         font-weight: 800;
       }
 
@@ -188,10 +197,10 @@
 
       .preview-box {
         display: grid;
-        gap: 10px;
-        margin-top: 8px;
+        gap: 8px;
+        margin-top: 6px;
         border-top: 1px solid var(--line);
-        padding-top: 14px;
+        padding-top: 10px;
       }
 
       .preview-item {
@@ -222,10 +231,10 @@
         min-height: 0;
         overflow: hidden;
         display: grid;
-        grid-template-columns: minmax(0, 0.94fr) minmax(260px, 1.06fr);
-        gap: clamp(16px, 2.4vw, 34px);
+        grid-template-columns: minmax(0, 0.98fr) minmax(220px, 1.02fr);
+        gap: clamp(12px, 1.8vw, 28px);
         align-items: center;
-        padding: clamp(16px, 2.4vw, 32px);
+        padding: clamp(12px, 1.8vw, 28px);
       }
 
       .copy {
@@ -234,22 +243,22 @@
 
       .copy h1,
       .copy h2 {
-        margin: 8px 0 0;
+        margin: 6px 0 0;
         color: white;
-        font-size: clamp(2rem, 4.4vw, 4.4rem);
+        font-size: clamp(1.8rem, 3.7vw, 3.55rem);
         line-height: 1;
         letter-spacing: 0;
       }
 
       .copy h2 {
-        font-size: clamp(1.8rem, 3.8vw, 3.8rem);
+        font-size: clamp(1.65rem, 3.2vw, 3.1rem);
       }
 
       .copy p {
         max-width: 760px;
         color: var(--muted);
-        font-size: clamp(0.95rem, 1.18vw, 1.08rem);
-        line-height: 1.6;
+        font-size: clamp(0.9rem, 1.02vw, 1rem);
+        line-height: 1.5;
       }
 
       .tags {
@@ -272,7 +281,7 @@
         position: relative;
         justify-self: center;
         overflow: hidden;
-        width: min(100%, 450px);
+        width: min(100%, 390px);
         border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 8px;
         background: #020d0a;
@@ -281,7 +290,7 @@
 
       .media-frame.portrait {
         aspect-ratio: 9 / 16;
-        max-height: min(58svh, 600px);
+        max-height: min(48dvh, 520px);
       }
 
       .media-frame.landscape {
@@ -290,7 +299,7 @@
       }
 
       .media-frame.logo {
-        width: min(260px, 42vw);
+        width: min(220px, 36vw);
         aspect-ratio: 1;
         background: rgba(255, 255, 255, 0.06);
       }
@@ -311,12 +320,12 @@
         display: grid;
         justify-items: start;
         gap: 8px;
-        width: min(430px, 100%);
-        margin-top: 26px;
+        width: min(360px, 100%);
+        margin-top: 18px;
         border: 1px solid rgba(201, 154, 53, 0.42);
         border-radius: 8px;
         background: rgba(201, 154, 53, 0.12);
-        padding: clamp(16px, 3vw, 26px);
+        padding: clamp(12px, 2vw, 18px);
       }
 
       .countdown-box span {
@@ -329,29 +338,36 @@
 
       .countdown-box strong {
         color: white;
-        font-size: clamp(3rem, 8vw, 7rem);
+        font-size: clamp(2.3rem, 5.4vw, 4.8rem);
         line-height: 0.9;
         font-variant-numeric: tabular-nums;
       }
 
       .controls {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 8px;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.34) transparent;
       }
 
       .controls button,
       .controls a {
-        min-height: 38px;
+        flex: 0 0 auto;
+        min-height: 34px;
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.1);
         color: white;
-        padding: 8px 12px;
+        padding: 7px 11px;
         text-decoration: none;
         font: inherit;
         font-weight: 900;
-        font-size: 0.92rem;
+        font-size: 0.84rem;
         cursor: pointer;
       }
 
