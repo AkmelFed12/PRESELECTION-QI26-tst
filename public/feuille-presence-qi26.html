@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feuille de présence QI26 | ASAA</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #f6f7f4;
+        color: #10231d;
+        font-family: Arial, sans-serif;
+      }
+      main {
+        width: min(1120px, calc(100% - 24px));
+        margin: 24px auto;
+        background: white;
+        padding: 28px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        border-bottom: 3px solid #064733;
+        padding-bottom: 18px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      img {
+        width: 72px;
+        height: 72px;
+        object-fit: cover;
+        border-radius: 8px;
+      }
+      h1 {
+        margin: 0;
+        color: #064733;
+        font-size: 2rem;
+      }
+      p {
+        margin: 6px 0 0;
+        color: #5e6b66;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 24px;
+      }
+      th,
+      td {
+        border: 1px solid #1f332c;
+        padding: 9px 7px;
+        text-align: left;
+        font-size: 0.86rem;
+      }
+      th {
+        background: #edf7f1;
+        color: #03251d;
+      }
+      td {
+        height: 38px;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 16px;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        background: #064733;
+        color: white;
+        padding: 11px 15px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      @media print {
+        body { background: white; }
+        main { width: 100%; margin: 0; padding: 12mm; }
+        .actions { display: none; }
+        th, td { font-size: 10px; padding: 5px; }
+        td { height: 28px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand">
+          <img src="assets/logo.jpg" alt="Logo ASAA" />
+          <div>
+            <h1>Feuille de présence QI26</h1>
+            <p>Finale du Quiz Islamique 2026 · Salle N’zassa, Treichville</p>
+          </div>
+        </div>
+        <p>Date : ____ / ____ / 2026</p>
+      </header>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nom et prénom</th>
+            <th>Frère / Sœur</th>
+            <th>WhatsApp</th>
+            <th>Téléphone</th>
+            <th>Commune</th>
+            <th>Comment connu</th>
+            <th>Signature</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="actions"><button type="button" onclick="window.print()">Imprimer</button></div>
+    </main>
+    <script>
+      document.getElementById('rows').innerHTML = Array.from({ length: 32 }, (_, index) =>
+        `<tr><td>${index + 1}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`
+      ).join('');
+    </script>
+  </body>
+</html>

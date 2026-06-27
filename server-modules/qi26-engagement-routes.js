@@ -47,6 +47,7 @@ function parseAudienceRow(row = {}) {
     phone: row.phone || '',
     commune: row.commune || '',
     ageRange: row.agerange || row.ageRange || '',
+    source: row.source || '',
     note: row.note || '',
     createdAt: row.createdat || row.createdAt || ''
   };
@@ -94,6 +95,10 @@ async function getAudienceStats(pool) {
   };
 }
 
+async function getAudienceClosed(pool) {
+  const result = await pool.query("SELECT value FROM qi26_audience_settings WHERE key = 'closed' LIMIT 1");
+  return result.rows[0]?.value === '1';
+}
 export async function ensureQi26EngagementTables(pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS qi26_engagement_likes (
@@ -128,10 +133,19 @@ export async function ensureQi26EngagementTables(pool) {
       phone TEXT,
       commune TEXT NOT NULL,
       ageRange TEXT,
+      source TEXT,
       note TEXT,
       ip TEXT,
       createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS qi26_audience_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    ALTER TABLE qi26_audience_registrations ADD COLUMN IF NOT EXISTS source TEXT;
 
     CREATE INDEX IF NOT EXISTS idx_qi26_likes_item ON qi26_engagement_likes(itemSlug);
     CREATE INDEX IF NOT EXISTS idx_qi26_comments_item_status ON qi26_engagement_comments(itemSlug, status, createdAt DESC);
@@ -320,6 +334,7 @@ export function registerQi26EngagementRoutes({
     const phone = normalizePhone(req.body?.phone);
     const commune = clean(req.body?.commune, 80);
     const ageRange = clean(req.body?.ageRange, 40);
+    const source = clean(req.body?.source, 80);
     const note = clean(req.body?.note, 240);
 
     if (fullName.length < 2) return res.status(400).json({ message: 'Nom et prénom obligatoires.' });
@@ -328,6 +343,10 @@ export function registerQi26EngagementRoutes({
     if (!whatsapp) return res.status(400).json({ message: 'Numéro WhatsApp obligatoire.' });
 
     try {
+      if (await getAudienceClosed(pool)) {
+        return res.status(423).json({ message: 'Les enregistrements du public sont clôturés.' });
+      }
+
       if (whatsapp || phone) {
         const duplicate = await pool.query(
           `SELECT id FROM qi26_audience_registrations
@@ -342,10 +361,10 @@ export function registerQi26EngagementRoutes({
 
       const result = await pool.query(
         `INSERT INTO qi26_audience_registrations
-         (fullName, gender, whatsapp, phone, commune, ageRange, note, ip)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, fullName, gender, whatsapp, phone, commune, ageRange, note, createdAt`,
-        [fullName, gender, whatsapp, phone, commune, ageRange, note, getRequestIp(req)]
+         (fullName, gender, whatsapp, phone, commune, ageRange, source, note, ip)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, fullName, gender, whatsapp, phone, commune, ageRange, source, note, createdAt`,
+        [fullName, gender, whatsapp, phone, commune, ageRange, source, note, getRequestIp(req)]
       );
       res.status(201).json({
         message: 'Présence enregistrée. Qu’Allah récompense votre soutien.',
@@ -360,7 +379,7 @@ export function registerQi26EngagementRoutes({
 
   app.get('/api/qi26/audience/stats', publicLimiter, async (req, res) => {
     try {
-      res.json({ stats: await getAudienceStats(pool) });
+      res.json({ stats: await getAudienceStats(pool), closed: await getAudienceClosed(pool) });
     } catch (error) {
       console.error('[QI26 Audience] stats error:', error.message);
       res.status(500).json({ message: 'Compteurs indisponibles.' });
@@ -370,7 +389,7 @@ export function registerQi26EngagementRoutes({
   app.get('/api/admin/qi26-audience', verifyAdmin, async (req, res) => {
     try {
       const registrations = await pool.query(
-        `SELECT id, fullName, gender, whatsapp, phone, commune, ageRange, note, createdAt
+        `SELECT id, fullName, gender, whatsapp, phone, commune, ageRange, source, note, createdAt
          FROM qi26_audience_registrations
          ORDER BY createdAt DESC
          LIMIT $1`,
@@ -378,6 +397,7 @@ export function registerQi26EngagementRoutes({
       );
       res.json({
         stats: await getAudienceStats(pool),
+        closed: await getAudienceClosed(pool),
         registrations: registrations.rows.map(parseAudienceRow)
       });
     } catch (error) {
@@ -389,11 +409,11 @@ export function registerQi26EngagementRoutes({
   app.get('/api/admin/qi26-audience/export.csv', verifyAdmin, async (req, res) => {
     try {
       const result = await pool.query(
-        `SELECT id, fullName, gender, whatsapp, phone, commune, ageRange, note, createdAt
+        `SELECT id, fullName, gender, whatsapp, phone, commune, ageRange, source, note, createdAt
          FROM qi26_audience_registrations
          ORDER BY createdAt ASC`
       );
-      const header = ['ID', 'Nom et prenom', 'Genre', 'WhatsApp', 'Telephone', 'Commune', 'Age', 'Note', 'Date'];
+      const header = ['ID', 'Nom et prenom', 'Genre', 'WhatsApp', 'Telephone', 'Commune', 'Age', 'Source', 'Note', 'Date'];
       const rows = result.rows.map(parseAudienceRow).map((item) => [
         item.id,
         item.fullName,
@@ -402,6 +422,7 @@ export function registerQi26EngagementRoutes({
         item.phone,
         item.commune,
         item.ageRange,
+        item.source,
         item.note,
         item.createdAt
       ]);
@@ -417,6 +438,26 @@ export function registerQi26EngagementRoutes({
     }
   });
 
+
+  app.put('/api/admin/qi26-audience/status', verifyAdmin, async (req, res) => {
+    const closed = req.body?.closed === true || req.body?.closed === '1';
+    try {
+      await pool.query(
+        `INSERT INTO qi26_audience_settings (key, value, updatedAt)
+         VALUES ('closed', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = $1, updatedAt = NOW()`,
+        [closed ? '1' : '0']
+      );
+      res.json({
+        message: closed ? 'Enregistrements du public clôturés.' : 'Enregistrements du public ouverts.',
+        closed,
+        stats: await getAudienceStats(pool)
+      });
+    } catch (error) {
+      console.error('[QI26 Audience] status error:', error.message);
+      res.status(500).json({ message: 'Mise à jour indisponible.' });
+    }
+  });
   app.delete('/api/admin/qi26-audience/:id', verifyAdmin, async (req, res) => {
     const id = Number.parseInt(req.params.id, 10);
     if (!Number.isInteger(id) || id <= 0) {

@@ -194,6 +194,7 @@ const qi26AudienceMsg = document.getElementById('qi26AudienceMsg');
 let qi26AudienceCache = [];
 let qi26AudienceFiltered = [];
 let qi26AudienceStatsCache = {};
+let qi26AudienceClosed = false;
 const qi26CommentsPending = document.getElementById('qi26CommentsPending');
 const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
 const qi26CommentsRejected = document.getElementById('qi26CommentsRejected');
@@ -1073,14 +1074,26 @@ function installQi26AudienceAdminTools() {
   if (actions && !document.getElementById('qi26AudienceExportExcel')) {
     actions.insertAdjacentHTML('beforeend', `
       <button class="btn-primary" type="button" id="qi26AudienceExportExcel">Exporter Excel</button>
+      <button class="btn-primary" type="button" id="qi26AudienceFinalReport">Bilan final PDF</button>
       <button class="btn-primary" type="button" id="qi26AudienceThanksAll">Messages WhatsApp</button>
+      <button class="btn-danger" type="button" id="qi26AudienceClose">Clôturer audience</button>
+      <button class="btn-primary" type="button" id="qi26AudienceOpen">Rouvrir audience</button>
       <a class="btn outline" href="qr-audience-qi26.html" target="_blank" rel="noopener">QR imprimable</a>
       <a class="btn outline" href="audience-dashboard-qi26.html" target="_blank" rel="noopener">Dashboard live</a>
+      <a class="btn outline" href="feuille-presence-qi26.html" target="_blank" rel="noopener">Feuille papier</a>
     `);
   }
 
   const table = document.getElementById('qi26AudienceTable');
   if (table && !document.getElementById('qi26AudienceFilters')) {
+    const headRow = table.querySelector('thead tr');
+    if (headRow && !headRow.querySelector('[data-source-head]')) {
+      const sourceHead = document.createElement('th');
+      sourceHead.dataset.sourceHead = '1';
+      sourceHead.textContent = 'Comment connu';
+      headRow.insertBefore(sourceHead, headRow.children[6] || null);
+    }
+
     const filters = document.createElement('div');
     filters.id = 'qi26AudienceFilters';
     filters.className = 'form-grid';
@@ -1120,7 +1133,10 @@ function installQi26AudienceAdminTools() {
   document.getElementById('qi26AudienceCommuneFilter')?.addEventListener('input', () => renderQi26Audience({ registrations: qi26AudienceCache }));
   document.getElementById('qi26AudienceSort')?.addEventListener('change', () => renderQi26Audience({ registrations: qi26AudienceCache }));
   document.getElementById('qi26AudienceExportExcel')?.addEventListener('click', exportQi26AudienceExcel);
+  document.getElementById('qi26AudienceFinalReport')?.addEventListener('click', exportQi26AudienceFinalReport);
   document.getElementById('qi26AudienceThanksAll')?.addEventListener('click', copyQi26AudienceWhatsappMessages);
+  document.getElementById('qi26AudienceClose')?.addEventListener('click', () => updateQi26AudienceStatus(true));
+  document.getElementById('qi26AudienceOpen')?.addEventListener('click', () => updateQi26AudienceStatus(false));
 }
 
 function getQi26AudienceFilterValues() {
@@ -1160,6 +1176,7 @@ function hasQi26AudienceFilters() {
 function renderQi26Audience(data = {}) {
   installQi26AudienceAdminTools();
   if (data.stats) qi26AudienceStatsCache = data.stats;
+  if (typeof data.closed === 'boolean') qi26AudienceClosed = data.closed;
   const stats = qi26AudienceStatsCache || {};
   if (Array.isArray(data.registrations)) qi26AudienceCache = data.registrations;
   const registrations = applyQi26AudienceFilters(qi26AudienceCache);
@@ -1174,6 +1191,10 @@ function renderQi26Audience(data = {}) {
       ? communes.map((item) => `${escapeHtml(item.commune)}: <strong>${Number(item.total || 0)}</strong>`).join(' · ')
       : 'Aucune donnée.';
   }
+  const closeBtn = document.getElementById('qi26AudienceClose');
+  const openBtn = document.getElementById('qi26AudienceOpen');
+  if (closeBtn) closeBtn.disabled = qi26AudienceClosed;
+  if (openBtn) openBtn.disabled = !qi26AudienceClosed;
   if (qi26AudienceTable) {
     qi26AudienceTable.innerHTML = registrations.length
       ? registrations.map((item) => `
@@ -1186,6 +1207,7 @@ function renderQi26Audience(data = {}) {
           </td>
           <td>${escapeHtml(item.phone || '')}</td>
           <td>${escapeHtml(item.commune || '')}</td>
+          <td>${escapeHtml(item.source || '')}</td>
           <td>${formatAdminDateTime(item.createdAt)}</td>
           <td>
             <button type="button" data-qi26-audience-thanks="${item.id}" data-qi26-audience-url="${buildQi26AudienceThanksUrl(item)}">Message WhatsApp</button>
@@ -1193,8 +1215,9 @@ function renderQi26Audience(data = {}) {
           </td>
         </tr>
       `).join('')
-      : '<tr><td colspan="8">Aucun enregistrement pour le moment.</td></tr>';
+      : '<tr><td colspan="9">Aucun enregistrement pour le moment.</td></tr>';
   }
+  setStatus(qi26AudienceMsg, qi26AudienceClosed ? 'Audience clôturée : les nouveaux enregistrements sont bloqués.' : 'Audience ouverte.');
 }
 
 function exportQi26AudiencePdf() {
@@ -1210,6 +1233,7 @@ function exportQi26AudiencePdf() {
         <td>${escapeHtml(cells[4]?.textContent || '')}</td>
         <td>${escapeHtml(cells[5]?.textContent || '')}</td>
         <td>${escapeHtml(cells[6]?.textContent || '')}</td>
+        <td>${escapeHtml(cells[7]?.textContent || '')}</td>
       </tr>`;
     })
     .join('');
@@ -1222,9 +1246,85 @@ function exportQi26AudiencePdf() {
   openPdfPrintWindow(
     'AUDIENCE QI26',
     subtitle,
-    ['ID', 'Nom', 'Catégorie', 'WhatsApp', 'Téléphone', 'Commune', 'Date'],
-    rows || '<tr><td colspan="7">Aucun enregistrement.</td></tr>'
+    ['ID', 'Nom', 'Catégorie', 'WhatsApp', 'Téléphone', 'Commune', 'Comment connu', 'Date'],
+    rows || '<tr><td colspan="8">Aucun enregistrement.</td></tr>'
   );
+}
+
+function exportQi26AudienceFinalReport() {
+  const rows = buildQi26AudienceExportRows();
+  const stats = qi26AudienceStatsCache || {};
+  const byCommune = Array.isArray(stats.byCommune) ? stats.byCommune : [];
+  const bySource = rows.reduce((acc, item) => {
+    const key = item.source || 'Non précisé';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const notes = rows.filter((item) => item.note).slice(0, 30);
+  const html = `
+    <html>
+      <head>
+        <title>Bilan final Audience QI26</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; color: #10231d; }
+          h1 { text-align: center; margin-bottom: 6px; color: #064733; }
+          h2 { margin-top: 24px; color: #064733; }
+          .subtitle { text-align:center; color: #555; }
+          .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 18px; }
+          .stat { border: 1px solid #ddd; padding: 12px; }
+          .stat strong { display:block; font-size: 28px; color:#064733; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+          th, td { border: 1px solid #ddd; padding: 7px; text-align: left; font-size: 12px; }
+          th { background: #edf7f1; }
+          @media print { .stats { grid-template-columns: repeat(4, 1fr); } }
+        </style>
+      </head>
+      <body>
+        <h1>Bilan final Audience QI26</h1>
+        <div class="subtitle">Édité le ${new Date().toLocaleString('fr-FR')} · ${qi26AudienceClosed ? 'Audience clôturée' : 'Audience ouverte'}</div>
+        <div class="stats">
+          <div class="stat"><strong>${stats.total ?? rows.length}</strong>Total public</div>
+          <div class="stat"><strong>${stats.brothers ?? rows.filter((item) => item.gender === 'Frère').length}</strong>Frères</div>
+          <div class="stat"><strong>${stats.sisters ?? rows.filter((item) => item.gender === 'Sœur').length}</strong>Sœurs</div>
+          <div class="stat"><strong>${byCommune.length}</strong>Communes</div>
+        </div>
+        <h2>Communes représentées</h2>
+        <table><thead><tr><th>Commune</th><th>Total</th></tr></thead><tbody>
+          ${byCommune.map((item) => `<tr><td>${escapeHtml(item.commune || 'Non renseignée')}</td><td>${Number(item.total || 0)}</td></tr>`).join('') || '<tr><td colspan="2">Aucune donnée.</td></tr>'}
+        </tbody></table>
+        <h2>Comment le public a connu l’événement</h2>
+        <table><thead><tr><th>Canal</th><th>Total</th></tr></thead><tbody>
+          ${Object.entries(bySource).map(([source, total]) => `<tr><td>${escapeHtml(source)}</td><td>${total}</td></tr>`).join('') || '<tr><td colspan="2">Aucune donnée.</td></tr>'}
+        </tbody></table>
+        <h2>Avis et remarques</h2>
+        <table><thead><tr><th>Nom</th><th>Commune</th><th>Avis</th></tr></thead><tbody>
+          ${notes.map((item) => `<tr><td>${escapeHtml(item.fullName)}</td><td>${escapeHtml(item.commune)}</td><td>${escapeHtml(item.note)}</td></tr>`).join('') || '<tr><td colspan="3">Aucun avis renseigné.</td></tr>'}
+        </tbody></table>
+      </body>
+    </html>
+  `;
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  win.print();
+}
+
+async function updateQi26AudienceStatus(closed) {
+  const ok = confirm(closed ? 'Clôturer les enregistrements du public QI26 ?' : 'Rouvrir les enregistrements du public QI26 ?');
+  if (!ok) return;
+  try {
+    const res = await authedFetch('/api/admin/qi26-audience/status', {
+      method: 'PUT',
+      body: JSON.stringify({ closed })
+    });
+    const data = await res.json().catch(() => ({}));
+    setStatus(qi26AudienceMsg, data.message || (res.ok ? 'Statut mis à jour.' : 'Mise à jour impossible.'));
+    if (res.ok) await loadQi26Audience();
+  } catch {
+    setStatus(qi26AudienceMsg, 'Réseau indisponible pour la clôture audience.');
+  }
 }
 
 function buildQi26AudienceExportRows() {
@@ -1237,6 +1337,7 @@ function buildQi26AudienceExportRows() {
     phone: item.phone || '',
     commune: item.commune || '',
     ageRange: item.ageRange || '',
+    source: item.source || '',
     note: item.note || '',
     createdAt: formatAdminDateTime(item.createdAt)
   }));
@@ -1253,6 +1354,7 @@ function exportQi26AudienceExcel() {
       <td>${escapeHtml(item.phone)}</td>
       <td>${escapeHtml(item.commune)}</td>
       <td>${escapeHtml(item.ageRange)}</td>
+      <td>${escapeHtml(item.source)}</td>
       <td>${escapeHtml(item.note)}</td>
       <td>${escapeHtml(item.createdAt)}</td>
     </tr>
@@ -1264,7 +1366,7 @@ function exportQi26AudienceExcel() {
         <table>
           <thead>
             <tr>
-              <th>ID</th><th>Nom et prénom</th><th>Catégorie</th><th>WhatsApp</th><th>Téléphone</th><th>Commune</th><th>Âge</th><th>Avis</th><th>Date</th>
+              <th>ID</th><th>Nom et prénom</th><th>Catégorie</th><th>WhatsApp</th><th>Téléphone</th><th>Commune</th><th>Âge</th><th>Comment connu</th><th>Avis</th><th>Date</th>
             </tr>
           </thead>
           <tbody>${body}</tbody>
@@ -1328,7 +1430,6 @@ async function loadQi26Audience() {
       return;
     }
     renderQi26Audience(data);
-    setStatus(qi26AudienceMsg, 'Audience QI26 à jour.');
   } catch {
     setStatus(qi26AudienceMsg, 'Réseau indisponible pour Audience QI26.');
   }

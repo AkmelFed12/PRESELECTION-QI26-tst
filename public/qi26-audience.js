@@ -7,6 +7,7 @@
   const sistersEl = document.querySelector('[data-audience-sisters]');
   const communesEl = document.querySelector('[data-audience-communes]');
   const offlineKey = 'asaa_qi26_audience_pending';
+  const submitButton = form?.querySelector('button[type="submit"]');
 
   const setMessage = (text, tone = '') => {
     if (!message) return;
@@ -50,6 +51,10 @@
       if (!res.ok) return;
       const data = await res.json();
       renderStats(data.stats || {});
+      if (typeof data.closed === 'boolean' && submitButton) {
+        submitButton.disabled = data.closed;
+        if (data.closed) setMessage('Les enregistrements du public sont clôturés.', 'error');
+      }
     } catch {}
   };
 
@@ -156,6 +161,9 @@
       form.reset();
       renderStats(data.stats || {});
       setMessage(data.message || 'Présence enregistrée.', 'success');
+      window.setTimeout(() => {
+        window.location.href = 'merci-audience-qi26.html';
+      }, 700);
     } catch {
       saveOffline(payload);
       form.reset();
