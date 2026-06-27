@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secours QI26 | ASAA</title>
+    <meta name="description" content="Page secours pour la finale du Quiz Islamique 2026." />
+    <meta name="theme-color" content="#03251d" />
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="asaa-officiel.css" />
+    <style>
+      .emergency-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 20px; align-items: start; }
+      .emergency-list { margin: 0; padding-left: 20px; color: var(--asaa-muted); line-height: 1.8; font-weight: 750; }
+      .qr-large { width: min(340px, 100%); border: 12px solid white; border-radius: 8px; background: white; }
+      @media (max-width: 860px) { .emergency-grid { grid-template-columns: 1fr; } }
+      @media print { .site-header, .hero-actions { display: none; } .section { padding: 24px 0; } }
+    </style>
+    <script src="qi26-regie-guard.js" defer></script>
+  </head>
+  <body class="asaa-public">
+    <header class="site-header">
+      <a class="brand" href="index.html"><img src="assets/logo.jpg" alt="Logo ASAA" /><span>ASAA Officiel</span></a>
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="regie-qi26.html">Régie</a>
+        <a href="feuille-presence-qi26.html">Feuille papier</a>
+      </nav>
+    </header>
+    <main>
+      <section class="page-hero">
+        <div class="section">
+          <span class="eyebrow">Plan secours</span>
+          <h1>Secours QI26</h1>
+          <p>À garder ouvert ou imprimé pour continuer l’accueil même en cas de coupure internet, souci de projection ou ralentissement du formulaire.</p>
+          <div class="hero-actions">
+            <a class="btn-soft" href="feuille-presence-qi26.html">Feuille présence</a>
+            <a class="btn-soft" href="qr-audience-qi26.html">QR imprimable</a>
+          </div>
+        </div>
+      </section>
+      <section class="section emergency-grid">
+        <article class="notice-card">
+          <p class="kicker">Priorités</p>
+          <h3>À faire immédiatement</h3>
+          <ol class="emergency-list">
+            <li>Passer sur partage mobile si la connexion principale coupe.</li>
+            <li>Ouvrir la feuille papier pour enregistrer les présences à la main.</li>
+            <li>Garder le QR affiché à l’entrée si le formulaire fonctionne encore.</li>
+            <li>Relancer le mode projection dans un autre navigateur si besoin.</li>
+            <li>Après l’activité, saisir les présences papier dans l’admin.</li>
+          </ol>
+        </article>
+        <aside class="notice-card" style="text-align:center;">
+          <p class="kicker">Audience QI26</p>
+          <h3>QR d’enregistrement</h3>
+          <img class="qr-large" src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=14&data=https%3A%2F%2Fasaaofficiel.vercel.app%2Faudience-qi26.html" alt="QR code Audience QI26" />
+          <p>asaaofficiel.vercel.app/audience-qi26.html</p>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>

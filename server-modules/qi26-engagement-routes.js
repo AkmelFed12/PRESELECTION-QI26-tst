@@ -61,6 +61,7 @@ function parseCommentRow(row = {}) {
     content: row.content || '',
     status: row.status || 'pending',
     moderationScore: Number(row.moderationscore || row.moderationScore || 0),
+    moderationIssues: row.moderationissues || row.moderationIssues || '',
     createdAt: row.createdat || row.createdAt || ''
   };
 }
@@ -510,6 +511,44 @@ export function registerQi26EngagementRoutes({
     }
   });
 
+  app.get('/api/admin/qi26-engagement/export', verifyAdmin, async (req, res) => {
+    try {
+      const [summary, comments, likes] = await Promise.all([
+        pool.query(`
+          SELECT
+            COUNT(*)::int AS totalComments,
+            COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
+            COUNT(*) FILTER (WHERE status = 'approved')::int AS approved,
+            COUNT(*) FILTER (WHERE status = 'rejected')::int AS rejected
+          FROM qi26_engagement_comments
+        `),
+        pool.query(
+          `SELECT id, itemSlug, authorName, content, status, moderationScore, moderationIssues, createdAt
+           FROM qi26_engagement_comments
+           ORDER BY createdAt DESC
+           LIMIT 1000`
+        ),
+        pool.query(
+          `SELECT itemSlug, COUNT(*)::int AS likes
+           FROM qi26_engagement_likes
+           GROUP BY itemSlug
+           ORDER BY likes DESC, itemSlug ASC`
+        )
+      ]);
+      res.json({
+        summary: summary.rows[0] || {},
+        comments: comments.rows.map(parseCommentRow),
+        likes: likes.rows.map((item) => ({
+          itemSlug: item.itemslug || item.itemSlug || '',
+          likes: Number(item.likes || 0)
+        }))
+      });
+    } catch (error) {
+      console.error('[QI26 Engagement] export error:', error.message);
+      res.status(500).json({ message: 'Export interactions indisponible.' });
+    }
+  });
+
   app.patch('/api/admin/qi26-engagement/comments/:id', verifyAdmin, async (req, res) => {
     const id = Number.parseInt(req.params.id, 10);
     const status = clean(req.body?.status, 20);
@@ -530,6 +569,22 @@ export function registerQi26EngagementRoutes({
     } catch (error) {
       console.error('[QI26 Engagement] update comment error:', error.message);
       res.status(500).json({ message: 'Mise à jour indisponible.' });
+    }
+  });
+
+  app.delete('/api/admin/qi26-engagement/comments/:id', verifyAdmin, async (req, res) => {
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Commentaire invalide.' });
+    }
+
+    try {
+      const result = await pool.query('DELETE FROM qi26_engagement_comments WHERE id = $1 RETURNING id', [id]);
+      if (!result.rows.length) return res.status(404).json({ message: 'Commentaire introuvable.' });
+      res.json({ message: 'Commentaire supprimé.' });
+    } catch (error) {
+      console.error('[QI26 Engagement] delete comment error:', error.message);
+      res.status(500).json({ message: 'Suppression indisponible.' });
     }
   });
 }

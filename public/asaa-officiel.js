@@ -81,6 +81,7 @@
           </div>
           <div class="full">
             <button class="btn-solid" type="submit">Publier</button>
+            <p class="muted" style="margin:8px 0 0;">Les messages sont relus avant affichage public afin de préserver un cadre respectueux.</p>
             <p class="form-message" data-comment-message role="status"></p>
           </div>
         </form>

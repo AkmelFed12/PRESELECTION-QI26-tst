@@ -201,6 +201,7 @@ const qi26CommentsRejected = document.getElementById('qi26CommentsRejected');
 const qi26CommentStatusFilter = document.getElementById('qi26CommentStatusFilter');
 const qi26CommentsRefresh = document.getElementById('qi26CommentsRefresh');
 const qi26CommentsTable = document.querySelector('#qi26CommentsTable tbody');
+let qi26CommentsCache = [];
 
 const pollSection = document.getElementById('pollSection');
 const pollForm = document.getElementById('pollForm');
@@ -1065,6 +1066,7 @@ function installQi26AudienceAdminTools() {
         <a class="btn outline" href="audience-dashboard-qi26.html" target="_blank" rel="noopener">Dashboard public</a>
         <a class="btn outline" href="qr-audience-qi26.html" target="_blank" rel="noopener">QR code</a>
         <a class="btn outline" href="projection-qi26.html" target="_blank" rel="noopener">Projection</a>
+        <a class="btn outline" href="secours-qi26.html" target="_blank" rel="noopener">Plan secours</a>
       </div>
     `;
     dashboardActions.insertAdjacentElement('afterend', quick);
@@ -1077,6 +1079,7 @@ function installQi26AudienceAdminTools() {
       <button class="btn-primary" type="button" id="qi26AudienceFinalReport">Bilan final PDF</button>
       <button class="btn-primary" type="button" id="qi26AudienceWhatsappTxt">Export WhatsApp TXT</button>
       <button class="btn-primary" type="button" id="qi26AudienceArchive">Archive QI26</button>
+      <button class="btn-primary" type="button" id="qi26AudienceFullBackup">Sauvegarde finale</button>
       <button class="btn-primary" type="button" id="qi26AudienceThanksAll">Messages WhatsApp</button>
       <button class="btn-danger" type="button" id="qi26AudienceClose">Clôturer audience</button>
       <button class="btn-primary" type="button" id="qi26AudienceOpen">Rouvrir audience</button>
@@ -1084,6 +1087,7 @@ function installQi26AudienceAdminTools() {
       <a class="btn outline" href="audience-dashboard-qi26.html" target="_blank" rel="noopener">Dashboard live</a>
       <a class="btn outline" href="feuille-presence-qi26.html" target="_blank" rel="noopener">Feuille papier</a>
       <a class="btn outline" href="regie-qi26.html" target="_blank" rel="noopener">Régie QI26</a>
+      <a class="btn outline" href="secours-qi26.html" target="_blank" rel="noopener">Plan secours</a>
     `);
   }
 
@@ -1139,6 +1143,7 @@ function installQi26AudienceAdminTools() {
   document.getElementById('qi26AudienceFinalReport')?.addEventListener('click', exportQi26AudienceFinalReport);
   document.getElementById('qi26AudienceWhatsappTxt')?.addEventListener('click', exportQi26AudienceWhatsappTxt);
   document.getElementById('qi26AudienceArchive')?.addEventListener('click', exportQi26AudienceArchive);
+  document.getElementById('qi26AudienceFullBackup')?.addEventListener('click', exportQi26FinalBackup);
   document.getElementById('qi26AudienceThanksAll')?.addEventListener('click', copyQi26AudienceWhatsappMessages);
   document.getElementById('qi26AudienceClose')?.addEventListener('click', () => updateQi26AudienceStatus(true));
   document.getElementById('qi26AudienceOpen')?.addEventListener('click', () => updateQi26AudienceStatus(false));
@@ -1498,6 +1503,35 @@ function exportQi26AudienceArchive() {
   setStatus(qi26AudienceMsg, 'Archive QI26 téléchargée.');
 }
 
+async function exportQi26FinalBackup() {
+  try {
+    setStatus(qi26AudienceMsg, 'Préparation de la sauvegarde finale...');
+    const engagementRes = await authedFetch('/api/admin/qi26-engagement/export');
+    const engagement = engagementRes.ok ? await engagementRes.json() : { summary: {}, comments: qi26CommentsCache, likes: [] };
+    const audienceRows = buildQi26AudienceExportRows();
+    const messages = getQi26AudienceWhatsappLines();
+    const stats = qi26AudienceStatsCache || {};
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      audienceClosed: qi26AudienceClosed,
+      audience: {
+        stats,
+        registrations: audienceRows,
+        whatsappMessages: messages
+      },
+      engagement: {
+        summary: engagement.summary || {},
+        likes: Array.isArray(engagement.likes) ? engagement.likes : [],
+        comments: Array.isArray(engagement.comments) ? engagement.comments : []
+      }
+    };
+    downloadBlob('sauvegarde-finale-qi26.json', new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }));
+    setStatus(qi26AudienceMsg, 'Sauvegarde finale téléchargée.');
+  } catch {
+    setStatus(qi26AudienceMsg, 'Sauvegarde finale indisponible.');
+  }
+}
+
 async function loadQi26Audience() {
   if (!qi26AudienceSection) return;
   try {
@@ -1516,6 +1550,7 @@ async function loadQi26Audience() {
 function renderQi26Comments(data = {}) {
   const summary = data.summary || {};
   const comments = Array.isArray(data.comments) ? data.comments : [];
+  qi26CommentsCache = comments;
   if (qi26CommentsPending) qi26CommentsPending.textContent = summary.pending ?? 0;
   if (qi26CommentsApproved) qi26CommentsApproved.textContent = summary.approved ?? 0;
   if (qi26CommentsRejected) qi26CommentsRejected.textContent = summary.rejected ?? 0;
@@ -1527,14 +1562,24 @@ function renderQi26Comments(data = {}) {
         <td>${escapeHtml(item.itemSlug || '')}</td>
         <td>${escapeHtml(item.authorName || 'Anonyme')}</td>
         <td>${escapeHtml(item.content || '')}</td>
-        <td>${escapeHtml(item.status || '')}</td>
+        <td>${escapeHtml(formatQi26CommentStatus(item.status))}</td>
         <td>
-          <button data-qi26-comment="${item.id}" data-status="approved">Approuver</button>
-          <button data-qi26-comment="${item.id}" data-status="rejected">Rejeter</button>
+          ${item.status !== 'approved' ? `<button data-qi26-comment="${item.id}" data-status="approved">Approuver</button>` : ''}
+          ${item.status !== 'rejected' ? `<button data-qi26-comment="${item.id}" data-status="rejected">Rejeter</button>` : ''}
+          ${item.status !== 'pending' ? `<button data-qi26-comment="${item.id}" data-status="pending">Mettre en attente</button>` : ''}
+          <button data-qi26-comment-delete="${item.id}">Supprimer</button>
         </td>
       </tr>
     `).join('')
     : '<tr><td colspan="6">Aucun commentaire.</td></tr>';
+}
+
+function formatQi26CommentStatus(status) {
+  const key = String(status || '').toLowerCase();
+  if (key === 'approved') return 'Approuvé';
+  if (key === 'rejected') return 'Rejeté';
+  if (key === 'pending') return 'En attente';
+  return status || '';
 }
 
 async function loadQi26Comments() {
@@ -4667,6 +4712,17 @@ qi26CommentsRefresh?.addEventListener('click', loadQi26Comments);
 qi26CommentStatusFilter?.addEventListener('change', loadQi26Comments);
 
 qi26CommentsTable?.addEventListener('click', async (event) => {
+  const deleteButton = event.target.closest('button[data-qi26-comment-delete]');
+  if (deleteButton) {
+    const id = deleteButton.dataset.qi26CommentDelete;
+    if (!id || !confirm('Supprimer définitivement ce commentaire ?')) return;
+    const res = await authedFetch(`/api/admin/qi26-engagement/comments/${id}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    setStatus(qi26AudienceMsg, data.message || (res.ok ? 'Commentaire supprimé.' : 'Suppression impossible.'));
+    await loadQi26Comments();
+    return;
+  }
+
   const button = event.target.closest('button[data-qi26-comment]');
   if (!button) return;
   const id = button.dataset.qi26Comment;
