@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vérification médias QI26 | ASAA</title>
+    <meta name="theme-color" content="#03251d" />
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="asaa-officiel.css" />
+    <script src="qi26-regie-guard.js" defer></script>
+    <style>
+      .media-check { display: grid; gap: 12px; }
+      .media-row {
+        display: grid;
+        grid-template-columns: minmax(180px, 1.1fr) minmax(180px, 1.4fr) 110px;
+        gap: 12px;
+        align-items: center;
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+      }
+      .media-row strong { color: var(--asaa-green-deep); }
+      .media-row span { color: var(--asaa-muted); overflow-wrap: anywhere; }
+      .media-state { font-weight: 900; text-align: right; }
+      .media-state.ok { color: #057a43; }
+      .media-state.missing { color: #b42318; }
+      @media (max-width: 780px) { .media-row { grid-template-columns: 1fr; } .media-state { text-align: left; } }
+    </style>
+  </head>
+  <body class="asaa-public">
+    <header class="site-header">
+      <a class="brand" href="index.html"><img src="assets/logo.jpg" alt="Logo ASAA" /><span>ASAA Officiel</span></a>
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="regie-qi26.html">Régie</a>
+        <a href="projection-qi26.html">Projection</a>
+      </nav>
+    </header>
+    <main>
+      <section class="page-hero">
+        <div class="section">
+          <span class="eyebrow">Régie QI26</span>
+          <h1>Vérification médias</h1>
+          <p>Contrôle rapide des vidéos, photos et affiches utilisées dans la régie de projection.</p>
+        </div>
+      </section>
+      <section class="section">
+        <div class="media-check" data-media-check></div>
+      </section>
+    </main>
+    <script>
+      const files = [
+        ['Vidéo finaliste', 'Kouyaté Amara', 'assets/finalistes/kouyate-amara-video.mp4'],
+        ['Vidéo finaliste', 'Sidibé Mohamed', 'assets/finalistes/sidibe-mohamed-video.mp4'],
+        ['Vidéo finaliste', 'Kouyaté Fatoumata Ramadan', 'assets/finalistes/kouyate-fatoumata-ramadan-video.mp4'],
+        ['Vidéo finaliste', 'Sib Abdoulaye', 'assets/finalistes/sib-abdoulaye-video.mp4'],
+        ['Vidéo finaliste', 'Sayore Nassiratou', 'assets/finalistes/sayore-nassiratou-video.mp4'],
+        ['Photo finaliste', 'Kouyaté Amara', 'assets/finalistes/kouyate-amara-photo.jpeg'],
+        ['Photo finaliste', 'Sidibé Mohamed', 'assets/finalistes/sidibe-mohamed-photo.jpeg'],
+        ['Photo finaliste', 'Kouyaté Fatoumata Ramadan', 'assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg'],
+        ['Photo finaliste', 'Sib Abdoulaye', 'assets/finalistes/sib-abdoulaye-photo.jpeg'],
+        ['Photo finaliste', 'Sayore Nassiratou', 'assets/finalistes/sayore-nassiratou-photo.jpeg'],
+        ['Photo finaliste', 'Kokora Mohamed Ouattara', 'assets/finalistes/kokora-mohamed-ouattara-photo.jpeg'],
+        ['Photo finaliste', 'Traoré Mouhammad Aboubakr', 'assets/finalistes/traore-mouhammad-aboubakr-photo.jpeg'],
+        ['Affiche officielle', 'Kouyaté Amara', 'assets/finalistes/kouyate-amara-affiche.png'],
+        ['Affiche officielle', 'Sidibé Mohamed', 'assets/finalistes/sidibe-mohamed-affiche.jpeg'],
+        ['Affiche officielle', 'Kouyaté Fatoumata Ramadan', 'assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg'],
+        ['Affiche officielle', 'Sib Abdoulaye', 'assets/finalistes/sib-abdoulaye-affiche.jpeg'],
+        ['Affiche officielle', 'Sayore Nassiratou', 'assets/finalistes/sayore-nassiratou-affiche.jpeg'],
+        ['Affiche officielle', 'Kokora Mohamed Ouattara', 'assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg'],
+        ['Affiche officielle', 'Traoré Mouhammad Aboubakr', 'assets/finalistes/traore-mouhammad-aboubakr-affiche.jpeg'],
+        ['Ancien vainqueur', 'Amina Ouattara', 'assets/anciens-vainqueurs/amina-ouattara-vainqueur-qi23-video.mp4'],
+        ['Ancien vainqueur', 'Bamba Moriba', 'assets/anciens-vainqueurs/bamba-moriba-vainqueur-qi25-video.mp4'],
+        ['Photo ancien vainqueur', 'Bamba Moriba', 'assets/anciens-vainqueurs/bamba-moriba-photo.jpg']
+      ];
+      const root = document.querySelector('[data-media-check]');
+      const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+      function renderRow(file, state = 'Vérification...') {
+        const cls = state === 'OK' ? 'ok' : state === 'Manquant' ? 'missing' : '';
+        return `<div class="media-row" data-path="${escapeHtml(file[2])}"><strong>${escapeHtml(file[0])} · ${escapeHtml(file[1])}</strong><span>${escapeHtml(file[2])}</span><div class="media-state ${cls}">${state}</div></div>`;
+      }
+      root.innerHTML = files.map((file) => renderRow(file)).join('');
+      files.forEach(async (file) => {
+        const row = root.querySelector(`[data-path="${CSS.escape(file[2])}"] .media-state`);
+        try {
+          const res = await fetch(file[2], { method: 'HEAD', cache: 'no-store' });
+          row.textContent = res.ok ? 'OK' : 'Manquant';
+          row.className = `media-state ${res.ok ? 'ok' : 'missing'}`;
+        } catch {
+          row.textContent = 'Manquant';
+          row.className = 'media-state missing';
+        }
+      });
+    </script>
+  </body>
+</html>

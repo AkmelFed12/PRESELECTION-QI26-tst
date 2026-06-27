@@ -44,6 +44,31 @@
           var(--green);
       }
 
+      body.public-mode .topbar,
+      body.public-mode .sidebar,
+      body.public-mode .bottombar {
+        display: none;
+      }
+
+      body.public-mode .stage {
+        grid-template-rows: 1fr;
+      }
+
+      body.public-mode .workspace {
+        grid-template-columns: 1fr;
+        padding: 0;
+      }
+
+      body.public-mode .screen {
+        min-height: 100svh;
+        border: 0;
+        border-radius: 0;
+      }
+
+      body.black-screen .blackout {
+        display: grid;
+      }
+
       .topbar,
       .bottombar {
         position: relative;
@@ -142,6 +167,37 @@
       .category-button:hover {
         border-color: rgba(201, 154, 53, 0.76);
         background: rgba(201, 154, 53, 0.18);
+      }
+
+      .preview-box {
+        display: grid;
+        gap: 10px;
+        margin-top: 8px;
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+      }
+
+      .preview-item {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.14);
+        padding: 10px;
+      }
+
+      .preview-item span {
+        display: block;
+        color: #ffe7a3;
+        font-size: 0.72rem;
+        font-weight: 950;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .preview-item strong {
+        display: block;
+        margin-top: 4px;
+        color: white;
+        font-size: 0.96rem;
       }
 
       .screen {
@@ -287,6 +343,17 @@
         color: var(--green);
       }
 
+      .blackout {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: none;
+        place-items: center;
+        background: #000;
+        color: rgba(255, 255, 255, 0.5);
+        font-weight: 900;
+      }
+
       @media (max-width: 980px) {
         body {
           overflow: auto;
@@ -336,9 +403,13 @@
             <strong>Vidéos des finalistes</strong>
             <span>Lecture contrôlée par la régie</span>
           </button>
-          <button class="category-button" type="button" data-category="finalistImages">
-            <strong>Images des finalistes</strong>
-            <span>Photos et affiches officielles</span>
+          <button class="category-button" type="button" data-category="finalistPhotos">
+            <strong>Photos des finalistes</strong>
+            <span>Portraits officiels</span>
+          </button>
+          <button class="category-button" type="button" data-category="finalistPosters">
+            <strong>Affiches officielles</strong>
+            <span>Supports de communication</span>
           </button>
           <button class="category-button" type="button" data-category="winners">
             <strong>Anciens vainqueurs</strong>
@@ -352,6 +423,10 @@
             <strong>Remerciements</strong>
             <span>Bénévoles, soutiens et public</span>
           </button>
+          <div class="preview-box" aria-live="polite">
+            <div class="preview-item"><span>À l’écran</span><strong data-current-preview>Accueil</strong></div>
+            <div class="preview-item"><span>Suivant</span><strong data-next-preview>Prêt</strong></div>
+          </div>
         </aside>
 
         <section class="panel screen" data-screen></section>
@@ -361,8 +436,11 @@
         <div class="controls">
           <button type="button" data-prev>Précédent</button>
           <button type="button" data-next>Suivant</button>
+          <button type="button" data-home>Accueil</button>
           <button type="button" data-play>Lire</button>
           <button type="button" data-stop>Stop</button>
+          <button type="button" data-black>Écran noir</button>
+          <button type="button" data-public>Écran public</button>
           <button type="button" data-countdown-start="10">10 min</button>
           <button type="button" data-countdown-start="5">5 min</button>
           <button type="button" data-countdown-start="1">1 min</button>
@@ -371,8 +449,10 @@
         <div class="controls">
           <a href="regie-qi26.html">Régie</a>
           <a href="audience-dashboard-qi26.html">Dashboard</a>
+          <a href="verification-medias-qi26.html">Médias</a>
         </div>
       </footer>
+      <div class="blackout">Écran noir</div>
     </main>
 
     <script>
@@ -380,6 +460,8 @@
       const statusLabel = document.querySelector('[data-status]');
       const categoryButtons = Array.from(document.querySelectorAll('[data-category]'));
       const playButton = document.querySelector('[data-play]');
+      const currentPreview = document.querySelector('[data-current-preview]');
+      const nextPreview = document.querySelector('[data-next-preview]');
       const collections = {
         home: [
           {
@@ -397,21 +479,23 @@
           { type: 'video', title: 'Sib Abdoulaye', text: 'Cocody. Finaliste du Quiz Islamique 2026.', src: 'assets/finalistes/sib-abdoulaye-video.mp4', poster: 'assets/finalistes/sib-abdoulaye-photo.jpeg' },
           { type: 'video', title: 'Sayore Nassiratou', text: 'Plateau. Finaliste du Quiz Islamique 2026.', src: 'assets/finalistes/sayore-nassiratou-video.mp4', poster: 'assets/finalistes/sayore-nassiratou-photo.jpeg' }
         ],
-        finalistImages: [
-          { type: 'image', title: 'Kouyaté Amara', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/kouyate-amara-affiche.png', fit: 'portrait' },
+        finalistPhotos: [
           { type: 'image', title: 'Kouyaté Amara', text: 'Photo officielle.', src: 'assets/finalistes/kouyate-amara-photo.jpeg', fit: 'portrait' },
-          { type: 'image', title: 'Sidibé Mohamed', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/sidibe-mohamed-affiche.jpeg', fit: 'portrait' },
           { type: 'image', title: 'Sidibé Mohamed', text: 'Photo officielle.', src: 'assets/finalistes/sidibe-mohamed-photo.jpeg', fit: 'portrait' },
-          { type: 'image', title: 'Kouyaté Fatoumata Ramadan', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg', fit: 'portrait' },
           { type: 'image', title: 'Kouyaté Fatoumata Ramadan', text: 'Photo officielle.', src: 'assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg', fit: 'portrait' },
-          { type: 'image', title: 'Sib Abdoulaye', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/sib-abdoulaye-affiche.jpeg', fit: 'portrait' },
           { type: 'image', title: 'Sib Abdoulaye', text: 'Photo officielle.', src: 'assets/finalistes/sib-abdoulaye-photo.jpeg', fit: 'portrait' },
-          { type: 'image', title: 'Sayore Nassiratou', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/sayore-nassiratou-affiche.jpeg', fit: 'portrait' },
           { type: 'image', title: 'Sayore Nassiratou', text: 'Photo officielle.', src: 'assets/finalistes/sayore-nassiratou-photo.jpeg', fit: 'portrait' },
-          { type: 'image', title: 'Kokora Mohamed Ouattara', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg', fit: 'portrait' },
           { type: 'image', title: 'Kokora Mohamed Ouattara', text: 'Photo officielle.', src: 'assets/finalistes/kokora-mohamed-ouattara-photo.jpeg', fit: 'portrait' },
-          { type: 'image', title: 'Traoré Mouhammad Aboubakr', text: 'Support officiel de la campagne QI26.', src: 'assets/finalistes/traore-mouhammad-aboubakr-affiche.jpeg', fit: 'portrait' },
           { type: 'image', title: 'Traoré Mouhammad Aboubakr', text: 'Photo officielle.', src: 'assets/finalistes/traore-mouhammad-aboubakr-photo.jpeg', fit: 'portrait' }
+        ],
+        finalistPosters: [
+          { type: 'image', title: 'Kouyaté Amara', text: 'Affiche officielle QI26.', src: 'assets/finalistes/kouyate-amara-affiche.png', fit: 'portrait' },
+          { type: 'image', title: 'Sidibé Mohamed', text: 'Affiche officielle QI26.', src: 'assets/finalistes/sidibe-mohamed-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Kouyaté Fatoumata Ramadan', text: 'Affiche officielle QI26.', src: 'assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Sib Abdoulaye', text: 'Affiche officielle QI26.', src: 'assets/finalistes/sib-abdoulaye-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Sayore Nassiratou', text: 'Affiche officielle QI26.', src: 'assets/finalistes/sayore-nassiratou-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Kokora Mohamed Ouattara', text: 'Affiche officielle QI26.', src: 'assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg', fit: 'portrait' },
+          { type: 'image', title: 'Traoré Mouhammad Aboubakr', text: 'Affiche officielle QI26.', src: 'assets/finalistes/traore-mouhammad-aboubakr-affiche.jpeg', fit: 'portrait' }
         ],
         winners: [
           { type: 'video', title: 'Amina Ouattara', text: 'Vainqueure de l’édition 2023.', src: 'assets/anciens-vainqueurs/amina-ouattara-vainqueur-qi23-video.mp4' },
@@ -440,7 +524,8 @@
       const labels = {
         home: 'Accueil',
         finalistVideos: 'Vidéos des finalistes',
-        finalistImages: 'Images des finalistes',
+        finalistPhotos: 'Photos des finalistes',
+        finalistPosters: 'Affiches officielles',
         winners: 'Anciens vainqueurs',
         qr: 'QR Audience',
         thanks: 'Remerciements'
@@ -463,6 +548,7 @@
       function stopMedia() {
         document.querySelectorAll('video').forEach((video) => {
           video.pause();
+          video.muted = false;
           video.currentTime = 0;
         });
       }
@@ -494,10 +580,14 @@
 
       function render() {
         stopMedia();
+        document.body.classList.remove('black-screen');
         const items = collections[activeCategory] || [];
         const item = items[activeIndex] || items[0];
         const counter = items.length > 1 ? `${activeIndex + 1} / ${items.length}` : 'Prêt';
         if (statusLabel) statusLabel.textContent = `${labels[activeCategory]} · ${counter}`;
+        const nextItem = items.length > 1 ? items[(activeIndex + 1) % items.length] : null;
+        if (currentPreview) currentPreview.textContent = item?.title || labels[activeCategory] || 'Accueil';
+        if (nextPreview) nextPreview.textContent = nextItem?.title || 'Prêt';
         categoryButtons.forEach((button) => button.classList.toggle('is-active', button.dataset.category === activeCategory));
         const kicker = item.kicker || labels[activeCategory];
         const titleTag = item.type === 'home' ? 'h1' : 'h2';
@@ -520,6 +610,7 @@
 
       function setCategory(category) {
         if (!collections[category]) return;
+        stopMedia();
         activeCategory = category;
         activeIndex = 0;
         render();
@@ -548,11 +639,19 @@
       });
       document.querySelector('[data-prev]')?.addEventListener('click', () => move(-1));
       document.querySelector('[data-next]')?.addEventListener('click', () => move(1));
+      document.querySelector('[data-home]')?.addEventListener('click', () => setCategory('home'));
       document.querySelector('[data-play]')?.addEventListener('click', () => {
         const video = screen.querySelector('video');
         if (video) video.play().catch(() => {});
       });
       document.querySelector('[data-stop]')?.addEventListener('click', stopMedia);
+      document.querySelector('[data-black]')?.addEventListener('click', () => {
+        stopMedia();
+        document.body.classList.toggle('black-screen');
+      });
+      document.querySelector('[data-public]')?.addEventListener('click', () => {
+        document.body.classList.toggle('public-mode');
+      });
       document.querySelectorAll('[data-countdown-start]').forEach((button) => {
         button.addEventListener('click', () => startCountdown(button.dataset.countdownStart));
       });
@@ -563,6 +662,15 @@
       document.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowRight') move(1);
         if (event.key === 'ArrowLeft') move(-1);
+        if (event.key === 'Escape') {
+          document.body.classList.remove('public-mode');
+          document.body.classList.remove('black-screen');
+        }
+        if (event.key.toLowerCase() === 'b') {
+          stopMedia();
+          document.body.classList.toggle('black-screen');
+        }
+        if (event.key.toLowerCase() === 'h') setCategory('home');
         if (event.key.toLowerCase() === 'f') document.querySelector('[data-fullscreen]')?.click();
         if (event.key === ' ') {
           event.preventDefault();
