@@ -341,6 +341,27 @@
         line-height: 1.5;
       }
 
+      .arabic-invocation {
+        max-width: 900px;
+        margin: 0 0 18px;
+        color: #fff7d6;
+        font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
+        font-size: clamp(2.2rem, 5vw, 5.4rem);
+        font-weight: 800;
+        line-height: 1.25;
+        text-align: right;
+        direction: rtl;
+      }
+
+      .home-translation {
+        display: block;
+        margin-top: 10px;
+        color: #ffe7a3;
+        font-size: clamp(1rem, 1.45vw, 1.55rem);
+        font-weight: 850;
+        line-height: 1.45;
+      }
+
       .tags {
         display: flex;
         flex-wrap: wrap;
@@ -644,10 +665,12 @@
         home: [
           {
             type: 'home',
-            kicker: 'Quiz Islamique 2026',
-            title: 'Début dans quelques instants',
-            text: 'Merci de vous installer dans le calme. Qu’Allah mette la bénédiction dans cette rencontre et dans la recherche de la science utile.',
-            tags: ['ASAA Officiel', 'Finale QI26', 'Salle N’zassa']
+            kicker: 'Finale du Quiz Islamique 2026',
+            arabic: 'بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيمِ<br>رَبِّ زِدْنِي عِلْمًا',
+            translation: 'Au nom d’Allah, le Tout Miséricordieux, le Très Miséricordieux. Seigneur, augmente-nous en science.',
+            title: 'Bienvenue à la finale',
+            text: 'Merci de vous installer dans le calme. Qu’Allah accorde la bénédiction à cette rencontre, aux candidats, aux familles et à toute l’équipe ASAA.',
+            tags: ['Science utile', 'Respect', 'Excellence']
           }
         ],
         opening: [
@@ -943,12 +966,16 @@
         document.body.classList.toggle('poster-display', projectPoster);
         const kicker = displayItem.kicker || (projectPoster ? labels.finalistPosters : labels[activeCategory]);
         const titleTag = displayItem.type === 'home' ? 'h1' : 'h2';
+        const homeIntro = displayItem.type === 'home'
+          ? `${displayItem.arabic ? `<div class="arabic-invocation">${displayItem.arabic}</div>` : ''}${displayItem.translation ? `<span class="home-translation">${escapeHtml(displayItem.translation)}</span>` : ''}`
+          : '';
         const extra = displayItem.type === 'home'
           ? `<div class="countdown-box" aria-live="polite"><span>Compte à rebours</span><strong data-countdown>10:00</strong></div>`
           : '';
         screen.innerHTML = `
           <div class="copy">
             <span class="kicker">${escapeHtml(kicker)}</span>
+            ${homeIntro}
             <${titleTag}>${escapeHtml(displayItem.title)}</${titleTag}>
             <p>${escapeHtml(displayItem.text)}</p>
             ${extra}
