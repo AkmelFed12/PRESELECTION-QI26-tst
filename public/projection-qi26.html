@@ -540,6 +540,10 @@
             <strong>Accueil</strong>
             <span>Écran d’attente et compte à rebours</span>
           </button>
+          <button class="category-button" type="button" data-category="opening">
+            <strong>Ouverture</strong>
+            <span>Lancement officiel</span>
+          </button>
           <button class="category-button" type="button" data-category="pause">
             <strong>Pause</strong>
             <span>Attente technique ou transition</span>
@@ -567,6 +571,10 @@
           <button class="category-button" type="button" data-category="qr">
             <strong>QR Audience</strong>
             <span>Enregistrement du public</span>
+          </button>
+          <button class="category-button" type="button" data-category="resultsPending">
+            <strong>Résultats</strong>
+            <span>Délibération en cours</span>
           </button>
           <button class="category-button" type="button" data-category="thanks">
             <strong>Remerciements</strong>
@@ -596,6 +604,7 @@
           <button type="button" data-public>Écran public</button>
           <button type="button" data-open-display>Ouvrir projecteur</button>
           <button type="button" data-test-display>Test projecteur</button>
+          <button type="button" data-next-poster>Affiche suivante</button>
           <button type="button" data-day-mode>Jour J</button>
           <button type="button" data-preload>Précharger</button>
           <button type="button" data-test-media>Test médias</button>
@@ -639,6 +648,15 @@
             title: 'Début dans quelques instants',
             text: 'Merci de vous installer dans le calme. Qu’Allah mette la bénédiction dans cette rencontre et dans la recherche de la science utile.',
             tags: ['ASAA Officiel', 'Finale QI26', 'Salle N’zassa']
+          }
+        ],
+        opening: [
+          {
+            type: 'card',
+            kicker: 'Bismillah',
+            title: 'Finale du Quiz Islamique 2026',
+            text: 'Au nom d’Allah, nous ouvrons cette rencontre dédiée à la science, à l’effort et au bon comportement.',
+            tags: ['ASAA Officiel', 'Ouverture', 'QI26']
           }
         ],
         pause: [
@@ -698,6 +716,15 @@
             tags: ['Formulaire public', 'Comptage live', 'ASAA']
           }
         ],
+        resultsPending: [
+          {
+            type: 'card',
+            kicker: 'Délibération',
+            title: 'Résultats en préparation',
+            text: 'Le jury vérifie les éléments finaux. Merci de patienter dans le calme.',
+            tags: ['Jury', 'Résultats', 'QI26']
+          }
+        ],
         thanks: [
           {
             type: 'logo',
@@ -710,6 +737,7 @@
       };
       const labels = {
         home: 'Accueil',
+        opening: 'Ouverture',
         pause: 'Pause',
         candidateCards: 'Cartons candidats',
         finalistVideos: 'Vidéos des finalistes',
@@ -717,9 +745,11 @@
         finalistPosters: 'Affiches officielles',
         winners: 'Anciens vainqueurs',
         qr: 'QR Audience',
+        resultsPending: 'Résultats en attente',
         thanks: 'Remerciements'
       };
       const posterByTitle = new Map(collections.finalistPosters.map((item) => [item.title, item]));
+      let projectorPosterIndex = 0;
       let activeCategory = 'home';
       let activeIndex = 0;
       let countdownTimer = null;
@@ -861,6 +891,16 @@
         }
         if (item.type === 'card' || item.type === 'pause') return '';
         return `<div class="media-frame logo"><img src="assets/logo.jpg" alt="Logo ASAA" /></div>`;
+      }
+
+      function sendProjectorState(state, target = 'asaa_qi26_public_projection') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'public');
+        url.searchParams.set('category', state.activeCategory);
+        url.searchParams.set('index', String(state.activeIndex));
+        localStorage.setItem(stateKey, JSON.stringify(state));
+        channel?.postMessage(state);
+        window.open(url.toString(), target, 'noopener');
       }
 
       function resolveDisplayItem(item) {
@@ -1013,21 +1053,21 @@
         render();
       });
       document.querySelector('[data-open-display]')?.addEventListener('click', () => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('view', 'public');
-        url.searchParams.set('category', activeCategory);
-        url.searchParams.set('index', String(activeIndex));
-        localStorage.setItem(stateKey, JSON.stringify(getState()));
-        window.open(url.toString(), 'asaa_qi26_public_projection', 'noopener');
+        sendProjectorState(getState());
         publishState();
       });
       document.querySelector('[data-test-display]')?.addEventListener('click', () => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('view', 'public');
-        url.searchParams.set('category', 'finalistPosters');
-        url.searchParams.set('index', '0');
-        localStorage.setItem(stateKey, JSON.stringify({ ...getState(), activeCategory: 'finalistPosters', activeIndex: 0 }));
-        window.open(url.toString(), 'asaa_qi26_public_projection_test', 'noopener');
+        sendProjectorState({ ...getState(), activeCategory: 'finalistPosters', activeIndex: 0 }, 'asaa_qi26_public_projection_test');
+      });
+      document.querySelector('[data-next-poster]')?.addEventListener('click', () => {
+        const posters = collections.finalistPosters || [];
+        if (!posters.length) return;
+        const activeTitle = collections[activeCategory]?.[activeIndex]?.title;
+        const currentPosterIndex = posters.findIndex((item) => item.title === activeTitle);
+        projectorPosterIndex = currentPosterIndex >= 0 ? currentPosterIndex + 1 : projectorPosterIndex + 1;
+        projectorPosterIndex = projectorPosterIndex % posters.length;
+        sendProjectorState({ ...getState(), activeCategory: 'finalistPosters', activeIndex: projectorPosterIndex });
+        if (techStatus) techStatus.textContent = `Projecteur : ${posters[projectorPosterIndex].title}`;
       });
       document.querySelector('[data-day-mode]')?.addEventListener('click', () => {
         document.body.classList.toggle('day-mode');
@@ -1071,7 +1111,9 @@
           publishState();
         }
         if (event.key.toLowerCase() === 'h') setCategory('home');
+        if (event.key.toLowerCase() === 'o') setCategory('opening');
         if (event.key.toLowerCase() === 'p') setCategory('pause');
+        if (event.key.toLowerCase() === 'r') setCategory('resultsPending');
         if (event.key.toLowerCase() === 'a') setCategory('finalistPosters');
         if (event.key.toLowerCase() === 'c') setCategory('candidateCards');
         if (event.key.toLowerCase() === 'v') setCategory('finalistVideos');
