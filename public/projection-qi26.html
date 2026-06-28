@@ -120,6 +120,25 @@
         display: grid;
       }
 
+      body.day-mode .sidebar .category-button[data-category="finalistPhotos"],
+      body.day-mode .sidebar .category-button[data-category="thanks"],
+      body.day-mode [data-prev],
+      body.day-mode [data-public],
+      body.day-mode [data-countdown-start="1"],
+      body.day-mode [data-countdown-start="5"],
+      body.day-mode [data-fullscreen],
+      body.day-mode .bottombar .controls:last-child {
+        display: none;
+      }
+
+      body.day-mode .sidebar {
+        gap: 10px;
+      }
+
+      body.day-mode .category-button {
+        min-height: 58px;
+      }
+
       .topbar,
       .bottombar {
         position: relative;
@@ -521,6 +540,10 @@
             <strong>Accueil</strong>
             <span>Écran d’attente et compte à rebours</span>
           </button>
+          <button class="category-button" type="button" data-category="pause">
+            <strong>Pause</strong>
+            <span>Attente technique ou transition</span>
+          </button>
           <button class="category-button" type="button" data-category="candidateCards">
             <strong>Cartons candidats</strong>
             <span>Annonce avant passage</span>
@@ -572,6 +595,8 @@
           <button type="button" data-black>Écran noir</button>
           <button type="button" data-public>Écran public</button>
           <button type="button" data-open-display>Ouvrir projecteur</button>
+          <button type="button" data-test-display>Test projecteur</button>
+          <button type="button" data-day-mode>Jour J</button>
           <button type="button" data-preload>Précharger</button>
           <button type="button" data-test-media>Test médias</button>
           <button type="button" data-countdown-start="10">10 min</button>
@@ -614,6 +639,15 @@
             title: 'Début dans quelques instants',
             text: 'Merci de vous installer dans le calme. Qu’Allah mette la bénédiction dans cette rencontre et dans la recherche de la science utile.',
             tags: ['ASAA Officiel', 'Finale QI26', 'Salle N’zassa']
+          }
+        ],
+        pause: [
+          {
+            type: 'pause',
+            kicker: 'ASAA Officiel',
+            title: 'Veuillez patienter',
+            text: 'La régie prépare la suite du programme. Merci de rester installés dans le calme.',
+            tags: ['Pause technique', 'QI26', 'ASAA']
           }
         ],
         candidateCards: [
@@ -676,6 +710,7 @@
       };
       const labels = {
         home: 'Accueil',
+        pause: 'Pause',
         candidateCards: 'Cartons candidats',
         finalistVideos: 'Vidéos des finalistes',
         finalistPhotos: 'Photos des finalistes',
@@ -824,7 +859,7 @@
         if (item.type === 'qr') {
           return `<div class="media-frame logo"><img src="https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=14&data=https%3A%2F%2Fasaaofficiel.vercel.app%2Faudience-qi26.html" alt="QR code Audience QI26" /></div>`;
         }
-        if (item.type === 'card') return '';
+        if (item.type === 'card' || item.type === 'pause') return '';
         return `<div class="media-frame logo"><img src="assets/logo.jpg" alt="Logo ASAA" /></div>`;
       }
 
@@ -864,7 +899,7 @@
         }
         categoryButtons.forEach((button) => button.classList.toggle('is-active', button.dataset.category === activeCategory));
         const projectPoster = (displayMode || document.body.classList.contains('public-mode')) && ['finalistPhotos', 'finalistPosters'].includes(activeCategory);
-        document.body.classList.toggle('card-display', displayItem.type === 'card');
+        document.body.classList.toggle('card-display', displayItem.type === 'card' || displayItem.type === 'pause');
         document.body.classList.toggle('poster-display', projectPoster);
         const kicker = displayItem.kicker || (projectPoster ? labels.finalistPosters : labels[activeCategory]);
         const titleTag = displayItem.type === 'home' ? 'h1' : 'h2';
@@ -986,6 +1021,22 @@
         window.open(url.toString(), 'asaa_qi26_public_projection', 'noopener');
         publishState();
       });
+      document.querySelector('[data-test-display]')?.addEventListener('click', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'public');
+        url.searchParams.set('category', 'finalistPosters');
+        url.searchParams.set('index', '0');
+        localStorage.setItem(stateKey, JSON.stringify({ ...getState(), activeCategory: 'finalistPosters', activeIndex: 0 }));
+        window.open(url.toString(), 'asaa_qi26_public_projection_test', 'noopener');
+      });
+      document.querySelector('[data-day-mode]')?.addEventListener('click', () => {
+        document.body.classList.toggle('day-mode');
+        const enabled = document.body.classList.contains('day-mode');
+        document.querySelector('[data-day-mode]').textContent = enabled ? 'Régie complète' : 'Jour J';
+        try {
+          localStorage.setItem('asaa_qi26_projection_day_mode', enabled ? '1' : '0');
+        } catch {}
+      });
       document.querySelector('[data-preload]')?.addEventListener('click', () => {
         warmProjectionAssets();
         if (techStatus) techStatus.textContent = 'Préchargement lancé';
@@ -1020,6 +1071,7 @@
           publishState();
         }
         if (event.key.toLowerCase() === 'h') setCategory('home');
+        if (event.key.toLowerCase() === 'p') setCategory('pause');
         if (event.key.toLowerCase() === 'a') setCategory('finalistPosters');
         if (event.key.toLowerCase() === 'c') setCategory('candidateCards');
         if (event.key.toLowerCase() === 'v') setCategory('finalistVideos');
@@ -1057,6 +1109,11 @@
         render();
         publishState();
       }
+      try {
+        if (!displayMode && localStorage.getItem('asaa_qi26_projection_day_mode') === '1') {
+          document.querySelector('[data-day-mode]')?.click();
+        }
+      } catch {}
       window.setTimeout(warmProjectionAssets, 250);
     </script>
   </body>

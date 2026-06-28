@@ -81,7 +81,24 @@
         font-weight: 900;
         cursor: pointer;
       }
+      .screen-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        padding: 10px 14px;
+        text-decoration: none;
+        font: inherit;
+        font-weight: 900;
+      }
       .screen-toggle:hover {
+        background: white;
+        color: #03251d;
+      }
+      .screen-link:hover {
         background: white;
         color: #03251d;
       }
@@ -210,6 +227,9 @@
         </div>
         <div class="header-actions">
           <button class="screen-toggle" type="button" data-big-screen>Grande police</button>
+          <a class="screen-link" href="/api/admin/qi26-audience/export.csv">CSV audience</a>
+          <a class="screen-link" href="admin.html#qi26AudienceSection">Rapport PDF</a>
+          <a class="screen-link" href="/api/admin/qi26-engagement/export">Interactions</a>
           <div class="updated" data-updated>Synchronisation...</div>
         </div>
       </header>
