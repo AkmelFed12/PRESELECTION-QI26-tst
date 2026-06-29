@@ -138,6 +138,18 @@
         font-size: clamp(1.05rem, 1.45vw, 1.6rem);
       }
 
+      .home-logo {
+        width: clamp(74px, 7vw, 116px);
+        height: clamp(74px, 7vw, 116px);
+        display: block;
+        margin: 0 auto clamp(14px, 1.6vw, 24px);
+        border: 2px solid rgba(201, 154, 53, 0.86);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+        object-fit: cover;
+      }
+
       body.black-screen .blackout {
         display: grid;
       }
@@ -575,6 +587,11 @@
           font-size: clamp(2.4rem, 12vw, 4.8rem);
         }
 
+        .home-logo {
+          width: 70px;
+          height: 70px;
+        }
+
         .arabic-invocation {
           font-size: clamp(2rem, 12vw, 4.2rem);
         }
@@ -1008,7 +1025,7 @@
         const kicker = displayItem.kicker || (projectPoster ? labels.finalistPosters : labels[activeCategory]);
         const titleTag = displayItem.type === 'home' ? 'h1' : 'h2';
         const homeIntro = displayItem.type === 'home'
-          ? `${displayItem.arabic ? `<div class="arabic-invocation">${displayItem.arabic}</div>` : ''}${displayItem.translation ? `<span class="home-translation">${escapeHtml(displayItem.translation)}</span>` : ''}`
+          ? `<img class="home-logo" src="assets/logo.jpg" alt="Logo ASAA" />${displayItem.arabic ? `<div class="arabic-invocation">${displayItem.arabic}</div>` : ''}${displayItem.translation ? `<span class="home-translation">${escapeHtml(displayItem.translation)}</span>` : ''}`
           : '';
         const extra = displayItem.type === 'home'
           ? `<div class="countdown-box" aria-live="polite"><span>Compte à rebours</span><strong data-countdown>10:00</strong></div>`
