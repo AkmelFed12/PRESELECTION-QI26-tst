@@ -116,6 +116,28 @@
         font-size: clamp(3rem, 8vw, 8rem);
       }
 
+      body.home-display .screen {
+        grid-template-columns: 1fr;
+        place-items: center;
+        padding: clamp(24px, 4vw, 72px);
+      }
+
+      body.home-display .copy {
+        width: min(1180px, 94vw);
+        text-align: center;
+      }
+
+      body.home-display .copy h1 {
+        margin-top: clamp(12px, 1.8vw, 28px);
+        font-size: clamp(3rem, 6vw, 6.8rem);
+      }
+
+      body.home-display .copy p {
+        max-width: 980px;
+        margin-inline: auto;
+        font-size: clamp(1.05rem, 1.45vw, 1.6rem);
+      }
+
       body.black-screen .blackout {
         display: grid;
       }
@@ -343,13 +365,13 @@
 
       .arabic-invocation {
         max-width: 900px;
-        margin: 0 0 18px;
+        margin: 0 auto 14px;
         color: #fff7d6;
         font-family: "Traditional Arabic", "Amiri", "Scheherazade New", serif;
-        font-size: clamp(2.2rem, 5vw, 5.4rem);
+        font-size: clamp(2.3rem, 4.4vw, 5.2rem);
         font-weight: 800;
-        line-height: 1.25;
-        text-align: right;
+        line-height: 1.18;
+        text-align: center;
         direction: rtl;
       }
 
@@ -419,10 +441,10 @@
 
       .countdown-box {
         display: grid;
-        justify-items: start;
+        justify-items: center;
         gap: 8px;
-        width: min(360px, 100%);
-        margin-top: 18px;
+        width: min(420px, 100%);
+        margin: 20px auto 0;
         border: 1px solid rgba(201, 154, 53, 0.42);
         border-radius: 8px;
         background: rgba(201, 154, 53, 0.12);
@@ -477,6 +499,11 @@
       body.public-mode .copy h1,
       body.public-mode .copy h2 {
         font-size: clamp(2.4rem, 5.4vw, 6rem);
+      }
+
+      body.display-view.home-display .copy h1,
+      body.public-mode.home-display .copy h1 {
+        font-size: clamp(3rem, 5.8vw, 6.6rem);
       }
 
       body.display-view .copy h2,
@@ -538,6 +565,18 @@
 
         .media-frame.portrait {
           max-height: none;
+        }
+
+        body.home-display .screen {
+          padding: 24px 16px;
+        }
+
+        body.home-display .copy h1 {
+          font-size: clamp(2.4rem, 12vw, 4.8rem);
+        }
+
+        .arabic-invocation {
+          font-size: clamp(2rem, 12vw, 4.2rem);
         }
       }
     </style>
@@ -902,6 +941,7 @@
       }
 
       function renderMedia(item) {
+        if (item.type === 'home') return '';
         if (item.type === 'video') {
           const videoControls = displayMode ? '' : 'controls';
           return `<div class="media-frame portrait"><video src="${escapeHtml(item.src)}" ${item.poster ? `poster="${escapeHtml(item.poster)}"` : ''} ${videoControls} playsinline preload="auto"></video></div>`;
@@ -964,6 +1004,7 @@
         const projectPoster = (displayMode || document.body.classList.contains('public-mode')) && ['finalistPhotos', 'finalistPosters'].includes(activeCategory);
         document.body.classList.toggle('card-display', displayItem.type === 'card' || displayItem.type === 'pause');
         document.body.classList.toggle('poster-display', projectPoster);
+        document.body.classList.toggle('home-display', displayItem.type === 'home');
         const kicker = displayItem.kicker || (projectPoster ? labels.finalistPosters : labels[activeCategory]);
         const titleTag = displayItem.type === 'home' ? 'h1' : 'h2';
         const homeIntro = displayItem.type === 'home'
