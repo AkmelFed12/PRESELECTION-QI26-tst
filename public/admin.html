@@ -6,7 +6,6 @@
     <title>ASAA Officiel — Admin — Quiz Islamique 2026</title>
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   </head>
   <body>
     <header class="hero">
@@ -35,72 +34,34 @@
 
       <section class="card" id="loginCard">
         <h2>Connexion administrateur</h2>
-        <form id="loginForm" class="form-grid" autocomplete="off">
+        <form id="loginForm" class="form-grid">
           <div>
             <label for="username">Identifiant</label>
-            <input id="username" name="username" autocomplete="off" autocapitalize="none" required />
+            <input id="username" name="username" autocomplete="username" required />
           </div>
           <div>
             <label for="password">Mot de passe</label>
-            <input id="password" name="password" type="password" autocomplete="off" required />
-            <button class="btn outline" type="button" id="toggleAdminPassword" style="margin-top:8px;">
-              Afficher le mot de passe
-            </button>
+            <input id="password" name="password" type="password" autocomplete="current-password" required />
           </div>
           <div class="full">
             <button class="btn-primary" type="submit">Se connecter</button>
           </div>
         </form>
         <p id="loginMsg" class="status"></p>
+        <p class="muted">Identifiant: <strong>asaa</strong> · Mot de passe: <strong>ASAA</strong></p>
       </section>
 
       <section class="card admin-hidden" id="dashboard">
         <h2>Tableau de bord</h2>
-        <div class="stats-bar admin-stats">
-          <div class="stat-card">
-            <div class="stat-label">Candidats inscrits</div>
-            <div class="stat-value" id="statCandidates">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Votes exprimés</div>
-            <div class="stat-value" id="statVotes">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Passages notés</div>
-            <div class="stat-value" id="statScores">0</div>
-          </div>
+        <div class="grid-three">
+          <div class="status">Candidats inscrits: <strong id="statCandidates">0</strong></div>
+          <div class="status">Votes exprimés: <strong id="statVotes">0</strong></div>
+          <div class="status">Passages notés: <strong id="statScores">0</strong></div>
         </div>
-        <div class="admin-actions">
-          <span class="pill" id="adminRegistrationStatus">Inscriptions: ...</span>
-          <button class="btn outline" id="openRegistrationBtn" type="button">Ouvrir inscriptions</button>
-          <button class="btn-danger" id="closeRegistrationBtn" type="button">Fermer inscriptions</button>
-          <button class="btn outline" id="adminLogoutBtn" type="button">Déconnexion</button>
+        <div class="status" style="margin-top:12px;">
+          <strong>Statistiques par commune</strong>
+          <div id="communeStats" style="margin-top:8px;">Aucune donnée.</div>
         </div>
-        <div class="commune-card">
-          <div class="card-subtitle">Statistiques par commune</div>
-          <div id="communeStats">Aucune donnée.</div>
-        </div>
-        <div class="commune-card" style="margin-top:12px;">
-          <div class="card-subtitle">Carte des communes (répartition)</div>
-          <div id="communeMap" class="status">Aucune donnée.</div>
-        </div>
-        <div class="commune-card" style="margin-top:12px;">
-          <div class="card-subtitle">Anomalies détectées</div>
-          <div id="anomaliesList" class="status">Aucune anomalie.</div>
-        </div>
-        <div class="commune-card" style="margin-top:12px;">
-          <div class="card-subtitle">Mode Super-admin</div>
-          <div id="superAdminStatus" class="status" style="margin-bottom:8px;">Accès limité.</div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn-primary" type="button" id="superAdminUnlockBtn">Déverrouiller</button>
-            <button class="btn outline" type="button" id="superAdminLockBtn">Verrouiller</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="card admin-hidden" id="phaseTimelineSection">
-        <h2>Phases & calendrier</h2>
-        <div id="phaseTimelineList" class="status">Aucune phase renseignée.</div>
       </section>
 
       <section class="card admin-hidden" id="settingsSection">
@@ -150,19 +111,6 @@
         </div>
         <div class="muted" style="margin-top:8px;">
           Pré‑requis secrets: DATABASE_URL, RCLONE_CONFIG, GDRIVE_FOLDER.
-        </div>
-        <div class="form-grid" style="margin-top:16px;">
-          <div class="full">
-            <label>Saison active</label>
-            <input id="seasonLabelInput" placeholder="2026" />
-          </div>
-          <div class="full" style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn-danger" type="button" id="archiveSeasonBtn">Archiver la saison</button>
-            <button class="btn outline" type="button" id="unarchiveSeasonBtn">Déverrouiller la saison</button>
-          </div>
-          <div class="full">
-            <p id="archiveStatusMsg" class="status"></p>
-          </div>
         </div>
       </section>
 
@@ -247,20 +195,6 @@
           </div>
 
           <div class="full">
-            <label>Phase de notation (page publique)</label>
-            <select id="phaseEnabledInput">
-              <option value="1">Afficher</option>
-              <option value="0">Masquer</option>
-            </select>
-            <input id="phaseTitleInput" placeholder="Titre" />
-            <textarea id="phaseBodyInput" placeholder="Texte de la phase"></textarea>
-            <div class="form-grid">
-              <div><input id="phaseNorthDateInput" placeholder="Date Abidjan Nord" /></div>
-              <div><input id="phaseSouthDateInput" placeholder="Date Abidjan Sud" /></div>
-            </div>
-          </div>
-
-          <div class="full">
             <label>Pied de page (coordonnées officielles)</label>
             <div class="form-grid">
               <div><input id="footerAddressInput" placeholder="Adresse" /></div>
@@ -306,10 +240,6 @@
             <label>Nouveau mot de passe par défaut</label>
             <input id="memberDefaultPassword" type="password" placeholder="Mot de passe par défaut" />
           </div>
-          <div class="full" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            <button class="btn outline" type="button" id="toggleMemberPassword">Afficher le mot de passe</button>
-            <button class="btn outline" type="button" id="copyMemberCredentials">Copier identifiants & mot de passe</button>
-          </div>
           <div class="full">
             <button class="btn outline" type="button" id="updateDefaultMemberPwd">
               Mettre à jour le mot de passe (tous les membres)
@@ -321,72 +251,14 @@
             <tr>
               <th>ID</th>
               <th>Identifiant</th>
-              <th>Mot de passe</th>
               <th>Nom</th>
               <th>Rôle</th>
-              <th>Performance</th>
               <th>Statut</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
-      </section>
-
-      <section class="card admin-hidden" id="memberToolsSection">
-        <h2>Espace membres — Outils & communication</h2>
-        <form id="memberToolsForm" class="form-grid">
-          <div class="full">
-            <label>Messages (1 ligne = CIBLE | TITRE | MESSAGE)</label>
-            <textarea id="memberMessagesInput" rows="5" placeholder="all | Réunion | Réunion ce vendredi à 19h"></textarea>
-          </div>
-          <div class="full">
-            <label>Tâches (1 ligne = CIBLE | TITRE | ÉCHÉANCE | STATUT)</label>
-            <textarea id="memberTasksInput" rows="5" placeholder="fofana.n | Préparer communiqué | 2026-03-20 | En cours"></textarea>
-          </div>
-          <div class="full">
-            <label>Documents (1 ligne = TITRE | URL)</label>
-            <textarea id="memberDocsInput" rows="4" placeholder="Règlement 2026 | assets/reglement.pdf"></textarea>
-          </div>
-          <div class="full">
-            <label>Rappels WhatsApp — Liste (1 ligne = NOM | POSTE | NUMERO)</label>
-            <textarea id="memberWhatsappList" rows="6" placeholder="DIARRA SIDI | PRESIDENT | 225079382233"></textarea>
-          </div>
-          <div class="full">
-            <label>Numéro de test (ligne numéro dans la liste)</label>
-            <input id="memberWhatsappTestIndex" type="number" min="1" placeholder="Ex: 1" />
-          </div>
-          <div class="full">
-            <label>Destinataire de test (liste)</label>
-            <select id="memberWhatsappTestSelect">
-              <option value="">Sélectionner un membre</option>
-            </select>
-          </div>
-          <div class="full">
-            <label>Rappels WhatsApp — Modèle (variables: {name}, {role})</label>
-            <textarea id="memberWhatsappTemplate" rows="3" placeholder="Bonjour {name} ({role}), rappel ASAA : ..."></textarea>
-          </div>
-          <div class="full">
-            <label>Modèles rapides</label>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button class="btn outline" type="button" id="whTemplateMeeting">Modèle réunion</button>
-              <button class="btn outline" type="button" id="whTemplateConvocation">Modèle convocation</button>
-              <button class="btn outline" type="button" id="whTemplateReminder">Modèle rappel</button>
-            </div>
-          </div>
-          <div class="full" style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn outline" type="button" id="memberWhatsappSend">Envoyer rappels WhatsApp</button>
-            <button class="btn outline" type="button" id="memberWhatsappTest">Test d’envoi</button>
-            <button class="btn outline" type="button" id="memberWhatsappCopy">Copier messages</button>
-          </div>
-          <div class="full">
-            <div id="memberWhatsappLog" class="status">Aucun envoi enregistré.</div>
-          </div>
-          <div class="full">
-            <button class="btn-primary" type="submit">Enregistrer</button>
-          </div>
-        </form>
-        <p id="memberToolsMsg" class="status"></p>
       </section>
 
       <section class="card admin-hidden" id="dailyQuizSection">
@@ -412,76 +284,8 @@
         <div id="memberAuditList" class="status">Chargement...</div>
       </section>
 
-      <section class="card admin-hidden" id="securityThrottleSection">
-        <h2>Sécurité — Blocages de connexion</h2>
-        <div class="form-grid" style="margin-bottom:10px;">
-          <div>
-            <label>Espace</label>
-            <select id="throttleNamespaceFilter">
-              <option value="">Tous</option>
-              <option value="admin">Admin</option>
-              <option value="member">Membre</option>
-            </select>
-          </div>
-          <div>
-            <label>IP</label>
-            <input id="throttleIpFilter" placeholder="Ex: 203.0.113.4" />
-          </div>
-          <div>
-            <label>Identifiant</label>
-            <input id="throttleUsernameFilter" placeholder="Ex: asaa2026" />
-          </div>
-          <div>
-            <label>Statut</label>
-            <select id="throttleBlockedFilter">
-              <option value="">Tous</option>
-              <option value="true">Bloqués uniquement</option>
-            </select>
-          </div>
-        </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-          <button class="btn outline" type="button" id="throttleFilterBtn">Filtrer</button>
-          <button class="btn outline" type="button" id="throttleResetBtn">Réinitialiser</button>
-          <button class="btn outline" type="button" id="throttleRefreshBtn">Rafraîchir</button>
-          <button class="btn-danger" type="button" id="throttlePurgeBtn">Purger les entrées filtrées</button>
-        </div>
-        <p id="throttleStatusMsg" class="status"></p>
-        <table class="table" id="throttleTable">
-          <thead>
-            <tr>
-              <th class="throttle-sortable" data-throttle-sort="namespace">Espace <span id="throttleSortNamespace"></span></th>
-              <th class="throttle-sortable" data-throttle-sort="ip">IP <span id="throttleSortIp"></span></th>
-              <th class="throttle-sortable" data-throttle-sort="username">Identifiant <span id="throttleSortUsername"></span></th>
-              <th class="throttle-sortable" data-throttle-sort="failures">Échecs <span id="throttleSortFailures"></span></th>
-              <th class="throttle-sortable" data-throttle-sort="blockedSeconds">Bloqué (sec) <span id="throttleSortBlocked"></span></th>
-              <th class="throttle-sortable" data-throttle-sort="updatedAt">MAJ <span id="throttleSortUpdatedAt"></span></th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div style="display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap;">
-          <button class="btn outline" type="button" id="throttlePrevPageBtn">Page précédente</button>
-          <button class="btn outline" type="button" id="throttleNextPageBtn">Page suivante</button>
-          <span id="throttlePageInfo" class="muted">Page 1</span>
-        </div>
-      </section>
-
       <section class="card admin-hidden" id="candidatesSection">
         <h2>Gestion des candidats</h2>
-        <div class="nav-links" style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn outline" type="button" id="showAllCandidates">Tous les candidats</button>
-          <button class="btn outline" type="button" id="showOnlineCandidates">Candidats en ligne</button>
-          <button class="btn outline" type="button" id="showEliminatedCandidates">Candidats éliminés</button>
-          <button class="btn outline" type="button" id="compactToggleBtn">Mode compact</button>
-        </div>
-        <div class="status" id="bulkSelectionInfo" style="margin-bottom:8px;">0 sélectionné</div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-          <button class="btn-primary" type="button" id="bulkApproveBtn">Valider sélection</button>
-          <button class="btn-danger" type="button" id="bulkEliminateBtn">Éliminer sélection</button>
-          <button class="btn outline" type="button" id="bulkCompareBtn">Comparer (2)</button>
-          <button class="btn outline" type="button" id="bulkClearSelection">Vider sélection</button>
-        </div>
         <div class="form-grid" style="margin-bottom:12px;">
           <div class="full">
             <label>Recherche rapide (nom / commune / WhatsApp)</label>
@@ -500,24 +304,10 @@
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
               <button class="btn outline" type="button" id="printAbidjanNord">Imprimer Abidjan Nord</button>
               <button class="btn outline" type="button" id="printAbidjanSud">Imprimer Abidjan Sud</button>
-              <button class="btn outline" type="button" id="printAbidjanNordOnline">Abidjan Nord (en ligne)</button>
-              <button class="btn outline" type="button" id="printAbidjanSudOnline">Abidjan Sud (en ligne)</button>
-              <button class="btn outline" type="button" id="printOnlineCandidates">Imprimer candidats en ligne</button>
-              <button class="btn outline" type="button" id="printCommuneCandidates">Imprimer par commune</button>
-              <button class="btn outline" type="button" id="printAbidjanNordSheet">Fiche technique Abidjan Nord</button>
-              <button class="btn outline" type="button" id="printAbidjanSudSheet">Fiche technique Abidjan Sud</button>
-              <button class="btn outline" type="button" id="downloadAbidjanNordSheet">Fiche technique Nord (Word)</button>
-              <button class="btn outline" type="button" id="downloadAbidjanSudSheet">Fiche technique Sud (Word)</button>
             </div>
           </div>
           <div class="full">
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button class="btn outline" type="button" id="downloadAttendanceDoc">Télécharger la liste d'appel (Word)</button>
-              <button class="btn outline" type="button" id="downloadOnlineDoc">Télécharger en ligne (Word)</button>
-              <button class="btn outline" type="button" id="downloadOnlinePdf">Télécharger en ligne (PDF)</button>
-              <button class="btn outline" type="button" id="downloadCommuneDoc">Télécharger par commune (Word)</button>
-              <button class="btn outline" type="button" id="downloadCommunePdf">Télécharger par commune (PDF)</button>
-            </div>
+            <button class="btn outline" type="button" id="downloadAttendanceDoc">Télécharger la liste d'appel (Word)</button>
           </div>
         </div>
         <form id="candidateForm" class="form-grid">
@@ -540,22 +330,6 @@
         </form>
         <p id="candidateMsg" class="status"></p>
         <table class="table" id="candidatesTable">
-          <thead>
-            <tr>
-              <th style="width:42px;"><input type="checkbox" id="selectAllCandidates" /></th>
-              <th>ID</th>
-              <th>Nom</th>
-              <th>WhatsApp</th>
-              <th>Commune</th>
-              <th>Statut</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-
-        <h3 id="eliminatedTitle" style="display:none; margin-top:18px;">Candidats éliminés</h3>
-        <table class="table" id="eliminatedTable" style="display:none;">
           <thead>
             <tr>
               <th>ID</th>
@@ -590,232 +364,53 @@
                 <option value="eliminated">Éliminé</option>
               </select>
             </div>
-          <div class="full">
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button class="btn-primary" type="submit">Enregistrer les modifications</button>
-              <button class="btn outline" type="button" id="candidateModalPdf">Fiche candidat (PDF)</button>
-              <button class="btn outline" type="button" id="candidateModalWhatsapp">WhatsApp</button>
-              <button class="btn outline" type="button" id="candidateModalDelete">Supprimer ce candidat</button>
+            <div class="full">
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn-primary" type="submit">Enregistrer les modifications</button>
+                <button class="btn outline" type="button" id="candidateModalWhatsapp">WhatsApp</button>
+                <button class="btn outline" type="button" id="candidateModalDelete">Supprimer ce candidat</button>
+              </div>
             </div>
-          </div>
           </form>
           <p id="candidateModalMsg" class="status"></p>
-          <div class="card" style="margin-top:16px;">
-            <h4>Historique des notes</h4>
-            <div id="candidateModalScores" class="status">Aucune note.</div>
-          </div>
-          <div class="card" style="margin-top:16px;">
-            <h4>Historique des statuts</h4>
-            <div id="candidateStatusHistory" class="status">Aucun historique.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-backdrop" id="compareModal" style="display:none;">
-        <div class="modal-card" style="max-width:980px;">
-          <div class="modal-header">
-            <h3>Comparer deux candidats</h3>
-            <button class="btn outline" type="button" id="compareModalClose">Fermer</button>
-          </div>
-          <div id="compareBody" class="status">Aucune comparaison.</div>
-        </div>
-      </div>
-
-      <div class="modal-backdrop" id="convocationModal" style="display:none;">
-        <div class="modal-card" style="max-width:980px;">
-          <div class="modal-header">
-            <h3>Convocations WhatsApp</h3>
-            <button class="btn outline" type="button" id="convocationModalClose">Fermer</button>
-          </div>
-          <div id="convocationBody" class="status">Aucune convocation.</div>
         </div>
       </div>
 
       <section class="card admin-hidden" id="scoresSection">
         <h2>Notation des candidats</h2>
-        <div class="nav-links" style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn outline" id="juryModeToggle" type="button">Mode Jury</button>
-        </div>
-        <div class="card" id="finalPhaseSection" style="margin-bottom:14px;">
-          <h3>PHASE FINALE DES PRÉSÉLECTIONS DU QUIZ ISLAMIQUE 2026</h3>
-          <div class="status" style="margin-bottom:10px;">
-            Mode Jury actif pour les candidats qualifiés de la phase finale.
-          </div>
-          <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px;">
-            <div class="commune-card" style="margin-top:0;">
-              <strong>Composition sur table</strong>
-              <div class="muted">Barème: /40</div>
-            </div>
-            <div class="commune-card" style="margin-top:0;">
-              <strong>Questions-réponses</strong>
-              <div class="muted">Barème: /30</div>
-            </div>
-            <div class="commune-card" style="margin-top:0;">
-              <strong>Pont As Sirat</strong>
-              <div class="muted">Barème: /25</div>
-            </div>
-            <div class="commune-card" style="margin-top:0;">
-              <strong>Reconnaissances de verset</strong>
-              <div class="muted">Barème: /10</div>
-            </div>
-          </div>
-          <div class="nav-links" style="margin-bottom: 12px;">
-            <button class="btn-primary" id="downloadFinalCandidatesBtn" type="button">Télécharger la liste des candidats (PDF)</button>
-            <button class="btn-primary" id="downloadFinalRankingBtn" type="button">Télécharger le classement (PDF)</button>
-            <button class="btn-primary" id="downloadFinalScoresheetBtn" type="button">Télécharger la feuille de notation (PDF)</button>
-          </div>
-          <div class="nav-links" style="margin-bottom: 12px;">
-            <span class="pill" id="finalPhaseLockStatus">Phase finale: ouverte</span>
-            <button class="btn outline" id="lockFinalPhaseBtn" type="button">Verrouiller la phase finale</button>
-            <button class="btn outline" id="unlockFinalPhaseBtn" type="button">Déverrouiller la phase finale</button>
-          </div>
-          <div class="nav-links" style="margin-bottom: 12px;">
-            <button class="btn outline" id="assistModeToggleBtn" type="button">Saisie assistée: ON</button>
-            <span class="pill" id="offlineQueueStatus">File hors-ligne: 0</span>
-            <button class="btn outline" id="syncOfflineScoresBtn" type="button">Synchroniser notes hors-ligne</button>
-            <button class="btn outline" id="exportOfficialPackBtn" type="button">Exporter pack officiel (ZIP)</button>
-          </div>
-          <div id="juryLiveBoard" class="commune-card" style="margin-top:10px; margin-bottom:12px;">
-            <div class="card-subtitle">Pilotage Jury Live</div>
-            <div class="status">Chargement...</div>
-          </div>
-          <div id="finalPhaseRankingPreview" class="status" style="margin-bottom: 12px;">Classement en attente.</div>
-          <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-bottom:10px;">
-            <div>
-              <label>Filtrer les qualifiés par ID</label>
-              <input id="finalPhaseIdFilter" placeholder="Ex: 23" />
-            </div>
-            <div>
-              <label>Filtrer les qualifiés par commune</label>
-              <input id="finalPhaseCommuneFilter" placeholder="Ex: ADJAME" />
-            </div>
-          </div>
-          <table class="table" id="finalPhaseCandidatesTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>ID</th>
-                <th>Nom</th>
-                <th>WhatsApp</th>
-                <th>Commune</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="form-grid" style="margin-bottom:12px;">
-          <div>
-            <label>Date convocation</label>
-            <input id="convocationDate" type="date" />
-          </div>
-          <div>
-            <label>Heure convocation</label>
-            <input id="convocationTime" type="time" />
-          </div>
-          <div class="full">
-            <label>Lieu convocation</label>
-            <input id="convocationPlace" placeholder="Ex: Treichville" />
-          </div>
-        </div>
-        <div class="card" style="margin-bottom:14px;">
-          <h3>Saisie rapide</h3>
-          <form id="scoreQuickForm" class="form-grid">
-            <div><label>ID candidat</label><input name="candidateId" required /></div>
-            <div><label>Nom du juge</label><input name="judgeName" required /></div>
-            <div><label>Composition sur table /40</label><input name="compositionScore" type="number" step="0.1" /></div>
-            <div><label>Questions-réponses /30</label><input name="questionScore" type="number" step="0.1" /></div>
-            <div><label>Pont As Sirat /25</label><input name="pontAsSiratScore" type="number" step="0.1" /></div>
-            <div><label>Reconnaissance de Verset /10</label><input name="recognitionScore" type="number" step="0.1" /></div>
-            <div class="full"><label>Total calculé</label><input id="scoreQuickTotal" readonly /></div>
-            <div class="full"><label>Notes</label><textarea name="notes"></textarea></div>
-            <div class="full"><button class="btn-primary" type="submit">Enregistrer la note (rapide)</button></div>
-          </form>
-        </div>
         <form id="scoreForm" class="form-grid">
           <div><label>ID candidat</label><input name="candidateId" required /></div>
+          <div><label>Candidat</label><div id="candidateName" style="padding: 8px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 4px;">À remplir</div></div>
           <div><label>Nom du juge</label><input name="judgeName" required /></div>
-          <div><label>Composition sur table /40</label><input name="compositionScore" type="number" step="0.1" /></div>
-          <div><label>Questions-réponses /30</label><input name="questionScore" type="number" step="0.1" /></div>
-          <div><label>Pont As Sirat /25</label><input name="pontAsSiratScore" type="number" step="0.1" /></div>
-          <div><label>Reconnaissance de Verset /10</label><input name="recognitionScore" type="number" step="0.1" /></div>
-          <div class="full"><label>Total calculé</label><input id="scoreFormTotal" readonly /></div>
-          <div class="full"><label>Motif de correction (obligatoire pour modifier une note existante)</label><input id="scoreCorrectionReason" placeholder="Ex: erreur de saisie jury table 2" /></div>
+          <div><label>Thème au choix /15</label><input name="themeChosenScore" type="number" step="0.1" /></div>
+          <div><label>Thème imposé /15</label><input name="themeImposedScore" type="number" step="0.1" /></div>
           <div class="full"><label>Notes</label><textarea name="notes"></textarea></div>
           <div class="full"><button class="btn-primary" type="submit">Enregistrer la note</button></div>
         </form>
-        <div id="scoreLiveMsg" class="status">—</div>
         <p id="scoreMsg" class="status"></p>
-        <h3>Notes récentes</h3>
-        <div class="form-grid" style="grid-template-columns: repeat(4, minmax(0,1fr)); gap:10px; margin-bottom:12px;">
-          <div>
-            <label>Filtrer par juge</label>
-            <input id="scoresJudgeFilter" placeholder="Nom du juge" />
-          </div>
-          <div>
-            <label>Date début</label>
-            <input id="scoresDateFrom" type="date" />
-          </div>
-          <div>
-            <label>Date fin</label>
-            <input id="scoresDateTo" type="date" />
-          </div>
-          <div style="display:flex; align-items:flex-end;">
-            <button class="btn outline" id="scoresFilterClear" type="button">Réinitialiser</button>
-          </div>
-          <div class="full">
-            <div id="scoresFilterInfo" class="status">Tous les résultats.</div>
-          </div>
-        </div>
+
+        <h3>Notes entrées</h3>
         <table class="table" id="scoresTable">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>Candidat</th>
-              <th>Juge</th>
-              <th>Composition /40</th>
-              <th>Questions-réponses /30</th>
-              <th>Pont As Sirat /25</th>
-              <th>Reconnaissance de Verset /10</th>
-              <th>Total /105</th>
-              <th>Date</th>
-              <th>Action</th>
-            </tr>
+            <tr><th>Candidat</th><th>Juge</th><th>Thème choix</th><th>Thème imposé</th><th>Total</th><th>Action</th></tr>
           </thead>
           <tbody></tbody>
         </table>
-        <div class="card" style="margin-top:12px;">
-          <h3>Journal d'audit des notes</h3>
-          <div id="scoreAuditList" class="status">Aucune activité.</div>
-        </div>
 
-        <h3>Classement (totaux)</h3>
+        <h3>Classement (moyennes)</h3>
         <div class="nav-links" style="margin-bottom: 12px;">
           <button class="btn-primary" id="exportCandidatesCsv" type="button">Exporter candidats (CSV)</button>
           <button class="btn-primary" id="exportRankingCsv" type="button">Exporter classement (CSV)</button>
           <button class="btn-primary" id="exportRankingPdf" type="button">Exporter classement (PDF)</button>
-          <button class="btn-primary" id="exportRankingOfficialPdf" type="button">Exporter classement officiel (PDF)</button>
-          <button class="btn-primary" id="exportFinalPvPdf" type="button">Exporter PV final signé (PDF)</button>
           <button class="btn-primary" id="exportCandidatesPdf" type="button">Exporter candidats (PDF)</button>
           <button class="btn-primary" id="exportFullPdf" type="button">Exporter rapport complet (PDF)</button>
         </div>
-        <div class="nav-links" style="margin-bottom: 12px;">
-          <button class="btn outline" id="generateGroupsBtn" type="button">Générer groupes (8×4)</button>
-          <button class="btn outline" id="exportGroupsPdfBtn" type="button">Exporter groupes (PDF)</button>
-        </div>
-        <div id="groupsPreview" class="status" style="margin-bottom:12px;">Aucun groupe généré.</div>
-        <div class="nav-links" style="margin-bottom: 12px;">
-          <button class="btn outline" id="exportConvocationsPdfBtn" type="button">Convocations (PDF)</button>
-          <button class="btn outline" id="openConvocationsModalBtn" type="button">Convocations WhatsApp</button>
-        </div>
         <table class="table" id="rankingTable">
           <thead>
-            <tr><th>Rang</th><th>Candidat</th><th>Total</th><th>Passages</th></tr>
+            <tr><th>Candidat</th><th>Moyenne</th><th>Passages</th></tr>
           </thead>
           <tbody></tbody>
         </table>
-
-        <h3 style="margin-top:16px;">Scoreboard dynamique</h3>
-        <div id="scoreboardList" class="status">Aucune donnée.</div>
       </section>
 
       <section class="card admin-hidden" id="newsSection">
@@ -1061,29 +656,9 @@
 
     <footer>
       <div>Association des Serviteurs d'Allah Azawajal — Quiz Islamique 2026</div>
-      <div class="footer-signature">Designed & Created by LMO Website Services</div>
+      <div class="footer-signature">Created by LMO Web Services</div>
     </footer>
 
-    <script src="admin.js?v=20260427"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then((registrations) => {
-          registrations.forEach((registration) => registration.unregister());
-        }).catch(() => {});
-        if (window.caches && caches.keys) {
-          caches.keys().then((keys) => keys.forEach((key) => caches.delete(key))).catch(() => {});
-        }
-      }
-    </script>
-    <script>
-      setTimeout(function () {
-        if (!window.__adminLoaded) {
-          var s = document.createElement('script');
-          s.src = '/admin.js?v=' + Date.now();
-          document.body.appendChild(s);
-        }
-      }, 1200);
-    </script>
+    <script src="admin.js"></script>
   </body>
 </html>
-

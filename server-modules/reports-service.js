@@ -13,8 +13,13 @@ export class ReportsService {
     try {
       // Récupérer les données utilisateur
       const userResult = await pool.query(
-        `SELECT id, email, nom, prenom, date_inscription 
-         FROM users WHERE id = $1`,
+        `SELECT up.id,
+                up.joined_at AS date_inscription,
+                c.email,
+                c.fullName
+         FROM user_profiles up
+         LEFT JOIN candidates c ON c.id = up.candidate_id
+         WHERE up.id = $1`,
         [userId]
       );
 
@@ -26,9 +31,12 @@ export class ReportsService {
 
       // Récupérer les scores de quiz
       const scoresResult = await pool.query(
-        `SELECT quiz_id, score, passed, date_quiz 
-         FROM quiz_scores WHERE user_id = $1 
-         ORDER BY date_quiz DESC`,
+        `SELECT quizDate AS quiz_id,
+                score,
+                CASE WHEN total > 0 THEN score >= CEIL(total * 0.6) ELSE false END AS passed,
+                createdAt AS date_quiz
+         FROM daily_quiz_attempts WHERE memberId = $1
+         ORDER BY createdAt DESC`,
         [userId]
       );
 
@@ -43,11 +51,11 @@ export class ReportsService {
       // Récupérer les statistiques
       const statsResult = await pool.query(
         `SELECT 
-          COUNT(DISTINCT quiz_id) as quiz_count,
+          COUNT(DISTINCT quizDate) as quiz_count,
           AVG(score) as avg_score,
           MAX(score) as max_score,
-          COUNT(CASE WHEN passed = true THEN 1 END) as passed_count
-         FROM quiz_scores WHERE user_id = $1`,
+          COUNT(CASE WHEN total > 0 AND score >= CEIL(total * 0.6) THEN 1 END) as passed_count
+         FROM daily_quiz_attempts WHERE memberId = $1`,
         [userId]
       );
 
@@ -92,7 +100,7 @@ export class ReportsService {
         // Informations utilisateur
         doc.fontSize(14).text('Informations Personnelles', { underline: true });
         doc.fontSize(11);
-        doc.text(`Nom: ${user.prenom} ${user.nom}`);
+        doc.text(`Nom: ${user.fullname || 'Utilisateur'}`);
         doc.text(`Email: ${user.email}`);
         doc.text(`Date d'inscription: ${new Date(user.date_inscription).toLocaleDateString()}`);
         doc.moveDown();
@@ -141,7 +149,7 @@ export class ReportsService {
     let csv = 'Rapport Personnel\n\n';
     
     csv += 'Informations Personnelles\n';
-    csv += `Nom,${user.prenom} ${user.nom}\n`;
+    csv += `Nom,${user.fullname || 'Utilisateur'}\n`;
     csv += `Email,${user.email}\n`;
     csv += `Date d'inscription,${new Date(user.date_inscription).toLocaleDateString()}\n\n`;
 
@@ -182,12 +190,12 @@ export class ReportsService {
       // Statistiques globales
       const globalStats = await pool.query(
         `SELECT 
-          COUNT(DISTINCT user_id) as total_users,
+          COUNT(DISTINCT memberId) as total_users,
           COUNT(*) as total_quiz_attempts,
           AVG(score) as avg_score,
           MAX(score) as max_score
-         FROM quiz_scores 
-         WHERE date_quiz BETWEEN $1 AND $2`,
+         FROM daily_quiz_attempts 
+         WHERE createdAt BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
 
@@ -195,10 +203,10 @@ export class ReportsService {
 
       // Utilisateurs actifs
       const activeUsers = await pool.query(
-        `SELECT user_id, COUNT(*) as attempt_count, AVG(score) as avg_score
-         FROM quiz_scores 
-         WHERE date_quiz BETWEEN $1 AND $2
-         GROUP BY user_id
+        `SELECT memberId AS user_id, COUNT(*) as attempt_count, AVG(score) as avg_score
+         FROM daily_quiz_attempts 
+         WHERE createdAt BETWEEN $1 AND $2
+         GROUP BY memberId
          ORDER BY attempt_count DESC
          LIMIT 10`,
         [startDate, endDate]
@@ -210,10 +218,13 @@ export class ReportsService {
       const successRate = await pool.query(
         `SELECT 
           COUNT(*) as total,
-          COUNT(CASE WHEN passed = true THEN 1 END) as passed,
-          ROUND(100.0 * COUNT(CASE WHEN passed = true THEN 1 END) / COUNT(*), 2) as pass_rate
-         FROM quiz_scores 
-         WHERE date_quiz BETWEEN $1 AND $2`,
+          COUNT(CASE WHEN total > 0 AND score >= CEIL(total * 0.6) THEN 1 END) as passed,
+          ROUND(
+            100.0 * COUNT(CASE WHEN total > 0 AND score >= CEIL(total * 0.6) THEN 1 END) / NULLIF(COUNT(*), 0),
+            2
+          ) as pass_rate
+         FROM daily_quiz_attempts 
+         WHERE createdAt BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
 

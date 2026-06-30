@@ -202,7 +202,7 @@ export class ModerationService {
       const banUntil = duration ? new Date(Date.now() + duration) : null;
 
       await pool.query(
-        `UPDATE users 
+        `UPDATE user_profiles
          SET is_banned = true, ban_reason = $1, ban_until = $2, banned_at = NOW()
          WHERE id = $3`,
         [reason, banUntil, userId]
@@ -221,7 +221,7 @@ export class ModerationService {
   static async unbanUser(pool, userId) {
     try {
       await pool.query(
-        `UPDATE users 
+        `UPDATE user_profiles
          SET is_banned = false, ban_reason = NULL, ban_until = NULL
          WHERE id = $1`,
         [userId]
@@ -240,12 +240,27 @@ export class ModerationService {
   static async getBannedUsers(pool) {
     try {
       const result = await pool.query(
-        `SELECT id, email, nom, prenom, ban_reason, banned_at, ban_until
-         FROM users WHERE is_banned = true
+        `SELECT up.id,
+                c.email,
+                c.fullName,
+                up.ban_reason,
+                up.banned_at,
+                up.ban_until
+         FROM user_profiles up
+         LEFT JOIN candidates c ON c.id = up.candidate_id
+         WHERE up.is_banned = true
          ORDER BY banned_at DESC`
       );
 
-      return result.rows;
+      return result.rows.map((row) => ({
+        id: row.id,
+        email: row.email,
+        nom: row.fullname || '',
+        prenom: '',
+        ban_reason: row.ban_reason,
+        banned_at: row.banned_at,
+        ban_until: row.ban_until
+      }));
     } catch (error) {
       console.error('Error fetching banned users:', error);
       throw error;

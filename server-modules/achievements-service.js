@@ -112,7 +112,7 @@ export class AchievementService {
       const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achievementId);
       if (achievement) {
         await pool.query(
-          `UPDATE users SET achievement_points = COALESCE(achievement_points, 0) + $1
+          `UPDATE user_profiles SET achievement_points = COALESCE(achievement_points, 0) + $1
            WHERE id = $2`,
           [achievement.points, userId]
         );
