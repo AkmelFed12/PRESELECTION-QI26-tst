@@ -22,6 +22,39 @@
         margin-top: 22px;
       }
 
+      .meeting-actions button,
+      .meeting-actions a {
+        flex: 0 1 auto;
+      }
+
+      .quick-links {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .quick-link {
+        display: grid;
+        gap: 6px;
+        min-height: 112px;
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px;
+        text-decoration: none;
+      }
+
+      .quick-link strong {
+        color: var(--asaa-green-deep);
+        font-size: 0.95rem;
+      }
+
+      .quick-link span {
+        color: var(--asaa-muted);
+        font-size: 0.82rem;
+        line-height: 1.45;
+      }
+
       .meeting-stat-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -122,6 +155,79 @@
         line-height: 1.55;
       }
 
+      .slide-grid,
+      .checklist-grid,
+      .risk-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .slide-card,
+      .task-card,
+      .risk-card {
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 16px;
+      }
+
+      .slide-card {
+        min-height: 190px;
+        display: grid;
+        align-content: space-between;
+        gap: 14px;
+      }
+
+      .slide-card strong {
+        display: inline-grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--asaa-green);
+        color: #fff;
+        font-weight: 900;
+      }
+
+      .slide-card h3,
+      .task-card h3,
+      .risk-card h3 {
+        margin: 0;
+        color: var(--asaa-green-deep);
+      }
+
+      .slide-card p,
+      .task-card p,
+      .risk-card p {
+        margin: 8px 0 0;
+        color: var(--asaa-muted);
+        line-height: 1.65;
+      }
+
+      .task-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .task-list label {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: start;
+        color: var(--asaa-ink);
+        font-weight: 800;
+        line-height: 1.45;
+      }
+
+      .task-list input {
+        width: 18px;
+        height: 18px;
+        margin-top: 2px;
+        accent-color: var(--asaa-green);
+      }
+
       .decision-list {
         display: grid;
         gap: 10px;
@@ -131,11 +237,29 @@
       }
 
       .decision-list li,
+      .decision-notes,
       .copy-card {
         border: 1px solid var(--asaa-line);
         border-radius: 8px;
         background: #fff;
         padding: 14px;
+      }
+
+      .decision-notes {
+        display: grid;
+        gap: 12px;
+      }
+
+      .decision-notes textarea {
+        width: 100%;
+        min-height: 132px;
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        padding: 12px;
+        color: var(--asaa-ink);
+        font: inherit;
+        line-height: 1.55;
+        resize: vertical;
       }
 
       .copy-card {
@@ -195,7 +319,11 @@
       @media (max-width: 980px) {
         .meeting-stat-grid,
         .meeting-finalist-grid,
-        .poster-strip {
+        .poster-strip,
+        .quick-links,
+        .slide-grid,
+        .checklist-grid,
+        .risk-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
@@ -207,7 +335,11 @@
       @media (max-width: 620px) {
         .meeting-stat-grid,
         .meeting-finalist-grid,
-        .poster-strip {
+        .poster-strip,
+        .quick-links,
+        .slide-grid,
+        .checklist-grid,
+        .risk-grid {
           grid-template-columns: 1fr;
         }
 
@@ -222,6 +354,7 @@
         .meeting-actions,
         .copy-actions,
         .copy-card button,
+        .meeting-print-button,
         .floating-actions {
           display: none !important;
         }
@@ -273,16 +406,34 @@
           <h1>Présentation de la finale 2026</h1>
           <p>Support court pour présenter les finalistes, les informations confirmées, les supports de communication et les décisions à valider en réunion.</p>
           <div class="meeting-actions">
+            <button class="meeting-print-button" type="button" data-print-page>Imprimer / PDF</button>
             <a class="btn-solid" href="fiche-synthese-finalistes-qi26.html">Fiche imprimable</a>
             <a class="btn-soft" href="finalistes-2026.html">Voir les pages finalistes</a>
             <a class="btn-soft" href="verification-medias-qi26.html">Contrôle médias</a>
+            <a class="btn-soft" href="#presentation-orale">Présentation orale</a>
+            <a class="btn-soft" href="#decisions">Décisions</a>
           </div>
           <div class="meeting-stat-grid" aria-label="Résumé QI26">
             <div class="meeting-stat"><strong>10</strong><span>finalistes retenus</span></div>
             <div class="meeting-stat"><strong>7</strong><span>communes représentées</span></div>
             <div class="meeting-stat"><strong>4e</strong><span>édition du Quiz Islamique</span></div>
-            <div class="meeting-stat"><strong>23/08</strong><span>finale confirmée</span></div>
+            <div class="meeting-stat"><strong data-countdown-days>23/08</strong><span>avant la finale</span></div>
           </div>
+        </div>
+      </section>
+
+      <section class="section compact">
+        <div class="section-title">
+          <p class="kicker">Accès rapide</p>
+          <h2>Liens utiles de réunion</h2>
+        </div>
+        <div class="quick-links mt-lg">
+          <a class="quick-link" href="fiche-synthese-finalistes-qi26.html"><strong>Fiche imprimable</strong><span>Profils courts des dix finalistes.</span></a>
+          <a class="quick-link" href="finalistes-2026.html"><strong>Finalistes 2026</strong><span>Pages publiques et affiches officielles.</span></a>
+          <a class="quick-link" href="galerie-medias.html"><strong>Galerie médias</strong><span>Visuels disponibles pour communication.</span></a>
+          <a class="quick-link" href="verification-medias-qi26.html"><strong>Contrôle supports</strong><span>Date, photos, affiches et pages.</span></a>
+          <a class="quick-link" href="regie-qi26.html"><strong>Régie interne</strong><span>Centre des outils QI26.</span></a>
+          <a class="quick-link" href="admin.html#qi26AudienceSection"><strong>Admin audience</strong><span>Suivi et exports après activité.</span></a>
         </div>
       </section>
 
@@ -295,6 +446,32 @@
           <article class="notice-card"><p class="kicker">Date</p><h3>Dimanche 23 août 2026</h3><p>Date officielle confirmée pour la finale QI26.</p></article>
           <article class="notice-card"><p class="kicker">Lieu</p><h3>Salle N’zassa, Treichville</h3><p>Lieu indiqué sur les supports d’organisation de la finale.</p></article>
           <article class="notice-card"><p class="kicker">Organisateur</p><h3>ASAA Officiel</h3><p>Association des Serviteurs d’Allah Azawajal.</p></article>
+        </div>
+      </section>
+
+      <section class="section compact" id="presentation-orale">
+        <div class="section-title">
+          <p class="kicker">Présentation orale</p>
+          <h2>Déroulé court en quatre écrans</h2>
+          <p>Une trame simple pour conduire la réunion sans se perdre dans les détails.</p>
+        </div>
+        <div class="slide-grid mt-lg">
+          <article class="slide-card">
+            <strong>1</strong>
+            <div><h3>Ouverture</h3><p>Rappeler l’objectif : préparer une finale utile, digne et centrée sur la formation.</p></div>
+          </article>
+          <article class="slide-card">
+            <strong>2</strong>
+            <div><h3>Cadre confirmé</h3><p>Date, lieu, organisateur, nombre de finalistes et communes représentées.</p></div>
+          </article>
+          <article class="slide-card">
+            <strong>3</strong>
+            <div><h3>Finalistes</h3><p>Présenter les dix candidats, leurs communes et les affiches officielles.</p></div>
+          </article>
+          <article class="slide-card">
+            <strong>4</strong>
+            <div><h3>Décisions</h3><p>Valider communication, responsabilités, impressions et derniers points d’organisation.</p></div>
+          </article>
         </div>
       </section>
 
@@ -347,6 +524,91 @@
               <li><strong>Jour J :</strong> confirmer que la régie reste un support interne, sans affichage salle prévu.</li>
             </ul>
           </aside>
+        </div>
+      </section>
+
+      <section class="section compact">
+        <div class="section-title">
+          <p class="kicker">Préparation</p>
+          <h2>À faire avant la finale</h2>
+          <p>Liste de contrôle pour suivre les points concrets d’une réunion à l’autre.</p>
+        </div>
+        <div class="checklist-grid mt-lg">
+          <article class="task-card">
+            <h3>Organisation</h3>
+            <div class="task-list">
+              <label><input type="checkbox" /> Confirmer la disponibilité de la Salle N’zassa</label>
+              <label><input type="checkbox" /> Valider l’heure d’arrivée des équipes</label>
+              <label><input type="checkbox" /> Confirmer le jury et les rôles principaux</label>
+              <label><input type="checkbox" /> Préparer le plan de secours papier</label>
+            </div>
+          </article>
+          <article class="task-card">
+            <h3>Communication</h3>
+            <div class="task-list">
+              <label><input type="checkbox" /> Valider l’ordre de publication des finalistes</label>
+              <label><input type="checkbox" /> Désigner les relais WhatsApp par commune</label>
+              <label><input type="checkbox" /> Partager les pages candidates aux familles</label>
+              <label><input type="checkbox" /> Préparer un message de rappel final</label>
+            </div>
+          </article>
+          <article class="task-card">
+            <h3>Supports</h3>
+            <div class="task-list">
+              <label><input type="checkbox" /> Imprimer la fiche synthèse des finalistes</label>
+              <label><input type="checkbox" /> Vérifier toutes les affiches officielles</label>
+              <label><input type="checkbox" /> Préparer certificats, lots et badges</label>
+              <label><input type="checkbox" /> Garder les supports disponibles hors ligne</label>
+            </div>
+          </article>
+          <article class="task-card">
+            <h3>Accueil</h3>
+            <div class="task-list">
+              <label><input type="checkbox" /> Préparer le QR audience et une feuille papier</label>
+              <label><input type="checkbox" /> Confirmer les personnes à l’accueil</label>
+              <label><input type="checkbox" /> Prévoir eau, orientation et installation</label>
+              <label><input type="checkbox" /> Préparer la clôture et les remerciements</label>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="decisions">
+        <div class="section-title">
+          <p class="kicker">Suivi réunion</p>
+          <h2>Décisions prises</h2>
+          <p>Zone de travail pour noter les arbitrages, responsables et délais pendant la réunion.</p>
+        </div>
+        <div class="meeting-board mt-lg">
+          <div>
+            <table class="meeting-table">
+              <thead><tr><th>Décision</th><th>Responsable</th><th>Délai</th></tr></thead>
+              <tbody>
+                <tr><td>Ordre de publication des affiches</td><td>Communication</td><td>À fixer</td></tr>
+                <tr><td>Validation finale des fiches candidates</td><td>Coordination QI26</td><td>À fixer</td></tr>
+                <tr><td>Impression des supports réunion/finalistes</td><td>Logistique</td><td>À fixer</td></tr>
+                <tr><td>Répartition des relais WhatsApp</td><td>Responsables communes</td><td>À fixer</td></tr>
+                <tr><td>Préparation des certificats et lots</td><td>Commission organisation</td><td>À fixer</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <aside class="decision-notes">
+            <h3>Notes de réunion</h3>
+            <textarea placeholder="Ajouter ici les décisions prises, remarques du comité, responsables et prochaines actions."></textarea>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section compact">
+        <div class="section-title">
+          <p class="kicker">Vigilance</p>
+          <h2>Risques à surveiller</h2>
+        </div>
+        <div class="risk-grid mt-lg">
+          <article class="risk-card"><h3>Communication tardive</h3><p>Publier les rappels assez tôt pour mobiliser les familles et les communes.</p></article>
+          <article class="risk-card"><h3>Supports non imprimés</h3><p>Prévoir une date limite pour imprimer fiches, certificats et documents utiles.</p></article>
+          <article class="risk-card"><h3>Absence d’un finaliste</h3><p>Confirmer la présence des candidats et garder un contact fiable par finaliste.</p></article>
+          <article class="risk-card"><h3>Connexion instable</h3><p>Garder QR, fiches, médias et feuille de présence disponibles hors ligne.</p></article>
         </div>
       </section>
 
@@ -412,6 +674,42 @@ Page officielle : https://asaaofficiel.vercel.app/finalistes-2026.html</textarea
     </footer>
     <script src="asaa-officiel.js"></script>
     <script>
+      const finalDate = new Date('2026-08-23T00:00:00');
+      const countdownOutput = document.querySelector('[data-countdown-days]');
+      if (countdownOutput) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const diff = Math.ceil((finalDate - today) / 86400000);
+        countdownOutput.textContent = diff > 0 ? `J-${diff}` : diff === 0 ? 'Jour J' : 'Finale passée';
+      }
+
+      document.querySelector('[data-print-page]')?.addEventListener('click', () => {
+        window.print();
+      });
+
+      const taskKey = 'asaa_qi26_meeting_tasks';
+      const noteKey = 'asaa_qi26_meeting_notes';
+      const taskInputs = [...document.querySelectorAll('.task-list input[type="checkbox"]')];
+      try {
+        const savedTasks = JSON.parse(localStorage.getItem(taskKey) || '[]');
+        taskInputs.forEach((input, index) => {
+          input.checked = Boolean(savedTasks[index]);
+          input.addEventListener('change', () => {
+            localStorage.setItem(taskKey, JSON.stringify(taskInputs.map((item) => item.checked)));
+          });
+        });
+      } catch {
+        taskInputs.forEach((input) => input.checked = false);
+      }
+
+      const decisionNotes = document.querySelector('.decision-notes textarea');
+      if (decisionNotes) {
+        decisionNotes.value = localStorage.getItem(noteKey) || '';
+        decisionNotes.addEventListener('input', () => {
+          localStorage.setItem(noteKey, decisionNotes.value);
+        });
+      }
+
       document.querySelectorAll('[data-copy-card]').forEach((button) => {
         button.addEventListener('click', async () => {
           const textarea = button.closest('.copy-card')?.querySelector('textarea');
