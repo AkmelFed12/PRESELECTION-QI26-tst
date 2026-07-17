@@ -1511,6 +1511,81 @@ body.asaa-public a {
   }
 }
 
+/* ---- Print ---- */
+@media print {
+  body { background: white !important; color: #000 !important; }
+  .site-header, .site-footer, .floating-actions, .menu-toggle, .skip-link,
+  .video-intro, .photo-play, .video-chip, .share-actions, .engagement-panel,
+  .comment-form, .like-button, .hero-actions, .cta-row, .stats-band,
+  .poster-grid, .commune-row, .btn-solid, .btn-soft, .btn-outline,
+  .floating-actions, .profile-button, .poster-link { display: none !important; }
+  .page-hero { background: #000 !important; color: #000 !important; padding: 20px 0; }
+  .page-hero * { color: #000 !important; }
+  .section { padding: 10px 0; page-break-inside: avoid; }
+  .person-card, .notice-card, .profile-page-card, .candidate-side { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
+  .profile-page-grid { display: block; }
+  .candidate-side { float: left; width: 35%; margin-right: 20px; }
+  .profile-page-card { overflow: hidden; }
+  .finalist-video-player { display: none; }
+  .candidate-portrait img { max-height: 200px; width: auto; }
+}
+
+/* ---- Countdown ---- */
+.countdown-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(201, 154, 53, 0.4);
+  border-radius: var(--radius);
+  background: var(--asaa-gold-soft);
+  color: var(--asaa-green-deep);
+  padding: 12px 18px;
+  font-weight: 900;
+}
+.countdown-bar strong {
+  font-size: 1.05rem;
+}
+.countdown-number {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #8a610f;
+  font-size: 1.2rem;
+}
+.countdown-number span {
+  background: var(--asaa-green-deep);
+  color: white;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- WhatsApp highlight ---- */
+.whatsapp-float-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  border: 1px solid rgba(22, 163, 74, 0.3);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: white;
+  padding: 14px 18px;
+  text-decoration: none;
+  font-weight: 900;
+  transition: transform 160ms ease;
+}
+.whatsapp-float-card:hover {
+  transform: translateY(-2px);
+}
+.whatsapp-float-card .whatsapp-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 680px) {
   .nav-shell,
   .section,

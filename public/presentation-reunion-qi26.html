@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Présentation réunion QI26 | ASAA</title>
+    <meta name="description" content="Support de réunion pour présenter la finale du Quiz Islamique 2026, les finalistes, les besoins et les décisions à prendre." />
+    <meta name="theme-color" content="#064733" />
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="asaa-officiel.css" />
+    <style>
+      .meeting-hero {
+        background: linear-gradient(135deg, #03251d, #064733);
+        color: #fff;
+      }
+
+      .meeting-actions,
+      .copy-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .meeting-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 24px;
+      }
+
+      .meeting-stat {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 16px;
+      }
+
+      .meeting-stat strong {
+        display: block;
+        font-size: 1.65rem;
+        line-height: 1;
+      }
+
+      .meeting-stat span {
+        display: block;
+        margin-top: 8px;
+        color: rgba(255, 255, 255, 0.78);
+        font-weight: 800;
+      }
+
+      .meeting-board {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .meeting-table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .meeting-table th,
+      .meeting-table td {
+        border-bottom: 1px solid var(--asaa-line);
+        padding: 12px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.92rem;
+      }
+
+      .meeting-table th {
+        background: var(--asaa-green-soft);
+        color: var(--asaa-green-deep);
+        font-weight: 900;
+      }
+
+      .meeting-table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .meeting-finalist-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .meeting-finalist {
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        background: #fff;
+        overflow: hidden;
+      }
+
+      .meeting-finalist img {
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        object-fit: cover;
+        background: var(--asaa-green-soft);
+      }
+
+      .meeting-finalist div {
+        padding: 12px;
+      }
+
+      .meeting-finalist h3 {
+        margin: 0;
+        color: var(--asaa-green-deep);
+        font-size: 0.92rem;
+        line-height: 1.25;
+      }
+
+      .meeting-finalist p {
+        margin: 8px 0 0;
+        color: var(--asaa-muted);
+        font-size: 0.82rem;
+        line-height: 1.55;
+      }
+
+      .decision-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .decision-list li,
+      .copy-card {
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px;
+      }
+
+      .copy-card {
+        display: grid;
+        gap: 10px;
+      }
+
+      .copy-card textarea {
+        width: 100%;
+        min-height: 98px;
+        resize: vertical;
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        padding: 12px;
+        color: var(--asaa-ink);
+        font: inherit;
+        line-height: 1.55;
+      }
+
+      .copy-card button,
+      .meeting-print-button {
+        min-height: 42px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--asaa-green);
+        color: #fff;
+        padding: 10px 14px;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .copy-card button[data-copied="true"] {
+        background: #057a43;
+      }
+
+      .poster-strip {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .poster-strip a {
+        display: block;
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .poster-strip img {
+        width: 100%;
+        aspect-ratio: 2 / 3;
+        object-fit: cover;
+        display: block;
+      }
+
+      @media (max-width: 980px) {
+        .meeting-stat-grid,
+        .meeting-finalist-grid,
+        .poster-strip {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .meeting-board {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .meeting-stat-grid,
+        .meeting-finalist-grid,
+        .poster-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .meeting-table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+
+      @media print {
+        .site-header,
+        .meeting-actions,
+        .copy-actions,
+        .copy-card button,
+        .floating-actions {
+          display: none !important;
+        }
+
+        .page-hero,
+        .meeting-hero {
+          background: #fff !important;
+          color: #10231d !important;
+        }
+
+        .page-hero p {
+          color: #10231d !important;
+        }
+
+        .section {
+          width: 100%;
+        }
+
+        .meeting-finalist-grid,
+        .poster-strip {
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
+        body.asaa-public {
+          background: #fff;
+        }
+      }
+    </style>
+  </head>
+  <body class="asaa-public">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="nav-shell">
+        <a class="brand" href="index.html"><img src="assets/logo.jpg" alt="Logo ASAA" /><span><strong>ASAA Officiel</strong><span>Association des Serviteurs d’Allah Azawajal</span></span></a>
+        <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false">Menu</button>
+        <nav class="main-nav" data-main-nav aria-label="Navigation principale">
+          <a href="finalistes-2026.html">Finalistes</a>
+          <a href="fiche-synthese-finalistes-qi26.html">Fiche imprimable</a>
+          <a href="verification-medias-qi26.html">Contrôle</a>
+          <a href="regie-qi26.html">Régie</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="contenu">
+      <section class="page-hero meeting-hero">
+        <div class="section">
+          <span class="eyebrow">Support réunion QI26</span>
+          <h1>Présentation de la finale 2026</h1>
+          <p>Support court pour présenter les finalistes, les informations confirmées, les supports de communication et les décisions à valider en réunion.</p>
+          <div class="meeting-actions">
+            <a class="btn-solid" href="fiche-synthese-finalistes-qi26.html">Fiche imprimable</a>
+            <a class="btn-soft" href="finalistes-2026.html">Voir les pages finalistes</a>
+            <a class="btn-soft" href="verification-medias-qi26.html">Contrôle médias</a>
+          </div>
+          <div class="meeting-stat-grid" aria-label="Résumé QI26">
+            <div class="meeting-stat"><strong>10</strong><span>finalistes retenus</span></div>
+            <div class="meeting-stat"><strong>7</strong><span>communes représentées</span></div>
+            <div class="meeting-stat"><strong>4e</strong><span>édition du Quiz Islamique</span></div>
+            <div class="meeting-stat"><strong>23/08</strong><span>finale confirmée</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <p class="kicker">Informations confirmées</p>
+          <h2>Cadre officiel à annoncer</h2>
+        </div>
+        <div class="grid-3 mt-lg">
+          <article class="notice-card"><p class="kicker">Date</p><h3>Dimanche 23 août 2026</h3><p>Date officielle confirmée pour la finale QI26.</p></article>
+          <article class="notice-card"><p class="kicker">Lieu</p><h3>Salle N’zassa, Treichville</h3><p>Lieu indiqué sur les supports d’organisation de la finale.</p></article>
+          <article class="notice-card"><p class="kicker">Organisateur</p><h3>ASAA Officiel</h3><p>Association des Serviteurs d’Allah Azawajal.</p></article>
+        </div>
+      </section>
+
+      <section class="section compact">
+        <div class="section-title">
+          <p class="kicker">Finalistes</p>
+          <h2>Vue d’ensemble pour la réunion</h2>
+          <p>Liste courte, uniforme et exploitable rapidement pendant une réunion de préparation.</p>
+        </div>
+        <div class="meeting-finalist-grid mt-lg">
+          <article class="meeting-finalist"><img src="assets/finalistes/oyewo-olamide-fatiatou-photo.jpg" alt="Portrait de OYEWO OLAMIDE FATIATOU" loading="lazy" /><div><h3>OYEWO OLAMIDE FATIATOU</h3><p>Koumassi · 20 ans · Bac</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/kouyate-amara-photo.jpeg" alt="Portrait de KOUYATE AMARA" loading="lazy" /><div><h3>KOUYATE AMARA</h3><p>Port-Bouët · 21 ans · Terminale D</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/sidibe-mohamed-photo.jpeg" alt="Portrait de SIDIBE MOHAMED" loading="lazy" /><div><h3>SIDIBE MOHAMED</h3><p>Yopougon · 26 ans · Terminale</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/kokora-mohamed-ouattara-photo.jpeg" alt="Portrait de KOKORA MOHAMED OUATTARA" loading="lazy" /><div><h3>KOKORA MOHAMED OUATTARA</h3><p>Koumassi · 24 ans · Génie Civil</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/dosso-mohamed-lamine-photo.jpeg" alt="Portrait de DOSSO MOHAMED LAMINE" loading="lazy" /><div><h3>DOSSO MOHAMED LAMINE</h3><p>Yopougon · 23 ans · Licence 2 de Droit</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg" alt="Portrait de KOUYATE FATOUMATA RAMADAN" loading="lazy" /><div><h3>KOUYATE FATOUMATA RAMADAN</h3><p>Adjamé · 22 ans · Terminale D</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/diabate-oumar-photo.jpeg" alt="Portrait de DIABATE OUMAR" loading="lazy" /><div><h3>DIABATE OUMAR</h3><p>Adjamé · 20 ans · Licence 1</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/sib-abdoulaye-photo.jpeg" alt="Portrait de SIB ABDOULAYE" loading="lazy" /><div><h3>SIB ABDOULAYE</h3><p>Cocody · 25 ans · L3 Géographie</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/sylla-abdoul-aziz-photo.jpeg" alt="Portrait de SYLLA ABOUBAKAR SIDIK ABDOUL AZIZ" loading="lazy" /><div><h3>SYLLA ABOUBAKAR SIDIK ABDOUL AZIZ</h3><p>Treichville · 19 ans · Terminale</p></div></article>
+          <article class="meeting-finalist"><img src="assets/finalistes/sayore-nassiratou-photo.jpeg" alt="Portrait de SAYORE NASSIRATOU" loading="lazy" /><div><h3>SAYORE NASSIRATOU</h3><p>Plateau · 22 ans · Licence 2</p></div></article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="meeting-board">
+          <div>
+            <div class="section-title">
+              <p class="kicker">Répartition</p>
+              <h2>Communes représentées</h2>
+            </div>
+            <table class="meeting-table mt-lg">
+              <thead><tr><th>Commune</th><th>Finalistes</th><th>Nombre</th></tr></thead>
+              <tbody>
+                <tr><td>Adjamé</td><td>Kouyaté Fatoumata Ramadan, Diabaté Oumar</td><td>2</td></tr>
+                <tr><td>Koumassi</td><td>Oyewo Olamide Fatiatou, Kokora Mohamed Ouattara</td><td>2</td></tr>
+                <tr><td>Yopougon</td><td>Sidibé Mohamed, Dosso Mohamed Lamine</td><td>2</td></tr>
+                <tr><td>Cocody</td><td>Sib Abdoulaye</td><td>1</td></tr>
+                <tr><td>Plateau</td><td>Sayore Nassiratou</td><td>1</td></tr>
+                <tr><td>Port-Bouët</td><td>Kouyaté Amara</td><td>1</td></tr>
+                <tr><td>Treichville</td><td>Sylla Aboubakar Sidik Abdoul Aziz</td><td>1</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <aside class="notice-card">
+            <p class="kicker">Points à valider</p>
+            <h3>Décisions utiles en réunion</h3>
+            <ul class="decision-list">
+              <li><strong>Communication :</strong> ordre de publication des affiches et pages candidates.</li>
+              <li><strong>WhatsApp :</strong> responsables de diffusion par commune.</li>
+              <li><strong>Jour J :</strong> confirmer que la régie reste un support interne, sans affichage salle prévu.</li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section compact">
+        <div class="section-title">
+          <p class="kicker">Affiches</p>
+          <h2>Supports visuels disponibles</h2>
+          <p>Les affiches ci-dessous sont prêtes pour présentation, réunion ou partage après validation finale de l’équipe communication.</p>
+        </div>
+        <div class="poster-strip mt-lg">
+          <a href="assets/finalistes/oyewo-olamide-fatiatou-affiche.png" target="_blank" rel="noopener"><img src="assets/finalistes/oyewo-olamide-fatiatou-affiche.png" alt="Affiche OYEWO OLAMIDE FATIATOU" loading="lazy" /></a>
+          <a href="assets/finalistes/kouyate-amara-affiche.png" target="_blank" rel="noopener"><img src="assets/finalistes/kouyate-amara-affiche.png" alt="Affiche KOUYATE AMARA" loading="lazy" /></a>
+          <a href="assets/finalistes/sidibe-mohamed-affiche.jpeg" target="_blank" rel="noopener"><img src="assets/finalistes/sidibe-mohamed-affiche.jpeg" alt="Affiche SIDIBE MOHAMED" loading="lazy" /></a>
+          <a href="assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg" target="_blank" rel="noopener"><img src="assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg" alt="Affiche KOKORA MOHAMED OUATTARA" loading="lazy" /></a>
+          <a href="assets/finalistes/dosso-mohamed-lamine-affiche.jpeg" target="_blank" rel="noopener"><img src="assets/finalistes/dosso-mohamed-lamine-affiche.jpeg" alt="Affiche DOSSO MOHAMED LAMINE" loading="lazy" /></a>
+          <a href="assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg" target="_blank" rel="noopener"><img src="assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg" alt="Affiche KOUYATE FATOUMATA RAMADAN" loading="lazy" /></a>
+          <a href="assets/finalistes/diabate-oumar-affiche.jpeg" target="_blank" rel="noopener"><img src="assets/finalistes/diabate-oumar-affiche.jpeg" alt="Affiche DIABATE OUMAR" loading="lazy" /></a>
+          <a href="assets/finalistes/sib-abdoulaye-affiche.jpeg" target="_blank" rel="noopener"><img src="assets/finalistes/sib-abdoulaye-affiche.jpeg" alt="Affiche SIB ABDOULAYE" loading="lazy" /></a>
+          <a href="assets/finalistes/sylla-abdoul-aziz-affiche.jpeg" target="_blank" rel="noopener"><img src="assets/finalistes/sylla-abdoul-aziz-affiche.jpeg" alt="Affiche SYLLA ABOUBAKAR SIDIK ABDOUL AZIZ" loading="lazy" /></a>
+          <a href="assets/finalistes/sayore-nassiratou-affiche.jpeg" target="_blank" rel="noopener"><img src="assets/finalistes/sayore-nassiratou-affiche.jpeg" alt="Affiche SAYORE NASSIRATOU" loading="lazy" /></a>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <p class="kicker">WhatsApp</p>
+          <h2>Messages prêts à partager</h2>
+          <p>Textes courts pour mobiliser les familles, communes et sympathisants sans réécriture pendant la réunion.</p>
+        </div>
+        <div class="grid-2 mt-lg">
+          <article class="copy-card">
+            <h3>Annonce finale</h3>
+            <textarea readonly>📌 Finale du Quiz Islamique 2026 - ASAA Officiel
+
+La finale est confirmée pour le dimanche 23 août 2026 à la Salle N’zassa, Treichville.
+
+Découvrez les 10 finalistes retenus et leurs présentations officielles :
+https://asaaofficiel.vercel.app/finalistes-2026.html</textarea>
+            <button type="button" data-copy-card>Copier le message</button>
+          </article>
+          <article class="copy-card">
+            <h3>Découverte des finalistes</h3>
+            <textarea readonly>✨ Campagne à la découverte des finalistes QI26
+
+L’ASAA vous invite à découvrir les profils des candidats retenus pour la finale du Quiz Islamique 2026.
+
+Finale : dimanche 23 août 2026
+Lieu : Salle N’zassa, Treichville
+Page officielle : https://asaaofficiel.vercel.app/finalistes-2026.html</textarea>
+            <button type="button" data-copy-card>Copier le message</button>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div><h2>ASAA Officiel</h2><p>Support de réunion pour la finale QI26.</p></div>
+        <div><h3>Pages utiles</h3><a href="finalistes-2026.html">Finalistes</a><a href="fiche-synthese-finalistes-qi26.html">Fiche imprimable</a></div>
+        <div><h3>Contrôle</h3><a href="verification-medias-qi26.html">Vérifier les médias</a><a href="regie-qi26.html">Régie interne</a></div>
+      </div>
+      <div class="footer-bottom">© 2026 Association des Serviteurs d’Allah Azawajal.</div>
+    </footer>
+    <script src="asaa-officiel.js"></script>
+    <script>
+      document.querySelectorAll('[data-copy-card]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const textarea = button.closest('.copy-card')?.querySelector('textarea');
+          if (!textarea) return;
+          try {
+            await navigator.clipboard.writeText(textarea.value);
+            button.textContent = 'Copié';
+            button.dataset.copied = 'true';
+            window.setTimeout(() => {
+              button.textContent = 'Copier le message';
+              delete button.dataset.copied;
+            }, 1800);
+          } catch {
+            textarea.focus();
+            textarea.select();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

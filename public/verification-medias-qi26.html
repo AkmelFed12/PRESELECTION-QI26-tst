@@ -3,93 +3,286 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vérification médias QI26 | ASAA</title>
+    <title>Vérification supports QI26 | ASAA</title>
+    <meta name="description" content="Contrôle des dates, finalistes, photos, affiches et vidéos pour les supports QI26." />
     <meta name="theme-color" content="#03251d" />
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="asaa-officiel.css" />
     <script src="qi26-regie-guard.js" defer></script>
     <style>
-      .media-check { display: grid; gap: 12px; }
-      .media-row {
+      .check-summary {
         display: grid;
-        grid-template-columns: minmax(180px, 1.1fr) minmax(180px, 1.4fr) 110px;
-        gap: 12px;
-        align-items: center;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .check-card,
+      .media-row {
         border: 1px solid var(--asaa-line);
         border-radius: 8px;
         background: #fff;
-        padding: 12px;
+        padding: 14px;
       }
-      .media-row strong { color: var(--asaa-green-deep); }
-      .media-row span { color: var(--asaa-muted); overflow-wrap: anywhere; }
-      .media-state { font-weight: 900; text-align: right; }
-      .media-state.ok { color: #057a43; }
-      .media-state.missing { color: #b42318; }
-      @media (max-width: 780px) { .media-row { grid-template-columns: 1fr; } .media-state { text-align: left; } }
+
+      .check-card strong {
+        display: block;
+        color: var(--asaa-green-deep);
+        font-size: 1.45rem;
+        line-height: 1;
+      }
+
+      .check-card span {
+        display: block;
+        margin-top: 8px;
+        color: var(--asaa-muted);
+        font-weight: 800;
+      }
+
+      .check-card.ok strong,
+      .media-state.ok {
+        color: #057a43;
+      }
+
+      .check-card.warn strong,
+      .media-state.warn {
+        color: #9a5b00;
+      }
+
+      .check-card.missing strong,
+      .media-state.missing {
+        color: #b42318;
+      }
+
+      .media-check {
+        display: grid;
+        gap: 12px;
+      }
+
+      .media-row {
+        display: grid;
+        grid-template-columns: minmax(190px, 1.1fr) minmax(220px, 1.4fr) minmax(120px, auto);
+        gap: 12px;
+        align-items: center;
+      }
+
+      .media-row strong {
+        color: var(--asaa-green-deep);
+      }
+
+      .media-row span {
+        color: var(--asaa-muted);
+        overflow-wrap: anywhere;
+      }
+
+      .media-state {
+        font-weight: 900;
+        text-align: right;
+      }
+
+      .alert-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .alert-list li {
+        border: 1px solid var(--asaa-line);
+        border-left: 5px solid #057a43;
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px 14px;
+      }
+
+      .alert-list li.warn {
+        border-left-color: #c99a35;
+      }
+
+      .alert-list li.missing {
+        border-left-color: #b42318;
+      }
+
+      @media (max-width: 860px) {
+        .check-summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .media-row {
+          grid-template-columns: 1fr;
+        }
+
+        .media-state {
+          text-align: left;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .check-summary {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body class="asaa-public">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
     <header class="site-header">
-      <a class="brand" href="index.html"><img src="assets/logo.jpg" alt="Logo ASAA" /><span>ASAA Officiel</span></a>
-      <nav class="main-nav" aria-label="Navigation principale">
-        <a href="regie-qi26.html">Régie</a>
-        <a href="projection-qi26.html">Projection</a>
-      </nav>
+      <div class="nav-shell">
+        <a class="brand" href="regie-qi26.html"><img src="assets/logo.jpg" alt="Logo ASAA" /><span><strong>ASAA Régie</strong><span>Supports QI26</span></span></a>
+        <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false">Menu</button>
+        <nav class="main-nav" data-main-nav aria-label="Navigation contrôle">
+          <a href="presentation-reunion-qi26.html">Réunion</a>
+          <a href="fiche-synthese-finalistes-qi26.html">Fiche</a>
+          <a href="projection-qi26.html">Supports régie</a>
+          <a href="regie-qi26.html">Centre régie</a>
+        </nav>
+      </div>
     </header>
-    <main>
+
+    <main id="contenu">
       <section class="page-hero">
         <div class="section">
-          <span class="eyebrow">Régie QI26</span>
-          <h1>Vérification médias</h1>
-          <p>Contrôle rapide des vidéos, photos et affiches utilisées dans la régie de projection.</p>
+          <span class="eyebrow">Contrôle QI26</span>
+          <h1>Vérification des supports</h1>
+          <p>Contrôle rapide des dates, finalistes, photos, affiches et vidéos utilisés pour les réunions, la communication et la régie interne.</p>
         </div>
       </section>
+
+      <section class="section compact">
+        <div class="check-summary" data-check-summary>
+          <article class="check-card"><strong>...</strong><span>Date officielle</span></article>
+          <article class="check-card"><strong>...</strong><span>Finalistes listés</span></article>
+          <article class="check-card"><strong>...</strong><span>Médias vérifiés</span></article>
+          <article class="check-card"><strong>...</strong><span>Alertes</span></article>
+        </div>
+      </section>
+
       <section class="section">
-        <div class="media-check" data-media-check></div>
+        <div class="section-title">
+          <p class="kicker">Alertes</p>
+          <h2>Points à traiter avant diffusion finale</h2>
+        </div>
+        <ul class="alert-list mt-lg" data-alert-list>
+          <li>Vérification en cours...</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <p class="kicker">Médias</p>
+          <h2>Photos, affiches et vidéos</h2>
+        </div>
+        <div class="media-check mt-lg" data-media-check></div>
       </section>
     </main>
+
+    <script src="asaa-officiel.js"></script>
     <script>
-      const files = [
-        ['Vidéo finaliste', 'Kouyaté Amara', 'assets/finalistes/kouyate-amara-video.mp4'],
-        ['Vidéo finaliste', 'Sidibé Mohamed', 'assets/finalistes/sidibe-mohamed-video.mp4'],
-        ['Vidéo finaliste', 'Kouyaté Fatoumata Ramadan', 'assets/finalistes/kouyate-fatoumata-ramadan-video.mp4'],
-        ['Vidéo finaliste', 'Sib Abdoulaye', 'assets/finalistes/sib-abdoulaye-video.mp4'],
-        ['Vidéo finaliste', 'Sayore Nassiratou', 'assets/finalistes/sayore-nassiratou-video.mp4'],
-        ['Photo finaliste', 'Kouyaté Amara', 'assets/finalistes/kouyate-amara-photo.jpeg'],
-        ['Photo finaliste', 'Sidibé Mohamed', 'assets/finalistes/sidibe-mohamed-photo.jpeg'],
-        ['Photo finaliste', 'Kouyaté Fatoumata Ramadan', 'assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg'],
-        ['Photo finaliste', 'Sib Abdoulaye', 'assets/finalistes/sib-abdoulaye-photo.jpeg'],
-        ['Photo finaliste', 'Sayore Nassiratou', 'assets/finalistes/sayore-nassiratou-photo.jpeg'],
-        ['Photo finaliste', 'Kokora Mohamed Ouattara', 'assets/finalistes/kokora-mohamed-ouattara-photo.jpeg'],
-        ['Photo finaliste', 'Traoré Mouhammad Aboubakr', 'assets/finalistes/traore-mouhammad-aboubakr-photo.jpeg'],
-        ['Affiche officielle', 'Kouyaté Amara', 'assets/finalistes/kouyate-amara-affiche.png'],
-        ['Affiche officielle', 'Sidibé Mohamed', 'assets/finalistes/sidibe-mohamed-affiche.jpeg'],
-        ['Affiche officielle', 'Kouyaté Fatoumata Ramadan', 'assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg'],
-        ['Affiche officielle', 'Sib Abdoulaye', 'assets/finalistes/sib-abdoulaye-affiche.jpeg'],
-        ['Affiche officielle', 'Sayore Nassiratou', 'assets/finalistes/sayore-nassiratou-affiche.jpeg'],
-        ['Affiche officielle', 'Kokora Mohamed Ouattara', 'assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg'],
-        ['Affiche officielle', 'Traoré Mouhammad Aboubakr', 'assets/finalistes/traore-mouhammad-aboubakr-affiche.jpeg'],
+      const officialDate = {
+        label: 'Dimanche 23 août 2026',
+        iso: '2026-08-23',
+        expectedWeekday: 0
+      };
+
+      const finalists = [
+        { name: 'Kouyaté Amara', slug: 'kouyate-amara', photo: 'assets/finalistes/kouyate-amara-photo.jpeg', poster: 'assets/finalistes/kouyate-amara-affiche.png', video: 'assets/finalistes/kouyate-amara-video.mp4' },
+        { name: 'Sidibé Mohamed', slug: 'sidibe-mohamed', photo: 'assets/finalistes/sidibe-mohamed-photo.jpeg', poster: 'assets/finalistes/sidibe-mohamed-affiche.jpeg', video: 'assets/finalistes/sidibe-mohamed-video.mp4' },
+        { name: 'Kouyaté Fatoumata Ramadan', slug: 'kouyate-fatoumata-ramadan', photo: 'assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg', poster: 'assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg', video: 'assets/finalistes/kouyate-fatoumata-ramadan-video.mp4' },
+        { name: 'Sib Abdoulaye', slug: 'sib-abdoulaye', photo: 'assets/finalistes/sib-abdoulaye-photo.jpeg', poster: 'assets/finalistes/sib-abdoulaye-affiche.jpeg', video: 'assets/finalistes/sib-abdoulaye-video.mp4' },
+        { name: 'Sayore Nassiratou', slug: 'sayore-nassiratou', photo: 'assets/finalistes/sayore-nassiratou-photo.jpeg', poster: 'assets/finalistes/sayore-nassiratou-affiche.jpeg', video: 'assets/finalistes/sayore-nassiratou-video.mp4' },
+        { name: 'Sylla Aboubakar Sidik Abdoul Aziz', slug: 'sylla-abdoul-aziz', photo: 'assets/finalistes/sylla-abdoul-aziz-photo.jpeg', poster: 'assets/finalistes/sylla-abdoul-aziz-affiche.jpeg', video: 'assets/finalistes/sylla-abdoul-aziz-video.mp4' },
+        { name: 'Oyewo Olamide Fatiatou', slug: 'oyewo-olamide-fatiatou', photo: 'assets/finalistes/oyewo-olamide-fatiatou-photo.jpg', poster: 'assets/finalistes/oyewo-olamide-fatiatou-affiche.png' },
+        { name: 'Kokora Mohamed Ouattara', slug: 'kokora-mohamed-ouattara', photo: 'assets/finalistes/kokora-mohamed-ouattara-photo.jpeg', poster: 'assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg' },
+        { name: 'Diabaté Oumar', slug: 'diabate-oumar', photo: 'assets/finalistes/diabate-oumar-photo.jpeg', poster: 'assets/finalistes/diabate-oumar-affiche.jpeg' },
+        { name: 'Dosso Mohamed Lamine', slug: 'dosso-mohamed-lamine', photo: 'assets/finalistes/dosso-mohamed-lamine-photo.jpeg', poster: 'assets/finalistes/dosso-mohamed-lamine-affiche.jpeg' }
+      ];
+
+      const extraFiles = [
         ['Ancien vainqueur', 'Amina Ouattara', 'assets/anciens-vainqueurs/amina-ouattara-vainqueur-qi23-video.mp4'],
         ['Ancien vainqueur', 'Bamba Moriba', 'assets/anciens-vainqueurs/bamba-moriba-vainqueur-qi25-video.mp4'],
         ['Photo ancien vainqueur', 'Bamba Moriba', 'assets/anciens-vainqueurs/bamba-moriba-photo.jpg']
       ];
+
+      const mediaFiles = finalists.flatMap((finalist) => {
+        const rows = [
+          ['Photo finaliste', finalist.name, finalist.photo],
+          ['Affiche officielle', finalist.name, finalist.poster],
+          ['Page candidat', finalist.name, `finalistes/${finalist.slug}.html`]
+        ];
+        if (finalist.video) rows.push(['Vidéo finaliste', finalist.name, finalist.video]);
+        return rows;
+      }).concat(extraFiles);
+
       const root = document.querySelector('[data-media-check]');
+      const summaryRoot = document.querySelector('[data-check-summary]');
+      const alertRoot = document.querySelector('[data-alert-list]');
       const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+
       function renderRow(file, state = 'Vérification...') {
-        const cls = state === 'OK' ? 'ok' : state === 'Manquant' ? 'missing' : '';
+        const cls = state === 'OK' ? 'ok' : state === 'Manquant' ? 'missing' : state === 'Optionnel' ? 'warn' : '';
         return `<div class="media-row" data-path="${escapeHtml(file[2])}"><strong>${escapeHtml(file[0])} · ${escapeHtml(file[1])}</strong><span>${escapeHtml(file[2])}</span><div class="media-state ${cls}">${state}</div></div>`;
       }
-      root.innerHTML = files.map((file) => renderRow(file)).join('');
-      files.forEach(async (file) => {
+
+      function renderSummary({ okCount, missingCount, warningCount }) {
+        const date = new Date(`${officialDate.iso}T00:00:00Z`);
+        const dateOk = date.getUTCDay() === officialDate.expectedWeekday;
+        const alertCount = missingCount + warningCount + (dateOk ? 0 : 1);
+        summaryRoot.innerHTML = `
+          <article class="check-card ${dateOk ? 'ok' : 'missing'}"><strong>${dateOk ? 'OK' : 'Erreur'}</strong><span>${escapeHtml(officialDate.label)}</span></article>
+          <article class="check-card ${finalists.length === 10 ? 'ok' : 'missing'}"><strong>${finalists.length}/10</strong><span>Finalistes listés</span></article>
+          <article class="check-card ${missingCount ? 'missing' : 'ok'}"><strong>${okCount}/${mediaFiles.length}</strong><span>Médias disponibles</span></article>
+          <article class="check-card ${alertCount ? 'warn' : 'ok'}"><strong>${alertCount}</strong><span>Alertes actives</span></article>
+        `;
+      }
+
+      function renderAlerts(results) {
+        const alerts = [];
+        const date = new Date(`${officialDate.iso}T00:00:00Z`);
+        if (date.getUTCDay() !== officialDate.expectedWeekday) {
+          alerts.push({ type: 'missing', text: `Date incohérente : ${officialDate.label} ne tombe pas un dimanche.` });
+        } else {
+          alerts.push({ type: 'ok', text: `Date officielle validée : ${officialDate.label}.` });
+        }
+
+        if (finalists.length !== 10) {
+          alerts.push({ type: 'missing', text: `Nombre de finalistes incorrect : ${finalists.length} au lieu de 10.` });
+        } else {
+          alerts.push({ type: 'ok', text: 'Nombre de finalistes validé : 10.' });
+        }
+
+        results.filter((item) => !item.ok).forEach((item) => {
+          alerts.push({ type: 'missing', text: `${item.file[0]} manquant : ${item.file[1]} (${item.file[2]}).` });
+        });
+
+        const missingDosso = results.some((item) => !item.ok && item.file[1] === 'Dosso Mohamed Lamine');
+        if (missingDosso) {
+          alerts.push({ type: 'warn', text: 'DOSSO MOHAMED LAMINE : ajouter la photo et l’affiche officielles avant diffusion publique complète.' });
+        }
+
+        alertRoot.innerHTML = alerts.map((alert) => `<li class="${alert.type}">${escapeHtml(alert.text)}</li>`).join('');
+      }
+
+      root.innerHTML = mediaFiles.map((file) => renderRow(file)).join('');
+
+      Promise.all(mediaFiles.map(async (file) => {
         const row = root.querySelector(`[data-path="${CSS.escape(file[2])}"] .media-state`);
         try {
           const res = await fetch(file[2], { method: 'HEAD', cache: 'no-store' });
-          row.textContent = res.ok ? 'OK' : 'Manquant';
-          row.className = `media-state ${res.ok ? 'ok' : 'missing'}`;
+          const ok = res.ok;
+          row.textContent = ok ? 'OK' : 'Manquant';
+          row.className = `media-state ${ok ? 'ok' : 'missing'}`;
+          return { file, ok };
         } catch {
           row.textContent = 'Manquant';
           row.className = 'media-state missing';
+          return { file, ok: false };
         }
+      })).then((results) => {
+        const okCount = results.filter((item) => item.ok).length;
+        const missingCount = results.length - okCount;
+        const warningCount = results.some((item) => !item.ok && item.file[1] === 'Dosso Mohamed Lamine') ? 1 : 0;
+        renderSummary({ okCount, missingCount, warningCount });
+        renderAlerts(results);
       });
     </script>
   </body>

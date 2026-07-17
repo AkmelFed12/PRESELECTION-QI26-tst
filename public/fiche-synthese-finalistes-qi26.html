@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fiche synthèse finalistes QI26 | ASAA</title>
+    <meta name="description" content="Fiche synthèse imprimable des finalistes du Quiz Islamique 2026." />
+    <meta name="theme-color" content="#064733" />
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="asaa-officiel.css" />
+    <style>
+      .print-toolbar {
+        position: sticky;
+        top: 74px;
+        z-index: 40;
+        border-bottom: 1px solid var(--asaa-line);
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(14px);
+        padding: 12px 0;
+      }
+
+      .print-toolbar .section {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .print-toolbar button {
+        min-height: 42px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--asaa-green);
+        color: #fff;
+        padding: 10px 14px;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .sheet-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .summary-sheet {
+        break-inside: avoid;
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        background: #fff;
+        overflow: hidden;
+      }
+
+      .summary-head {
+        display: grid;
+        grid-template-columns: 112px 1fr;
+        gap: 14px;
+        align-items: center;
+        background: var(--asaa-green-soft);
+        padding: 14px;
+      }
+
+      .summary-head img {
+        width: 112px;
+        height: 128px;
+        border-radius: 8px;
+        object-fit: cover;
+        border: 1px solid rgba(6, 71, 51, 0.16);
+        background: #fff;
+      }
+
+      .summary-head h2 {
+        margin: 0;
+        color: var(--asaa-green-deep);
+        font-size: 1.05rem;
+        line-height: 1.25;
+      }
+
+      .summary-head p {
+        margin: 8px 0 0;
+        color: var(--asaa-muted);
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+
+      .summary-body {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+      }
+
+      .summary-line {
+        margin: 0;
+        color: var(--asaa-ink);
+        font-size: 0.9rem;
+        line-height: 1.55;
+      }
+
+      .summary-line strong {
+        color: var(--asaa-green-deep);
+      }
+
+      .summary-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      .summary-links a {
+        color: var(--asaa-green);
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      .print-note {
+        border: 1px solid var(--asaa-line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 16px;
+      }
+
+      @media (max-width: 820px) {
+        .sheet-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media print {
+        @page {
+          size: A4;
+          margin: 10mm;
+        }
+
+        .site-header,
+        .print-toolbar,
+        .floating-actions,
+        .site-footer {
+          display: none !important;
+        }
+
+        body.asaa-public {
+          background: #fff;
+        }
+
+        .page-hero {
+          padding: 0 0 8mm;
+          background: #fff !important;
+          color: #10231d !important;
+        }
+
+        .page-hero p {
+          color: #10231d !important;
+        }
+
+        .section {
+          width: 100%;
+        }
+
+        .sheet-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8mm;
+        }
+
+        .summary-sheet {
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body class="asaa-public">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="nav-shell">
+        <a class="brand" href="index.html"><img src="assets/logo.jpg" alt="Logo ASAA" /><span><strong>ASAA Officiel</strong><span>Association des Serviteurs d’Allah Azawajal</span></span></a>
+        <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false">Menu</button>
+        <nav class="main-nav" data-main-nav aria-label="Navigation principale">
+          <a href="presentation-reunion-qi26.html">Présentation réunion</a>
+          <a href="finalistes-2026.html">Finalistes</a>
+          <a href="verification-medias-qi26.html">Contrôle</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="print-toolbar">
+      <div class="section">
+        <strong>Fiche prête pour impression A4</strong>
+        <button type="button" onclick="window.print()">Imprimer / exporter PDF</button>
+      </div>
+    </div>
+
+    <main id="contenu">
+      <section class="page-hero">
+        <div class="section">
+          <span class="eyebrow">Fiche synthèse</span>
+          <h1>Finalistes du Quiz Islamique 2026</h1>
+          <p>Document de réunion et d’impression. Finale confirmée : dimanche 23 août 2026, Salle N’zassa, Treichville.</p>
+        </div>
+      </section>
+
+      <section class="section compact">
+        <div class="print-note">
+          <strong>Note de préparation :</strong> fiche synthèse utilisable en réunion. Les liens “Affiche” ouvrent les visuels officiels validés localement.
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="sheet-grid">
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/oyewo-olamide-fatiatou-photo.jpg" alt="Portrait de OYEWO OLAMIDE FATIATOU" /><div><h2>OYEWO OLAMIDE FATIATOU</h2><p>Koumassi · 20 ans · Titulaire d’un Bac</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Passion :</strong> récitation du Coran et apprentissage des sciences islamiques.</p><p class="summary-line"><strong>Objectif :</strong> mieux connaître Allah, pour mieux L’adorer.</p><p class="summary-line"><strong>Devise :</strong> Chaque jour est une opportunité pour plaire à Allah.</p><p class="summary-line"><strong>Message :</strong> Crains Allah et apprends ta religion pour éviter l’ignorance.</p><div class="summary-links"><a href="finalistes/oyewo-olamide-fatiatou.html">Page</a><a href="assets/finalistes/oyewo-olamide-fatiatou-affiche.png">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/kouyate-amara-photo.jpeg" alt="Portrait de KOUYATE AMARA" /><div><h2>KOUYATE AMARA</h2><p>Port-Bouët · 21 ans · Terminale D</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Établissement :</strong> Lycée Moderne de Port-Bouët.</p><p class="summary-line"><strong>Objectif :</strong> devenir un savant et transmettre la science religieuse.</p><p class="summary-line"><strong>Devise :</strong> Même quand tout semble perdu, la confiance en Allah reste une lumière.</p><p class="summary-line"><strong>Message :</strong> Mettons notre jeunesse au profit de la religion.</p><div class="summary-links"><a href="finalistes/kouyate-amara.html">Page</a><a href="assets/finalistes/kouyate-amara-affiche.png">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/sidibe-mohamed-photo.jpeg" alt="Portrait de SIDIBE MOHAMED" /><div><h2>SIDIBE MOHAMED</h2><p>Yopougon · 26 ans · Terminale, couturier</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Passion :</strong> apprendre sa religion et approfondir ses connaissances islamiques.</p><p class="summary-line"><strong>Objectif :</strong> être un modèle pour la communauté.</p><p class="summary-line"><strong>Profil :</strong> Sourate préférée : Al-Fâtiha.</p><p class="summary-line"><strong>Message :</strong> Soyons sincères dans tout ce que nous faisons.</p><div class="summary-links"><a href="finalistes/sidibe-mohamed.html">Page</a><a href="assets/finalistes/sidibe-mohamed-affiche.jpeg">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/kokora-mohamed-ouattara-photo.jpeg" alt="Portrait de KOKORA MOHAMED OUATTARA" /><div><h2>KOKORA MOHAMED OUATTARA</h2><p>Koumassi · 24 ans · Génie Civil</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Établissement :</strong> Université Nord-Sud, Institut FAMAH.</p><p class="summary-line"><strong>Objectif :</strong> maîtriser la jurisprudence islamique.</p><p class="summary-line"><strong>Devise :</strong> C’est plusieurs petit-petit qui deviennent beaucoup.</p><p class="summary-line"><strong>Message :</strong> Apprenez et pratiquez l’Islam où que vous soyez.</p><div class="summary-links"><a href="finalistes/kokora-mohamed-ouattara.html">Page</a><a href="assets/finalistes/kokora-mohamed-ouattara-affiche.jpeg">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/dosso-mohamed-lamine-photo.jpeg" alt="Portrait de DOSSO MOHAMED LAMINE" /><div><h2>DOSSO MOHAMED LAMINE</h2><p>Yopougon · 23 ans · Licence 2 de Droit</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Université :</strong> Université Félix Houphouët-Boigny.</p><p class="summary-line"><strong>Objectif :</strong> être hafiz.</p><p class="summary-line"><strong>Devise :</strong> Toute action entraîne une réaction.</p><p class="summary-line"><strong>Message :</strong> Cramponnez-vous au câble d’Allah.</p><div class="summary-links"><a href="finalistes/dosso-mohamed-lamine.html">Page</a><a href="assets/finalistes/dosso-mohamed-lamine-affiche.jpeg">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/kouyate-fatoumata-ramadan-photo.jpeg" alt="Portrait de KOUYATE FATOUMATA RAMADAN" /><div><h2>KOUYATE FATOUMATA RAMADAN</h2><p>Adjamé · 22 ans · Terminale D</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Établissement :</strong> Collège Montherlant, Adjamé.</p><p class="summary-line"><strong>Objectif :</strong> devenir une savante et transmettre la science religieuse.</p><p class="summary-line"><strong>Devise :</strong> La meilleure richesse est celle du savoir et de la foi.</p><p class="summary-line"><strong>Message :</strong> Vouloir, c’est pouvoir.</p><div class="summary-links"><a href="finalistes/kouyate-fatoumata-ramadan.html">Page</a><a href="assets/finalistes/kouyate-fatoumata-ramadan-affiche.jpeg">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/diabate-oumar-photo.jpeg" alt="Portrait de DIABATE OUMAR" /><div><h2>DIABATE OUMAR</h2><p>Adjamé · 20 ans · Licence 1 Informatique</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Établissement :</strong> UIST.</p><p class="summary-line"><strong>Objectif :</strong> bien connaître sa religion, la pratiquer et l’enseigner.</p><p class="summary-line"><strong>Devise :</strong> La détermination peut bonifier le destin.</p><p class="summary-line"><strong>Message :</strong> Apprenons notre religion dès notre jeunesse.</p><div class="summary-links"><a href="finalistes/diabate-oumar.html">Page</a><a href="assets/finalistes/diabate-oumar-affiche.jpeg">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/sib-abdoulaye-photo.jpeg" alt="Portrait de SIB ABDOULAYE" /><div><h2>SIB ABDOULAYE</h2><p>Cocody · 25 ans · L3 Géographie</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Université :</strong> Université Alassane Ouattara de Bouaké.</p><p class="summary-line"><strong>Objectif :</strong> mémoriser le Noble Qur’an et promouvoir l’islam.</p><p class="summary-line"><strong>Devise :</strong> Plus j’apprends, plus je me rends compte de mon ignorance.</p><p class="summary-line"><strong>Message :</strong> Choisir le Paradis plutôt que l’attachement à l’éphémère.</p><div class="summary-links"><a href="finalistes/sib-abdoulaye.html">Page</a><a href="assets/finalistes/sib-abdoulaye-affiche.jpeg">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/sylla-abdoul-aziz-photo.jpeg" alt="Portrait de SYLLA ABOUBAKAR SIDIK ABDOUL AZIZ" /><div><h2>SYLLA ABOUBAKAR SIDIK ABDOUL AZIZ</h2><p>Treichville · 19 ans · Terminale</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Établissement :</strong> Lycée Moderne de Treichville.</p><p class="summary-line"><strong>Objectif :</strong> toujours s’améliorer jusqu’au dernier souffle.</p><p class="summary-line"><strong>Devise :</strong> Celui qui n’apprend rien de ses erreurs les répète.</p><p class="summary-line"><strong>Message :</strong> Apprendre davantage et appliquer ce qu’on apprend.</p><div class="summary-links"><a href="finalistes/sylla-abdoul-aziz.html">Page</a><a href="assets/finalistes/sylla-abdoul-aziz-affiche.jpeg">Affiche</a></div></div>
+          </article>
+
+          <article class="summary-sheet">
+            <div class="summary-head"><img src="assets/finalistes/sayore-nassiratou-photo.jpeg" alt="Portrait de SAYORE NASSIRATOU" /><div><h2>SAYORE NASSIRATOU</h2><p>Plateau · 22 ans · Licence 2</p></div></div>
+            <div class="summary-body"><p class="summary-line"><strong>Établissement :</strong> HEC Abidjan, droit des affaires et fiscalité.</p><p class="summary-line"><strong>Objectif :</strong> s’améliorer continuellement et devenir une meilleure musulmane.</p><p class="summary-line"><strong>Devise :</strong> Demain, tu regretteras de ne pas avoir agi hier.</p><p class="summary-line"><strong>Message :</strong> Donner un sens à la vie par l’Islam.</p><div class="summary-links"><a href="finalistes/sayore-nassiratou.html">Page</a><a href="assets/finalistes/sayore-nassiratou-affiche.jpeg">Affiche</a></div></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div><h2>ASAA Officiel</h2><p>Fiche synthèse imprimable QI26.</p></div>
+        <div><h3>Réunion</h3><a href="presentation-reunion-qi26.html">Présentation réunion</a><a href="finalistes-2026.html">Finalistes</a></div>
+        <div><h3>Contrôle</h3><a href="verification-medias-qi26.html">Vérifier les médias</a></div>
+      </div>
+      <div class="footer-bottom">© 2026 Association des Serviteurs d’Allah Azawajal.</div>
+    </footer>
+    <script src="asaa-officiel.js"></script>
+  </body>
+</html>
