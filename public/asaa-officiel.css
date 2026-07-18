@@ -1280,12 +1280,18 @@ body.asaa-public a {
 .filter-button {
   width: 100%;
   min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--asaa-line);
   border-radius: var(--radius);
   background: white;
   color: var(--asaa-green-deep);
+  padding: 0 16px;
   font-weight: 900;
   cursor: pointer;
+  text-align: center;
+  text-decoration: none;
 }
 
 .profile-button:hover,
