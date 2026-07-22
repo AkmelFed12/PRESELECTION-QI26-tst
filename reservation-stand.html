@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réservation Stand - 4ᵉ Édition Quiz Islamique (#ASAAQI26)</title>
+    <style>
+        :root {
+            --primary-blue: #1e3a8a;
+            --wave-blue: #1dc4e9;
+            --wa-green: #25d366;
+            --bg-color: #f8fafc;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; }
+        .container { max-width: 650px; margin: 20px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: var(--primary-blue); text-align: center; margin-bottom: 5px; font-size: 24px; }
+        .hashtag { text-align: center; color: #64748b; font-weight: bold; margin-top: 0; }
+        .info-card { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 6px; margin: 20px 0; font-size: 14px; line-height: 1.5; }
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: 600; display: block; margin-bottom: 6px; font-size: 14px; }
+        input { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        input:focus { outline: none; border-color: #3b82f6; }
+        .btn { display: block; width: 100%; padding: 14px; font-weight: bold; text-align: center; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; margin-top: 15px; font-size: 16px; box-sizing: border-box; }
+        .btn-wave { background-color: var(--wave-blue); color: white; }
+        .btn-wa { background-color: var(--wa-green); color: white; }
+        .step { display: none; }
+        .step.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+        th { background-color: #f1f5f9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- ÉTAPE 1 : Formulaire -->
+    <div id="step-1" class="step active">
+        <h1>🕌 4ᵉ Édition - Quiz Islamique</h1>
+        <p class="hashtag">#ASAAQI26</p>
+
+        <div class="info-card">
+            <strong>Réservation de Stand de Exposition</strong><br>
+            Vous êtes entrepreneur, commerçant, artisan ou une association ? Profitez de cette occasion unique pour vous faire connaître !<br><br>
+            📍 <strong>Tarif du stand :</strong> 10 000 FCFA<br>
+            ⚠️ <em>Les places sont limitées.</em>
+        </div>
+
+        <form id="standForm">
+            <div class="form-group">
+                <label for="nom">Nom / Prénom ou Structure :</label>
+                <input type="text" id="nom" required placeholder="Ex: Boutique Medina / Mohamed Diallo">
+            </div>
+            <div class="form-group">
+                <label for="activite">Secteur d'activité / Produits :</label>
+                <input type="text" id="activite" required placeholder="Ex: Vêtements, Cosmétique, Restauration...">
+            </div>
+            <div class="form-group">
+                <label for="telephone">Numéro Téléphone (WhatsApp) :</label>
+                <input type="tel" id="telephone" required placeholder="Ex: 0700000000">
+            </div>
+            <button type="submit" class="btn btn-wave">Continuer vers le Paiement Wave (10 000 FCFA)</button>
+        </form>
+    </div>
+
+    <!-- ÉTAPE 2 : Paiement Wave & Reçu -->
+    <div id="step-2" class="step">
+        <h1>💳 Validation & Paiement</h1>
+        <p style="text-align: center; color: #475569;">Étape 2 sur 2</p>
+
+        <p>1. Effectuez le règlement de votre stand via le lien Wave ci-dessous :</p>
+        <a id="waveBtn" href="https://pay.wave.com/m/M_ci_85MvaTHMpTqa/c/ci/?amount=10000" target="_blank" class="btn btn-wave">
+            👉 Payer 10 000 FCFA avec Wave
+        </a>
+
+        <div style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+            <p>2. Une fois le paiement Wave effectué, cliquez sur ce bouton pour <strong>envoyer vos informations et votre reçu</strong> au secrétariat :</p>
+            <button id="waBtn" class="btn btn-wa">📱 Envoyer le reçu sur WhatsApp</button>
+        </div>
+    </div>
+
+    <!-- PANNEAU ADMIN -->
+    <div style="margin-top: 40px; border-top: 1px dashed #cbd5e1; padding-top: 15px; text-align: center;">
+        <button onclick="toggleAdmin()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 12px;">[ Espace Admin ]</button>
+        
+        <div id="adminArea" style="display: none; text-align: left; margin-top: 15px;">
+            <h3>Réservations de Stands</h3>
+            <div style="overflow-x: auto;">
+                <table id="adminTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Structure / Nom</th>
+                            <th>Activité</th>
+                            <th>Téléphone</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const adminPhone = "2250779382233"; // Numéro principal du comité
+    let clientData = {};
+
+    document.getElementById('standForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        clientData = {
+            date: new Date().toLocaleString('fr-FR'),
+            nom: document.getElementById('nom').value,
+            activite: document.getElementById('activite').value,
+            telephone: document.getElementById('telephone').value
+        };
+
+        // Sauvegarde locale pour la section Admin
+        let list = JSON.parse(localStorage.getItem('qi26_stands')) || [];
+        list.push(clientData);
+        localStorage.setItem('qi26_stands', JSON.stringify(list));
+
+        // Passage à l'étape suivante
+        document.getElementById('step-1').classList.remove('active');
+        document.getElementById('step-2').classList.add('active');
+    });
+
+    document.getElementById('waBtn').addEventListener('click', function() {
+        const textMessage = `Bonjour ! Je souhaite valider ma réservation de stand pour la 4ᵉ Édition du Quiz Islamique (#ASAAQI26).\n\n` +
+            `📋 *Informations de Réservation :*\n` +
+            `• Nom/Structure : ${clientData.nom}\n` +
+            `• Activité : ${clientData.activite}\n` +
+            `• Téléphone : ${clientData.telephone}\n\n` +
+            `📸 *Veuillez trouver ci-joint la capture d'écran de mon reçu de paiement Wave (10 000 FCFA).*`;
+
+        window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(textMessage)}`, '_blank');
+    });
+
+    function toggleAdmin() {
+        const area = document.getElementById('adminArea');
+        if (area.style.display === 'none') {
+            area.style.display = 'block';
+            const list = JSON.parse(localStorage.getItem('qi26_stands')) || [];
+            const tbody = document.querySelector('#adminTable tbody');
+            tbody.innerHTML = list.map(item => 
+                `<tr>
+                    <td>${item.date}</td>
+                    <td>${item.nom}</td>
+                    <td>${item.activite}</td>
+                    <td>${item.telephone}</td>
+                </tr>`
+            ).join('');
+        } else {
+            area.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>
