@@ -54,38 +54,28 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     async function submitReservation(data) {
-        try {
-            const response = await fetch('/api/stand-reservation', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                
-                // Show success message
-                successMessage.classList.add('active');
-                
-                // Show WhatsApp section with pre-filled message
-                receiptSection.classList.add('active');
-                setupWhatsAppButton(data);
-                
-                // Hide form
-                form.style.display = 'none';
-                
-                // Scroll to success message
-                successMessage.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                const error = await response.json();
-                alert('Erreur lors de la soumission: ' + (error.message || 'Veuillez réessayer'));
+        // Direct WhatsApp integration without API
+        setupWhatsAppButton(data);
+        
+        // Show success message
+        successMessage.classList.add('active');
+        
+        // Show WhatsApp section with pre-filled message
+        receiptSection.classList.add('active');
+        
+        // Hide form
+        form.style.display = 'none';
+        
+        // Scroll to success message
+        successMessage.scrollIntoView({ behavior: 'smooth' });
+        
+        // Auto-open WhatsApp after a short delay
+        setTimeout(() => {
+            const whatsappBtn = document.querySelector('.whatsapp-btn');
+            if (whatsappBtn) {
+                whatsappBtn.click();
             }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Erreur de connexion. Veuillez vérifier votre internet et réessayer.');
-        }
+        }, 1500);
     }
     
     function setupWhatsAppButton(data) {
