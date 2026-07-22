@@ -1893,6 +1893,29 @@ async function initDatabase() {
     await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS convocationTime TEXT DEFAULT '';`);
     await pool.query(`ALTER TABLE tournament_settings ADD COLUMN IF NOT EXISTS convocationPlace TEXT DEFAULT '';`);
 
+    // Stand Reservations Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS stand_reservations (
+        id SERIAL PRIMARY KEY,
+        nom VARCHAR(255) NOT NULL,
+        telephone VARCHAR(50) NOT NULL,
+        email VARCHAR(255),
+        activite VARCHAR(100) NOT NULL,
+        nom_activite VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        besoins TEXT,
+        payment_confirmed BOOLEAN DEFAULT FALSE,
+        receipt TEXT,
+        receipt_verified BOOLEAN DEFAULT FALSE,
+        status VARCHAR(50) DEFAULT 'en_attente',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_stand_reservations_created_at ON stand_reservations(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_stand_reservations_status ON stand_reservations(status);`);
+
     // ========== PHASE 3: CHAT GROUPS & DYNAMIC BADGES TABLES ==========
 
     // Chat Groups Tables
@@ -6161,6 +6184,112 @@ app.get('/api/social/users/:candidateId/badges/stats', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ========== STAND RESERVATION ENDPOINTS ==========
+
+// Create stand reservation
+app.post('/api/stand-reservation', async (req, res) => {
+  try {
+    const { nom, telephone, email, activite, nom_activite, description, besoins, paymentConfirmed, receipt } = req.body;
+    
+    if (!nom || !telephone || !activite || !nom_activite || !description) {
+      return res.status(400).json({ error: 'Champs obligatoires manquants' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO stand_reservations 
+      (nom, telephone, email, activite, nom_activite, description, besoins, payment_confirmed, receipt, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      RETURNING *
+    `, [nom, telephone, email || null, activite, nom_activite, description, besoins || null, paymentConfirmed || false, receipt || null]);
+
+    res.json({ message: 'Réservation créée avec succès', reservation: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating stand reservation:', error);
+    res.status(500).json({ error: 'Erreur serveur lors de la création de la réservation' });
+  }
+});
+
+// Get all stand reservations (admin only)
+app.get('/api/stand-reservations', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM stand_reservations 
+      ORDER BY created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching stand reservations:', error);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération des réservations' });
+  }
+});
+
+// Get single stand reservation
+app.get('/api/stand-reservations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`
+      SELECT * FROM stand_reservations 
+      WHERE id = $1
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Réservation non trouvée' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching stand reservation:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Update stand reservation status
+app.patch('/api/stand-reservations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, receipt_verified } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE stand_reservations 
+      SET status = COALESCE($1, status),
+          receipt_verified = COALESCE($2, receipt_verified),
+          updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `, [status, receipt_verified, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Réservation non trouvée' });
+    }
+    
+    res.json({ message: 'Réservation mise à jour', reservation: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating stand reservation:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Delete stand reservation
+app.delete('/api/stand-reservations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`
+      DELETE FROM stand_reservations 
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Réservation non trouvée' });
+    }
+    
+    res.json({ message: 'Réservation supprimée' });
+  } catch (error) {
+    console.error('Error deleting stand reservation:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

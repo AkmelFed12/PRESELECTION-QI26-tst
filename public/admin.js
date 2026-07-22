@@ -182,6 +182,7 @@ const sponsorPendingCount = document.getElementById('sponsorPendingCount');
 const donationChart = document.getElementById('donationChart');
 const registrationChart = document.getElementById('registrationChart');
 const qi26AudienceSection = document.getElementById('qi26AudienceSection');
+const standReservationsSection = document.getElementById('standReservationsSection');
 const qi26AudienceTotal = document.getElementById('qi26AudienceTotal');
 const qi26AudienceBrothers = document.getElementById('qi26AudienceBrothers');
 const qi26AudienceSisters = document.getElementById('qi26AudienceSisters');
@@ -195,6 +196,15 @@ let qi26AudienceCache = [];
 let qi26AudienceFiltered = [];
 let qi26AudienceStatsCache = {};
 let qi26AudienceClosed = false;
+
+const standReservationTotal = document.getElementById('standReservationTotal');
+const standPaymentConfirmed = document.getElementById('standPaymentConfirmed');
+const standReceiptVerified = document.getElementById('standReceiptVerified');
+const standReservationsRefresh = document.getElementById('standReservationsRefresh');
+const standReservationsExport = document.getElementById('standReservationsExport');
+const standReservationsTable = document.querySelector('#standReservationsTable tbody');
+const standReservationsMsg = document.getElementById('standReservationsMsg');
+let standReservationsCache = [];
 const qi26CommentsPending = document.getElementById('qi26CommentsPending');
 const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
 const qi26CommentsRejected = document.getElementById('qi26CommentsRejected');
@@ -522,6 +532,7 @@ function showAdmin() {
     globalSearchSection,
     financeSection,
     qi26AudienceSection,
+    standReservationsSection,
     pollSection,
     securityThrottleSection
   ];
@@ -543,6 +554,7 @@ function hideAdmin() {
     globalSearchSection,
     financeSection,
     qi26AudienceSection,
+    standReservationsSection,
     pollSection,
     securityThrottleSection
   ];
@@ -984,6 +996,7 @@ async function loadDashboard() {
   await loadFinances();
   await loadQi26Audience();
   await loadQi26Comments();
+  await loadStandReservations();
   await loadPollAdmin();
   await loadSiteContentAdmin();
   updateAdminRegistrationStatus();
@@ -1599,6 +1612,55 @@ async function loadQi26Comments() {
   } catch {
     setStatus(qi26AudienceMsg, 'Réseau indisponible pour les commentaires.');
   }
+}
+
+async function loadStandReservations() {
+  if (!standReservationsSection) return;
+  try {
+    const res = await authedFetch('/api/stand-reservations');
+    const data = await res.json().catch(() => []);
+    if (!res.ok) {
+      setStatus(standReservationsMsg, data.error || 'Réservations indisponibles.');
+      return;
+    }
+    standReservationsCache = Array.isArray(data) ? data : [];
+    renderStandReservations();
+  } catch {
+    setStatus(standReservationsMsg, 'Réseau indisponible pour les réservations.');
+  }
+}
+
+function renderStandReservations() {
+  const reservations = standReservationsCache;
+  const total = reservations.length;
+  const paymentConfirmed = reservations.filter(r => r.payment_confirmed).length;
+  const receiptVerified = reservations.filter(r => r.receipt_verified).length;
+  
+  if (standReservationTotal) standReservationTotal.textContent = total;
+  if (standPaymentConfirmed) standPaymentConfirmed.textContent = paymentConfirmed;
+  if (standReceiptVerified) standReceiptVerified.textContent = receiptVerified;
+  
+  if (!standReservationsTable) return;
+  standReservationsTable.innerHTML = reservations.length
+    ? reservations.map((r) => `
+      <tr>
+        <td>${r.id}</td>
+        <td>${escapeHtml(r.nom || '')}</td>
+        <td>${escapeHtml(r.telephone || '')}</td>
+        <td>${escapeHtml(r.activite || '')}</td>
+        <td>${escapeHtml(r.nom_activite || '')}</td>
+        <td>${r.payment_confirmed ? '✓ Confirmé' : '✗ En attente'}</td>
+        <td>${r.receipt_verified ? '✓ Vérifié' : '✗ Non vérifié'}</td>
+        <td>${escapeHtml(r.status || 'en_attente')}</td>
+        <td>${formatAdminDateTime(r.created_at)}</td>
+        <td>
+          <button data-stand-reservation-view="${r.id}">Voir</button>
+          <button data-stand-reservation-verify="${r.id}" ${r.receipt_verified ? 'disabled' : ''}>Vérifier reçu</button>
+          <button data-stand-reservation-delete="${r.id}">Supprimer</button>
+        </td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="10">Aucune réservation.</td></tr>';
 }
 
 function renderCandidates(list) {
@@ -4668,6 +4730,85 @@ setInterval(() => {
 qi26AudienceRefresh?.addEventListener('click', async () => {
   await loadQi26Audience();
   await loadQi26Comments();
+});
+
+standReservationsRefresh?.addEventListener('click', async () => {
+  await loadStandReservations();
+});
+
+standReservationsExport?.addEventListener('click', () => {
+  if (standReservationsCache.length === 0) {
+    setStatus(standReservationsMsg, 'Aucune donnée à exporter.');
+    return;
+  }
+  const headers = ['ID', 'Nom', 'Téléphone', 'Email', 'Activité', 'Entreprise', 'Description', 'Besoins', 'Paiement confirmé', 'Reçu vérifié', 'Statut', 'Date'];
+  const rows = standReservationsCache.map(r => [
+    r.id,
+    r.nom,
+    r.telephone,
+    r.email || '',
+    r.activite,
+    r.nom_activite,
+    r.description,
+    r.besoins || '',
+    r.payment_confirmed ? 'Oui' : 'Non',
+    r.receipt_verified ? 'Oui' : 'Non',
+    r.status || 'en_attente',
+    r.created_at
+  ]);
+  exportCsv('reservations-stands', headers, rows);
+});
+
+document.addEventListener('click', async (e) => {
+  const viewBtn = e.target.closest('[data-stand-reservation-view]');
+  const verifyBtn = e.target.closest('[data-stand-reservation-verify]');
+  const deleteBtn = e.target.closest('[data-stand-reservation-delete]');
+  
+  if (viewBtn) {
+    const id = viewBtn.dataset.standReservationView;
+    const reservation = standReservationsCache.find(r => r.id === parseInt(id));
+    if (reservation) {
+      alert(`Détails de la réservation:\n\nNom: ${reservation.nom}\nTéléphone: ${reservation.telephone}\nEmail: ${reservation.email || 'N/A'}\nActivité: ${reservation.activite}\nEntreprise: ${reservation.nom_activite}\nDescription: ${reservation.description}\nBesoins: ${reservation.besoins || 'Aucun'}\nPaiement: ${reservation.payment_confirmed ? 'Confirmé' : 'Non confirmé'}\nReçu vérifié: ${reservation.receipt_verified ? 'Oui' : 'Non'}`);
+    }
+  }
+  
+  if (verifyBtn) {
+    const id = verifyBtn.dataset.standReservationVerify;
+    if (confirm('Vérifier le reçu de paiement pour cette réservation ?')) {
+      try {
+        const res = await authedFetch(`/api/stand-reservations/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ receipt_verified: true, status: 'confirme' })
+        });
+        if (res.ok) {
+          setStatus(standReservationsMsg, 'Reçu vérifié avec succès.');
+          await loadStandReservations();
+        } else {
+          setStatus(standReservationsMsg, 'Erreur lors de la vérification.');
+        }
+      } catch {
+        setStatus(standReservationsMsg, 'Erreur réseau.');
+      }
+    }
+  }
+  
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.standReservationDelete;
+    if (confirm('Supprimer cette réservation ?')) {
+      try {
+        const res = await authedFetch(`/api/stand-reservations/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setStatus(standReservationsMsg, 'Réservation supprimée.');
+          await loadStandReservations();
+        } else {
+          setStatus(standReservationsMsg, 'Erreur lors de la suppression.');
+        }
+      } catch {
+        setStatus(standReservationsMsg, 'Erreur réseau.');
+      }
+    }
+  }
 });
 
 qi26AudienceExport?.addEventListener('click', async () => {

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Réservation de Stand — Quiz Islamique 2026</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .stand-form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .stand-form-container .card {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .stand-form-container h1 {
+        color: #064733;
+        margin-bottom: 10px;
+      }
+      .stand-form-container .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+        line-height: 1.6;
+      }
+      .stand-form-container .form-group {
+        margin-bottom: 20px;
+      }
+      .stand-form-container label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+      }
+      .stand-form-container input,
+      .stand-form-container select,
+      .stand-form-container textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        box-sizing: border-box;
+      }
+      .stand-form-container input:focus,
+      .stand-form-container select:focus,
+      .stand-form-container textarea:focus {
+        outline: none;
+        border-color: #064733;
+        box-shadow: 0 0 0 3px rgba(6, 71, 51, 0.1);
+      }
+      .stand-form-container .btn-primary {
+        background: #064733;
+        color: white;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: background 0.3s;
+      }
+      .stand-form-container .btn-primary:hover {
+        background: #045a2a;
+      }
+      .stand-form-container .payment-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border-left: 4px solid #064733;
+      }
+      .stand-form-container .payment-link {
+        display: inline-block;
+        background: #00d4aa;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        margin-top: 10px;
+        transition: background 0.3s;
+      }
+      .stand-form-container .payment-link:hover {
+        background: #00b896;
+      }
+      .stand-form-container .receipt-section {
+        display: none;
+        background: #e8f5e9;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border: 2px solid #4caf50;
+      }
+      .stand-form-container .receipt-section.active {
+        display: block;
+      }
+      .stand-form-container .whatsapp-btn {
+        background: #25d366;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        margin-top: 10px;
+        transition: background 0.3s;
+      }
+      .stand-form-container .whatsapp-btn:hover {
+        background: #128c7e;
+      }
+      .stand-form-container .success-message {
+        display: none;
+        background: #d4edda;
+        color: #155724;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border: 1px solid #c3e6cb;
+      }
+      .stand-form-container .success-message.active {
+        display: block;
+      }
+      .stand-form-container .benefits-list {
+        list-style: none;
+        padding: 0;
+        margin: 20px 0;
+      }
+      .stand-form-container .benefits-list li {
+        padding: 10px 0;
+        padding-left: 30px;
+        position: relative;
+      }
+      .stand-form-container .benefits-list li:before {
+        content: "✅";
+        position: absolute;
+        left: 0;
+      }
+      .stand-form-container .contact-info {
+        background: #f0f7ff;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .stand-form-container .contact-info p {
+        margin: 5px 0;
+      }
+      .file-upload {
+        border: 2px dashed #ddd;
+        padding: 20px;
+        text-align: center;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: border-color 0.3s;
+      }
+      .file-upload:hover {
+        border-color: #064733;
+      }
+      .file-upload input {
+        display: none;
+      }
+      .file-preview {
+        max-width: 100%;
+        max-height: 200px;
+        margin-top: 10px;
+        border-radius: 4px;
+        display: none;
+      }
+      .file-preview.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <img src="assets/logo.jpg" alt="Logo Les Serviteurs d'Allah" class="logo" />
+      <div>
+        <h1>Réservation de Stand — Quiz Islamique 2026</h1>
+        <p class="slogan">4ᵉ édition du Quiz Islamique</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn outline" href="index.html">Retour accueil</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <div class="stand-form-container">
+        <div class="card">
+          <h1>📍 Les réservations des stands pour la 4ᵉ édition du Quiz Islamique sont officiellement ouvertes !</h1>
+          
+          <p class="subtitle">
+            Vous êtes entrepreneur, commerçant, artisan ou représentez une association ? Profitez de cette occasion unique pour faire connaître vos produits et services auprès d'un large public dans un cadre familial et islamique.
+          </p>
+
+          <ul class="benefits-list">
+            <li>Exposez votre activité</li>
+            <li>Développez votre réseau</li>
+            <li>Rencontrez de nouveaux clients</li>
+            <li>Participez à un événement d'exception</li>
+          </ul>
+
+          <div class="contact-info">
+            <p><strong>📞 Contacts :</strong></p>
+            <p>☎️ 07 79 38 22 33</p>
+            <p>☎️ 07 49 97 44 90</p>
+            <p>☎️ 07 89 03 60 52</p>
+          </div>
+
+          <p style="color: #064733; font-weight: 600; margin: 20px 0;">
+            🤝 Ne manquez pas cette opportunité de faire partie de la 4ᵉ édition du Quiz Islamique.
+          </p>
+
+          <div class="payment-section">
+            <h3>💳 Paiement requis</h3>
+            <p>Veuillez payer <strong>LMO Service</strong> avec Wave en cliquant sur ce lien :</p>
+            <a href="https://pay.wave.com/m/M_ci_85MvaTHMpTqa/c/ci/?amount=10000" target="_blank" class="payment-link">
+              Payer 10 000 FCFA avec Wave
+            </a>
+            <p style="font-size: 12px; margin-top: 10px; color: #666;">
+              Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable.
+            </p>
+          </div>
+
+          <form id="standReservationForm">
+            <div class="form-group">
+              <label for="nom">Nom complet *</label>
+              <input type="text" id="nom" name="nom" required placeholder="Votre nom et prénom" />
+            </div>
+
+            <div class="form-group">
+              <label for="telephone">Téléphone *</label>
+              <input type="tel" id="telephone" name="telephone" required placeholder="Ex: 07 79 38 22 33" />
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" placeholder="votre@email.com" />
+            </div>
+
+            <div class="form-group">
+              <label for="activite">Type d'activité *</label>
+              <select id="activite" name="activite" required>
+                <option value="">Sélectionnez...</option>
+                <option value="entrepreneur">Entrepreneur</option>
+                <option value="commercant">Commerçant</option>
+                <option value="artisan">Artisan</option>
+                <option value="association">Association</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="nom_activite">Nom de l'activité/entreprise *</label>
+              <input type="text" id="nom_activite" name="nom_activite" required placeholder="Nom de votre entreprise ou activité" />
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description de l'activité *</label>
+              <textarea id="description" name="description" required rows="4" placeholder="Décrivez brièvement vos produits ou services..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="besoins">Besoins spécifiques</label>
+              <textarea id="besoins" name="besoins" rows="3" placeholder="Électricité, table, chaises, etc. (optionnel)"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Reçu de paiement Wave *</label>
+              <div class="file-upload" onclick="document.getElementById('receipt').click()">
+                <p>📸 Cliquez pour télécharger votre reçu de paiement</p>
+                <input type="file" id="receipt" name="receipt" accept="image/*" required onchange="previewFile(this)" />
+              </div>
+              <img id="receiptPreview" class="file-preview" alt="Aperçu du reçu" />
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="paymentConfirmed" required />
+                Je confirme avoir effectué le paiement de 10 000 FCFA via Wave
+              </label>
+            </div>
+
+            <button type="submit" class="btn-primary">Envoyer ma réservation</button>
+          </form>
+
+          <div id="receiptSection" class="receipt-section">
+            <h3>📱 Envoyez votre reçu via WhatsApp</h3>
+            <p>Pour finaliser votre réservation, envoyez votre reçu de paiement à notre numéro WhatsApp :</p>
+            <a href="https://wa.me/2250150070083" target="_blank" class="whatsapp-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Envoyer sur WhatsApp
+            </a>
+            <p style="font-size: 12px; margin-top: 8px; color: #666;">
+              Message pré-rempli avec vos informations de réservation
+            </p>
+          </div>
+
+          <div id="successMessage" class="success-message">
+            <h3>✅ Réservation envoyée avec succès !</h3>
+            <p>Vos informations ont été enregistrées. N'oubliez pas d'envoyer votre reçu de paiement via WhatsApp pour finaliser votre réservation.</p>
+          </div>
+        </div>
+
+        <p style="text-align: center; margin-top: 30px; color: #666;">
+          <strong>#ASAAQI26</strong> · asaaofficiel.vercel.app
+        </p>
+      </div>
+    </main>
+
+    <script src="reservation-stand.js"></script>
+  </body>
+</html>

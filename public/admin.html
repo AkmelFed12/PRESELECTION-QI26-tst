@@ -628,6 +628,38 @@
         <p id="qi26AudienceMsg" class="status"></p>
       </section>
 
+      <section class="card admin-hidden" id="standReservationsSection">
+        <h2>Réservations de Stands</h2>
+        <div class="grid-three">
+          <div class="status">Total réservations: <strong id="standReservationTotal">0</strong></div>
+          <div class="status">Paiements confirmés: <strong id="standPaymentConfirmed">0</strong></div>
+          <div class="status">Reçus vérifiés: <strong id="standReceiptVerified">0</strong></div>
+        </div>
+        <div class="hero-actions" style="margin-top:16px;">
+          <button class="btn-primary" type="button" id="standReservationsRefresh">Actualiser</button>
+          <button class="btn-primary" type="button" id="standReservationsExport">Exporter CSV</button>
+        </div>
+        <h3 style="margin-top:16px;">Réservations</h3>
+        <table class="table" id="standReservationsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Téléphone</th>
+              <th>Activité</th>
+              <th>Entreprise</th>
+              <th>Paiement</th>
+              <th>Reçu</th>
+              <th>Statut</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="standReservationsMsg" class="status"></p>
+      </section>
+
       <section class="card admin-hidden" id="pollSection">
         <h2>Sondage (admin)</h2>
         <form id="pollForm" class="form-grid">
