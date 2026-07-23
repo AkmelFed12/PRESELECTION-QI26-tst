@@ -212,6 +212,11 @@ const modalContent = document.getElementById('modalContent');
 const closeModal = document.getElementById('closeModal');
 let standReservationsCache = [];
 let standReservationsChart = null;
+
+// Initialize Supabase
+const supabaseUrl = 'https://mmzmssphmgstmktwkped.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tem1zc3BobWdzdG1rdHdrcGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDUwNTUsImV4cCI6MjEwMDM4MTA1NX0.T8PqHJsBQWhoiuHCBmXV1xUcvx6M-7ZWzNQAWZaEUTw';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 const qi26CommentsPending = document.getElementById('qi26CommentsPending');
 const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
 const qi26CommentsRejected = document.getElementById('qi26CommentsRejected');
@@ -1629,19 +1634,23 @@ window.addEventListener('load', () => {
 async function loadStandReservations() {
   if (!standReservationsSection) return;
   
-  // Try API first
+  // Try Supabase first
   try {
-    const res = await authedFetch('/api/stand-reservations');
-    const data = await res.json().catch(() => []);
-    if (res.ok && Array.isArray(data)) {
-      standReservationsCache = data;
-      renderStandReservations();
-      updateStandReservationsChart();
-      setStatus(standReservationsMsg, 'Données chargées depuis le backend');
-      return;
-    }
-  } catch {
-    console.log('API not available, using localStorage');
+    const { data, error } = await supabase
+      .from('stand_reservations')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    standReservationsCache = data || [];
+    renderStandReservations();
+    updateStandReservationsChart();
+    setStatus(standReservationsMsg, 'Données chargées depuis Supabase');
+    return;
+  } catch (error) {
+    console.error('Supabase error:', error);
+    setStatus(standReservationsMsg, 'Erreur Supabase, fallback à localStorage');
   }
   
   // Fallback to localStorage
@@ -5000,19 +5009,18 @@ document.addEventListener('click', async (e) => {
     const id = verifyBtn.dataset.standReservationVerify;
     if (confirm('Vérifier le reçu de paiement pour cette réservation ?')) {
       try {
-        const res = await authedFetch(`/api/stand-reservations/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ receipt_verified: true, status: 'confirme' })
-        });
-        if (res.ok) {
-          setStatus(standReservationsMsg, 'Reçu vérifié avec succès.');
-          await loadStandReservations();
-        } else {
-          setStatus(standReservationsMsg, 'Erreur lors de la vérification.');
-        }
-      } catch {
-        setStatus(standReservationsMsg, 'Erreur réseau.');
+        const { error } = await supabase
+          .from('stand_reservations')
+          .update({ receipt_verified: true, status: 'confirme' })
+          .eq('id', parseInt(id));
+        
+        if (error) throw error;
+        
+        setStatus(standReservationsMsg, 'Reçu vérifié avec succès.');
+        await loadStandReservations();
+      } catch (error) {
+        console.error('Error verifying receipt:', error);
+        setStatus(standReservationsMsg, 'Erreur lors de la vérification.');
       }
     }
   }
@@ -5021,27 +5029,30 @@ document.addEventListener('click', async (e) => {
     const id = deleteBtn.dataset.standReservationDelete;
     if (confirm('Supprimer cette réservation ? Cela libérera une place de stand.')) {
       try {
-        const res = await authedFetch(`/api/stand-reservations/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          setStatus(standReservationsMsg, 'Réservation supprimée et place libérée.');
-          
-          // Update local counter
-          const currentCount = parseInt(localStorage.getItem('standReservationsCount') || '0', 10);
-          if (currentCount > 0) {
-            localStorage.setItem('standReservationsCount', (currentCount - 1).toString());
-          }
-          
-          // Remove from local storage
-          const localReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
-          const updatedReservations = localReservations.filter(r => r.id !== parseInt(id));
-          localStorage.setItem('standReservations', JSON.stringify(updatedReservations));
-          
-          await loadStandReservations();
-        } else {
-          setStatus(standReservationsMsg, 'Erreur lors de la suppression.');
+        const { error } = await supabase
+          .from('stand_reservations')
+          .delete()
+          .eq('id', parseInt(id));
+        
+        if (error) throw error;
+        
+        setStatus(standReservationsMsg, 'Réservation supprimée et place libérée.');
+        
+        // Update local counter
+        const currentCount = parseInt(localStorage.getItem('standReservationsCount') || '0', 10);
+        if (currentCount > 0) {
+          localStorage.setItem('standReservationsCount', (currentCount - 1).toString());
         }
-      } catch {
-        setStatus(standReservationsMsg, 'Erreur réseau.');
+        
+        // Remove from local storage
+        const localReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+        const updatedReservations = localReservations.filter(r => r.id !== parseInt(id));
+        localStorage.setItem('standReservations', JSON.stringify(updatedReservations));
+        
+        await loadStandReservations();
+      } catch (error) {
+        console.error('Error deleting reservation:', error);
+        setStatus(standReservationsMsg, 'Erreur lors de la suppression.');
       }
     }
   }

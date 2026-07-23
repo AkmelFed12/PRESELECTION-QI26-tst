@@ -4,19 +4,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const receiptSection = document.getElementById('receiptSection');
     const successMessage = document.getElementById('successMessage');
     
+    // Initialize Supabase
+    const supabaseUrl = 'https://mmzmssphmgstmktwkped.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tem1zc3BobWdzdG1rdHdrcGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDUwNTUsImV4cCI6MjEwMDM4MTA1NX0.T8PqHJsBQWhoiuHCBmXV1xUcvx6M-7ZWzNQAWZaEUTw';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    
     const TOTAL_STANDS = 15;
     let currentReservations = 0;
     
     // Anti-fraud: Check for existing reservations from same phone/email
     async function checkExistingReservation(phone, email) {
         try {
-            const response = await fetch('/api/stand-reservations/check', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ telephone: phone, email })
-            });
-            const data = await response.json();
-            return data.exists || false;
+            const { data, error } = await supabase
+                .from('stand_reservations')
+                .select('id')
+                .or(`telephone.eq.${phone}${email ? `,email.eq.${email}` : ''}`)
+                .limit(1);
+            
+            if (error) throw error;
+            return data && data.length > 0;
         } catch (error) {
             console.error('Error checking existing reservation:', error);
             // Fallback to localStorage
@@ -81,20 +87,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function saveReservationInfo(data) {
         try {
-            const response = await fetch('/api/stand-reservation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+            const { data: insertedData, error } = await supabase
+                .from('stand_reservations')
+                .insert([{
+                    ...data,
+                    id: Date.now(),
+                    timestamp: Date.now(),
+                    status: 'pending_verification',
+                    created_at: new Date().toISOString()
+                }])
+                .select();
             
-            if (response.ok) {
-                console.log('Reservation saved to backend database');
-                return true;
-            } else {
-                throw new Error('Backend API error');
-            }
+            if (error) throw error;
+            console.log('Reservation saved to Supabase');
+            return true;
         } catch (error) {
-            console.error('Error saving to backend:', error);
+            console.error('Error saving to Supabase:', error);
             // Fallback to localStorage
             const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
             existingReservations.push({
