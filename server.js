@@ -6240,6 +6240,35 @@ app.post('/api/stand-reservation', async (req, res) => {
   }
 });
 
+// Check if reservation exists (for anti-fraud)
+app.post('/api/stand-reservations/check', async (req, res) => {
+  try {
+    const { telephone, email } = req.body;
+    
+    try {
+      const result = await pool.query(`
+        SELECT * FROM stand_reservations 
+        WHERE telephone = $1 OR ($2 IS NOT NULL AND email = $2)
+        LIMIT 1
+      `, [telephone, email || null]);
+      
+      res.json({ exists: result.rows.length > 0 });
+    } catch (dbError) {
+      console.log('Database error, using in-memory fallback:', dbError.message);
+      
+      // In-memory fallback for Vercel serverless
+      const reservations = global.standReservations || [];
+      const exists = reservations.some(r => 
+        r.telephone === telephone || (email && r.email === email)
+      );
+      res.json({ exists });
+    }
+  } catch (error) {
+    console.error('Error checking reservation:', error);
+    res.status(500).json({ error: 'Erreur serveur lors de la vérification' });
+  }
+});
+
 // Get all stand reservations (admin only)
 app.get('/api/stand-reservations', verifyAdmin, async (req, res) => {
   try {

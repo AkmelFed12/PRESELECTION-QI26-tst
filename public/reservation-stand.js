@@ -4,68 +4,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const receiptSection = document.getElementById('receiptSection');
     const successMessage = document.getElementById('successMessage');
     
-    // Firebase configuration and initialization
-    const firebaseConfig = {
-      apiKey: "AIzaSyAOqfky5gUgfHNYp1wB9OZDwOrieeytmQY",
-      authDomain: "asaaofficiel-d37ac.firebaseapp.com",
-      databaseURL: "https://asaaofficiel-d37ac-default-rtdb.firebaseio.com",
-      projectId: "asaaofficiel-d37ac",
-      storageBucket: "asaaofficiel-d37ac.firebasestorage.app",
-      messagingSenderId: "737701974010",
-      appId: "1:737701974010:web:5c041f129ad521d5af5e43",
-      measurementId: "G-QPW6QV044W"
-    };
-    
-    // Initialize Firebase (will be loaded from the CDN in HTML)
-    let db = null;
-    let app = null;
-    
-    // Wait for Firebase to load
-    window.addEventListener('load', async () => {
-      try {
-        if (typeof firebase !== 'undefined' && firebase.database) {
-          app = firebase.initializeApp(firebaseConfig);
-          db = firebase.database();
-          console.log('Firebase Realtime Database initialized successfully');
-        }
-      } catch (error) {
-        console.error('Firebase initialization error:', error);
-      }
-    });
-    
     const TOTAL_STANDS = 15;
     let currentReservations = 0;
     
     // Anti-fraud: Check for existing reservations from same phone/email
     async function checkExistingReservation(phone, email) {
-        if (!db) {
-            // Fallback to localStorage if Firebase not available
+        try {
+            const response = await fetch('/api/stand-reservations/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telephone: phone, email })
+            });
+            const data = await response.json();
+            return data.exists || false;
+        } catch (error) {
+            console.error('Error checking existing reservation:', error);
+            // Fallback to localStorage
             const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
             return existingReservations.some(r => 
                 r.telephone === phone || (email && r.email === email)
             );
-        }
-        
-        try {
-            const snapshot = await db.ref('stand_reservations')
-                .orderByChild('telephone')
-                .equalTo(phone)
-                .once('value');
-            
-            if (snapshot.exists()) return true;
-            
-            if (email) {
-                const emailSnapshot = await db.ref('stand_reservations')
-                    .orderByChild('email')
-                    .equalTo(email)
-                    .once('value');
-                if (emailSnapshot.exists()) return true;
-            }
-            
-            return false;
-        } catch (error) {
-            console.error('Error checking existing reservation:', error);
-            return false;
         }
     }
     
@@ -122,36 +80,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     async function saveReservationInfo(data) {
-        if (!db) {
-            // Fallback to localStorage if Firebase not available
-            const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
-            existingReservations.push({
-                ...data,
-                timestamp: Date.now(),
-                status: 'pending_verification'
-            });
-            localStorage.setItem('standReservations', JSON.stringify(existingReservations));
-            return;
-        }
-        
         try {
-            await db.ref('stand_reservations').push({
-                ...data,
-                timestamp: Date.now(),
-                status: 'pending_verification',
-                created_at: new Date().toISOString()
+            const response = await fetch('/api/stand-reservation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
             });
-            console.log('Reservation saved to Firebase Realtime Database');
+            
+            if (response.ok) {
+                console.log('Reservation saved to backend database');
+                return true;
+            } else {
+                throw new Error('Backend API error');
+            }
         } catch (error) {
-            console.error('Error saving to Firebase:', error);
+            console.error('Error saving to backend:', error);
             // Fallback to localStorage
             const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
             existingReservations.push({
                 ...data,
+                id: Date.now(),
                 timestamp: Date.now(),
-                status: 'pending_verification'
+                status: 'pending_verification',
+                created_at: new Date().toISOString()
             });
             localStorage.setItem('standReservations', JSON.stringify(existingReservations));
+            return false;
         }
     }
     

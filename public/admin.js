@@ -211,38 +211,7 @@ const standReservationModal = document.getElementById('standReservationModal');
 const modalContent = document.getElementById('modalContent');
 const closeModal = document.getElementById('closeModal');
 let standReservationsCache = [];
-
-// Firebase configuration and initialization
-const firebaseConfig = {
-  apiKey: "AIzaSyAOqfky5gUgfHNYp1wB9OZDwOrieeytmQY",
-  authDomain: "asaaofficiel-d37ac.firebaseapp.com",
-  databaseURL: "https://asaaofficiel-d37ac-default-rtdb.firebaseio.com",
-  projectId: "asaaofficiel-d37ac",
-  storageBucket: "asaaofficiel-d37ac.firebasestorage.app",
-  messagingSenderId: "737701974010",
-  appId: "1:737701974010:web:5c041f129ad521d5af5e43",
-  measurementId: "G-QPW6QV044W"
-};
-
-// Initialize Firebase
-let db = null;
-let app = null;
 let standReservationsChart = null;
-
-window.addEventListener('load', async () => {
-  try {
-    if (typeof firebase !== 'undefined' && firebase.database) {
-      app = firebase.initializeApp(firebaseConfig);
-      db = firebase.database();
-      console.log('Firebase Realtime Database initialized successfully in admin');
-      
-      // Initialize chart when Firebase is ready
-      initializeStandReservationsChart();
-    }
-  } catch (error) {
-    console.error('Firebase initialization error in admin:', error);
-  }
-});
 const qi26CommentsPending = document.getElementById('qi26CommentsPending');
 const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
 const qi26CommentsRejected = document.getElementById('qi26CommentsRejected');
@@ -1652,39 +1621,27 @@ async function loadQi26Comments() {
   }
 }
 
+// Initialize chart when page loads
+window.addEventListener('load', () => {
+  initializeStandReservationsChart();
+});
+
 async function loadStandReservations() {
   if (!standReservationsSection) return;
   
-  // Try Firebase Realtime Database first
-  if (db) {
-    try {
-      const snapshot = await db.ref('stand_reservations').once('value');
-      
-      standReservationsCache = [];
-      if (snapshot.exists()) {
-        snapshot.forEach(childSnapshot => {
-          standReservationsCache.push({
-            id: childSnapshot.key,
-            ...childSnapshot.val()
-          });
-        });
-      }
-      
-      // Sort by created_at descending
-      standReservationsCache.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0);
-        const dateB = new Date(b.created_at || 0);
-        return dateB - dateA;
-      });
-      
+  // Try API first
+  try {
+    const res = await authedFetch('/api/stand-reservations');
+    const data = await res.json().catch(() => []);
+    if (res.ok && Array.isArray(data)) {
+      standReservationsCache = data;
       renderStandReservations();
       updateStandReservationsChart();
-      setStatus(standReservationsMsg, 'Données chargées depuis Firebase Realtime Database');
+      setStatus(standReservationsMsg, 'Données chargées depuis le backend');
       return;
-    } catch (error) {
-      console.error('Firebase error:', error);
-      setStatus(standReservationsMsg, 'Erreur Firebase, fallback à localStorage');
     }
+  } catch {
+    console.log('API not available, using localStorage');
   }
   
   // Fallback to localStorage
@@ -1740,7 +1697,7 @@ function initializeStandReservationsChart() {
           display: false
         }
       }
-  }
+    }
   });
 }
 
