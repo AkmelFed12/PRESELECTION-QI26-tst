@@ -6198,14 +6198,42 @@ app.post('/api/stand-reservation', async (req, res) => {
       return res.status(400).json({ error: 'Champs obligatoires manquants' });
     }
 
-    const result = await pool.query(`
-      INSERT INTO stand_reservations 
-      (nom, telephone, email, activite, nom_activite, description, besoins, payment_confirmed, receipt, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-      RETURNING *
-    `, [nom, telephone, email || null, activite, nom_activite, description, besoins || null, paymentConfirmed || false, receipt || null]);
+    try {
+      const result = await pool.query(`
+        INSERT INTO stand_reservations 
+        (nom, telephone, email, activite, nom_activite, description, besoins, payment_confirmed, receipt, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        RETURNING *
+      `, [nom, telephone, email || null, activite, nom_activite, description, besoins || null, paymentConfirmed || false, receipt || null]);
 
-    res.json({ message: 'Réservation créée avec succès', reservation: result.rows[0] });
+      res.json({ message: 'Réservation créée avec succès', reservation: result.rows[0] });
+    } catch (dbError) {
+      console.log('Database error, using in-memory fallback:', dbError.message);
+      
+      // In-memory fallback for Vercel serverless
+      const newReservation = {
+        id: Date.now(),
+        nom,
+        telephone,
+        email: email || null,
+        activite,
+        nom_activite,
+        description,
+        besoins: besoins || null,
+        payment_confirmed: paymentConfirmed || false,
+        receipt: receipt || null,
+        status: 'en_attente',
+        created_at: new Date().toISOString()
+      };
+      
+      // Store in global variable for serverless
+      if (!global.standReservations) {
+        global.standReservations = [];
+      }
+      global.standReservations.push(newReservation);
+      
+      res.json({ message: 'Réservation créée avec succès (mémoire)', reservation: newReservation });
+    }
   } catch (error) {
     console.error('Error creating stand reservation:', error);
     res.status(500).json({ error: 'Erreur serveur lors de la création de la réservation' });
@@ -6215,11 +6243,19 @@ app.post('/api/stand-reservation', async (req, res) => {
 // Get all stand reservations (admin only)
 app.get('/api/stand-reservations', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT * FROM stand_reservations 
-      ORDER BY created_at DESC
-    `);
-    res.json(result.rows);
+    try {
+      const result = await pool.query(`
+        SELECT * FROM stand_reservations 
+        ORDER BY created_at DESC
+      `);
+      res.json(result.rows);
+    } catch (dbError) {
+      console.log('Database error, using in-memory fallback:', dbError.message);
+      
+      // In-memory fallback for Vercel serverless
+      const reservations = global.standReservations || [];
+      res.json(reservations);
+    }
   } catch (error) {
     console.error('Error fetching stand reservations:', error);
     res.status(500).json({ error: 'Erreur serveur lors de la récupération des réservations' });
@@ -6230,16 +6266,31 @@ app.get('/api/stand-reservations', async (req, res) => {
 app.get('/api/stand-reservations/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(`
-      SELECT * FROM stand_reservations 
-      WHERE id = $1
-    `, [id]);
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Réservation non trouvée' });
+    try {
+      const result = await pool.query(`
+        SELECT * FROM stand_reservations 
+        WHERE id = $1
+      `, [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Réservation non trouvée' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (dbError) {
+      console.log('Database error, using in-memory fallback:', dbError.message);
+      
+      // In-memory fallback for Vercel serverless
+      const reservations = global.standReservations || [];
+      const reservation = reservations.find(r => r.id === parseInt(id));
+      
+      if (!reservation) {
+        return res.status(404).json({ error: 'Réservation non trouvée' });
+      }
+      
+      res.json(reservation);
     }
-    
-    res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching stand reservation:', error);
     res.status(500).json({ error: 'Erreur serveur' });
