@@ -23,10 +23,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Wait for Firebase to load
     window.addEventListener('load', async () => {
       try {
-        if (typeof firebase !== 'undefined' && firebase.firestore) {
+        if (typeof firebase !== 'undefined' && firebase.database) {
           app = firebase.initializeApp(firebaseConfig);
-          db = firebase.firestore();
-          console.log('Firebase initialized successfully');
+          db = firebase.database();
+          console.log('Firebase Realtime Database initialized successfully');
         }
       } catch (error) {
         console.error('Firebase initialization error:', error);
@@ -47,17 +47,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            const snapshot = await db.collection('stand_reservations')
-                .where('telephone', '==', phone)
-                .get();
+            const snapshot = await db.ref('stand_reservations')
+                .orderByChild('telephone')
+                .equalTo(phone)
+                .once('value');
             
-            if (!snapshot.empty) return true;
+            if (snapshot.exists()) return true;
             
             if (email) {
-                const emailSnapshot = await db.collection('stand_reservations')
-                    .where('email', '==', email)
-                    .get();
-                if (!emailSnapshot.empty) return true;
+                const emailSnapshot = await db.ref('stand_reservations')
+                    .orderByChild('email')
+                    .equalTo(email)
+                    .once('value');
+                if (emailSnapshot.exists()) return true;
             }
             
             return false;
@@ -133,13 +135,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            await db.collection('stand_reservations').add({
+            await db.ref('stand_reservations').push({
                 ...data,
                 timestamp: Date.now(),
                 status: 'pending_verification',
                 created_at: new Date().toISOString()
             });
-            console.log('Reservation saved to Firebase');
+            console.log('Reservation saved to Firebase Realtime Database');
         } catch (error) {
             console.error('Error saving to Firebase:', error);
             // Fallback to localStorage

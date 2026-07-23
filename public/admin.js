@@ -231,10 +231,10 @@ let standReservationsChart = null;
 
 window.addEventListener('load', async () => {
   try {
-    if (typeof firebase !== 'undefined' && firebase.firestore) {
+    if (typeof firebase !== 'undefined' && firebase.database) {
       app = firebase.initializeApp(firebaseConfig);
-      db = firebase.firestore();
-      console.log('Firebase initialized successfully in admin');
+      db = firebase.database();
+      console.log('Firebase Realtime Database initialized successfully in admin');
       
       // Initialize chart when Firebase is ready
       initializeStandReservationsChart();
@@ -1655,24 +1655,31 @@ async function loadQi26Comments() {
 async function loadStandReservations() {
   if (!standReservationsSection) return;
   
-  // Try Firebase first
+  // Try Firebase Realtime Database first
   if (db) {
     try {
-      const snapshot = await db.collection('stand_reservations')
-        .orderBy('created_at', 'desc')
-        .get();
+      const snapshot = await db.ref('stand_reservations').once('value');
       
       standReservationsCache = [];
-      snapshot.forEach(doc => {
-        standReservationsCache.push({
-          id: doc.id,
-          ...doc.data()
+      if (snapshot.exists()) {
+        snapshot.forEach(childSnapshot => {
+          standReservationsCache.push({
+            id: childSnapshot.key,
+            ...childSnapshot.val()
+          });
         });
+      }
+      
+      // Sort by created_at descending
+      standReservationsCache.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0);
+        const dateB = new Date(b.created_at || 0);
+        return dateB - dateA;
       });
       
       renderStandReservations();
       updateStandReservationsChart();
-      setStatus(standReservationsMsg, 'Données chargées depuis Firebase');
+      setStatus(standReservationsMsg, 'Données chargées depuis Firebase Realtime Database');
       return;
     } catch (error) {
       console.error('Firebase error:', error);
