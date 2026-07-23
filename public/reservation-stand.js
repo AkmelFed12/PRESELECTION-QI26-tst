@@ -48,7 +48,34 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             progressFill.style.background = '#ffd700'; // Gold
         }
+        
+        // Disable form if no stands available
+        if (availableStands <= 0) {
+            form.style.opacity = '0.5';
+            form.style.pointerEvents = 'none';
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.textContent = 'Plus de places disponibles';
+                submitBtn.disabled = true;
+            }
+        } else {
+            form.style.opacity = '1';
+            form.style.pointerEvents = 'auto';
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.textContent = 'Envoyer ma réservation';
+                submitBtn.disabled = false;
+            }
+        }
     }
+    
+    // Listen for storage changes to sync counter across tabs
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'standReservationsCount') {
+            currentReservations = parseInt(e.newValue || '0', 10);
+            updateAvailabilityDisplay();
+        }
+    });
     
     function incrementReservationCount() {
         currentReservations++;

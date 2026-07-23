@@ -207,6 +207,9 @@ const standStatusFilter = document.getElementById('standStatusFilter');
 const standActivityStats = document.getElementById('standActivityStats');
 const standReservationsTable = document.querySelector('#standReservationsTable tbody');
 const standReservationsMsg = document.getElementById('standReservationsMsg');
+const standReservationModal = document.getElementById('standReservationModal');
+const modalContent = document.getElementById('modalContent');
+const closeModal = document.getElementById('closeModal');
 let standReservationsCache = [];
 const qi26CommentsPending = document.getElementById('qi26CommentsPending');
 const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
@@ -4888,7 +4891,40 @@ document.addEventListener('click', async (e) => {
     const id = viewBtn.dataset.standReservationView;
     const reservation = standReservationsCache.find(r => r.id === parseInt(id));
     if (reservation) {
-      alert(`Détails de la réservation:\n\nNom: ${reservation.nom}\nTéléphone: ${reservation.telephone}\nEmail: ${reservation.email || 'N/A'}\nActivité: ${reservation.activite}\nEntreprise: ${reservation.nom_activite}\nDescription: ${reservation.description}\nBesoins: ${reservation.besoins || 'Aucun'}\nPaiement: ${reservation.payment_confirmed ? 'Confirmé' : 'Non confirmé'}\nReçu vérifié: ${reservation.receipt_verified ? 'Oui' : 'Non'}`);
+      let receiptHtml = '';
+      if (reservation.receipt) {
+        receiptHtml = `
+          <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <h4 style="margin: 0 0 10px 0;">📸 Reçu de paiement</h4>
+            <img src="${reservation.receipt}" alt="Reçu de paiement" style="max-width: 100%; max-height: 400px; border-radius: 4px; cursor: pointer;" onclick="window.open(this.src, '_blank')" />
+            <p style="font-size: 12px; color: #666; margin-top: 5px;">Cliquez sur l'image pour l'agrandir</p>
+          </div>
+        `;
+      } else {
+        receiptHtml = `
+          <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+            <p style="margin: 0; color: #856404;">⚠️ Aucun reçu de paiement fourni</p>
+          </div>
+        `;
+      }
+      
+      modalContent.innerHTML = `
+        <div style="margin-bottom: 15px;">
+          <strong>Nom:</strong> ${reservation.nom}<br>
+          <strong>Téléphone:</strong> ${reservation.telephone}<br>
+          <strong>Email:</strong> ${reservation.email || 'N/A'}<br>
+          <strong>Activité:</strong> ${reservation.activite}<br>
+          <strong>Entreprise:</strong> ${reservation.nom_activite}<br>
+          <strong>Description:</strong> ${reservation.description}<br>
+          <strong>Besoins:</strong> ${reservation.besoins || 'Aucun'}<br>
+          <strong>Paiement confirmé:</strong> ${reservation.payment_confirmed ? 'Oui' : 'Non'}<br>
+          <strong>Reçu vérifié:</strong> ${reservation.receipt_verified ? 'Oui' : 'Non'}<br>
+          <strong>Statut:</strong> ${reservation.status || 'en_attente'}<br>
+          <strong>Date:</strong> ${formatAdminDateTime(reservation.created_at)}
+        </div>
+        ${receiptHtml}
+      `;
+      standReservationModal.style.display = 'flex';
     }
   }
   
@@ -4915,11 +4951,23 @@ document.addEventListener('click', async (e) => {
   
   if (deleteBtn) {
     const id = deleteBtn.dataset.standReservationDelete;
-    if (confirm('Supprimer cette réservation ?')) {
+    if (confirm('Supprimer cette réservation ? Cela libérera une place de stand.')) {
       try {
         const res = await authedFetch(`/api/stand-reservations/${id}`, { method: 'DELETE' });
         if (res.ok) {
-          setStatus(standReservationsMsg, 'Réservation supprimée.');
+          setStatus(standReservationsMsg, 'Réservation supprimée et place libérée.');
+          
+          // Update local counter
+          const currentCount = parseInt(localStorage.getItem('standReservationsCount') || '0', 10);
+          if (currentCount > 0) {
+            localStorage.setItem('standReservationsCount', (currentCount - 1).toString());
+          }
+          
+          // Remove from local storage
+          const localReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+          const updatedReservations = localReservations.filter(r => r.id !== parseInt(id));
+          localStorage.setItem('standReservations', JSON.stringify(updatedReservations));
+          
           await loadStandReservations();
         } else {
           setStatus(standReservationsMsg, 'Erreur lors de la suppression.');
@@ -4928,6 +4976,17 @@ document.addEventListener('click', async (e) => {
         setStatus(standReservationsMsg, 'Erreur réseau.');
       }
     }
+  }
+});
+
+// Close modal functionality
+closeModal?.addEventListener('click', () => {
+  standReservationModal.style.display = 'none';
+});
+
+standReservationModal?.addEventListener('click', (e) => {
+  if (e.target === standReservationModal) {
+    standReservationModal.style.display = 'none';
   }
 });
 
