@@ -4,10 +4,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const receiptSection = document.getElementById('receiptSection');
     const successMessage = document.getElementById('successMessage');
     
-    // Initialize Supabase
+    // Initialize Supabase client
     const supabaseUrl = 'https://mmzmssphmgstmktwkped.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tem1zc3BobWdzdG1rdHdrcGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDUwNTUsImV4cCI6MjEwMDM4MTA1NX0.T8PqHJsBQWhoiuHCBmXV1xUcvx6M-7ZWzNQAWZaEUTw';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
     
     const TOTAL_STANDS = 15;
     let currentReservations = 0;
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Anti-fraud: Check for existing reservations from same phone/email
     async function checkExistingReservation(phone, email) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('stand_reservations')
                 .select('id')
                 .or(`telephone.eq.${phone}${email ? `,email.eq.${email}` : ''}`)
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function saveReservationInfo(data) {
         try {
-            const { data: insertedData, error } = await supabase
+            const { data: insertedData, error } = await supabaseClient
                 .from('stand_reservations')
                 .insert([{
                     ...data,
