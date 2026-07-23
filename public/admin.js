@@ -202,6 +202,9 @@ const standPaymentConfirmed = document.getElementById('standPaymentConfirmed');
 const standReceiptVerified = document.getElementById('standReceiptVerified');
 const standReservationsRefresh = document.getElementById('standReservationsRefresh');
 const standReservationsExport = document.getElementById('standReservationsExport');
+const standReservationsExportPdf = document.getElementById('standReservationsExportPdf');
+const standStatusFilter = document.getElementById('standStatusFilter');
+const standActivityStats = document.getElementById('standActivityStats');
 const standReservationsTable = document.querySelector('#standReservationsTable tbody');
 const standReservationsMsg = document.getElementById('standReservationsMsg');
 let standReservationsCache = [];
@@ -1631,7 +1634,13 @@ async function loadStandReservations() {
 }
 
 function renderStandReservations() {
-  const reservations = standReservationsCache;
+  const filterValue = standStatusFilter?.value || '';
+  let reservations = standReservationsCache;
+  
+  if (filterValue) {
+    reservations = reservations.filter(r => r.status === filterValue);
+  }
+  
   const total = reservations.length;
   const paymentConfirmed = reservations.filter(r => r.payment_confirmed).length;
   const receiptVerified = reservations.filter(r => r.receipt_verified).length;
@@ -1639,6 +1648,9 @@ function renderStandReservations() {
   if (standReservationTotal) standReservationTotal.textContent = total;
   if (standPaymentConfirmed) standPaymentConfirmed.textContent = paymentConfirmed;
   if (standReceiptVerified) standReceiptVerified.textContent = receiptVerified;
+  
+  // Render activity statistics
+  renderActivityStatistics(reservations);
   
   if (!standReservationsTable) return;
   standReservationsTable.innerHTML = reservations.length
@@ -1661,6 +1673,94 @@ function renderStandReservations() {
       </tr>
     `).join('')
     : '<tr><td colspan="10">Aucune réservation.</td></tr>';
+}
+
+function renderActivityStatistics(reservations) {
+  if (!standActivityStats) return;
+  
+  const activityCounts = {};
+  reservations.forEach(r => {
+    const activity = r.activite || 'Autre';
+    activityCounts[activity] = (activityCounts[activity] || 0) + 1;
+  });
+  
+  const total = reservations.length;
+  const colors = ['#064733', '#045a2a', '#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#6c5ce7'];
+  
+  let html = '';
+  let colorIndex = 0;
+  
+  for (const [activity, count] of Object.entries(activityCounts)) {
+    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+    const color = colors[colorIndex % colors.length];
+    
+    html += `
+      <div style="flex:1; min-width:150px; background:${color}; color:white; padding:12px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+        <div style="font-size:24px; font-weight:700;">${count}</div>
+        <div style="font-size:12px; opacity:0.9;">${escapeHtml(activity)}</div>
+        <div style="font-size:10px; opacity:0.8; margin-top:4px;">${percentage}%</div>
+      </div>
+    `;
+    colorIndex++;
+  }
+  
+  if (Object.keys(activityCounts).length === 0) {
+    html = '<div style="color:#666; font-style:italic;">Aucune donnée disponible</div>';
+  }
+  
+  standActivityStats.innerHTML = html;
+}
+
+function exportStandReservationsPdf() {
+  const currentDate = new Date().toLocaleDateString('fr-FR');
+  
+  let pdfContent = `
+================================================================================
+                    RAPPORT DES RÉSERVATIONS DE STANDS
+                              QUIZ ISLAMIQUE 2026
+================================================================================
+
+DATE DU RAPPORT: ${currentDate}
+TOTAL RÉSERVATIONS: ${standReservationsCache.length}
+
+================================================================================
+`;
+  
+  standReservationsCache.forEach((r, index) => {
+    pdfContent += `
+RÉSERVATION #${index + 1} (ID: ${r.id})
+--------------------------------------------------------------------------------
+Nom: ${r.nom}
+Téléphone: ${r.telephone}
+Email: ${r.email || 'N/A'}
+Type d'activité: ${r.activite}
+Nom de l'entreprise: ${r.nom_activite}
+Description: ${r.description}
+Besoins spécifiques: ${r.besoins || 'Aucun'}
+Paiement confirmé: ${r.payment_confirmed ? 'Oui' : 'Non'}
+Reçu vérifié: ${r.receipt_verified ? 'Oui' : 'Non'}
+Statut: ${r.status || 'en_attente'}
+Date de réservation: ${r.created_at}
+--------------------------------------------------------------------------------
+`;
+  });
+  
+  pdfContent += `
+================================================================================
+                        LES SERVITEURS D'ALLAH (ASAA)
+                            Quiz Islamique 2026
+================================================================================
+`;
+  
+  const blob = new Blob([pdfContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rapport-reservations-stands-${Date.now()}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function renderCandidates(list) {
@@ -4757,6 +4857,18 @@ standReservationsExport?.addEventListener('click', () => {
     r.created_at
   ]);
   exportCsv('reservations-stands', headers, rows);
+});
+
+standReservationsExportPdf?.addEventListener('click', () => {
+  if (standReservationsCache.length === 0) {
+    setStatus(standReservationsMsg, 'Aucune donnée à exporter.');
+    return;
+  }
+  exportStandReservationsPdf();
+});
+
+standStatusFilter?.addEventListener('change', () => {
+  renderStandReservations();
 });
 
 document.addEventListener('click', async (e) => {

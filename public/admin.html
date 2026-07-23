@@ -635,9 +635,23 @@
           <div class="status">Paiements confirmés: <strong id="standPaymentConfirmed">0</strong></div>
           <div class="status">Reçus vérifiés: <strong id="standReceiptVerified">0</strong></div>
         </div>
+        <div style="margin-top:16px; margin-bottom:16px;">
+          <h3>Statistiques par type d'activité</h3>
+          <div id="standActivityStats" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;"></div>
+        </div>
         <div class="hero-actions" style="margin-top:16px;">
           <button class="btn-primary" type="button" id="standReservationsRefresh">Actualiser</button>
           <button class="btn-primary" type="button" id="standReservationsExport">Exporter CSV</button>
+          <button class="btn-primary" type="button" id="standReservationsExportPdf">Exporter PDF</button>
+        </div>
+        <div style="margin-top:12px;">
+          <label>Filtrer par statut:</label>
+          <select id="standStatusFilter" style="padding:8px; border:1px solid #ddd; border-radius:4px;">
+            <option value="">Tous</option>
+            <option value="en_attente">En attente</option>
+            <option value="confirme">Confirmé</option>
+            <option value="annule">Annulé</option>
+          </select>
         </div>
         <h3 style="margin-top:16px;">Réservations</h3>
         <table class="table" id="standReservationsTable">
