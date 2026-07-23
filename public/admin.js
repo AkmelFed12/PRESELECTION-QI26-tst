@@ -1623,13 +1623,21 @@ async function loadStandReservations() {
     const res = await authedFetch('/api/stand-reservations');
     const data = await res.json().catch(() => []);
     if (!res.ok) {
-      setStatus(standReservationsMsg, data.error || 'Réservations indisponibles.');
+      // Fallback to localStorage if API fails
+      const localReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+      standReservationsCache = localReservations;
+      renderStandReservations();
+      setStatus(standReservationsMsg, 'Données chargées depuis le stockage local (API indisponible)');
       return;
     }
     standReservationsCache = Array.isArray(data) ? data : [];
     renderStandReservations();
   } catch {
-    setStatus(standReservationsMsg, 'Réseau indisponible pour les réservations.');
+    // Fallback to localStorage on error
+    const localReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+    standReservationsCache = localReservations;
+    renderStandReservations();
+    setStatus(standReservationsMsg, 'Données chargées depuis le stockage local (API indisponible)');
   }
 }
 
