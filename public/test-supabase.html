@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h1>Test Supabase Connection</h1>
+  <div id="status">Chargement...</div>
+  <div id="results"></div>
+  
+  <script>
+    const supabaseUrl = 'https://mmzmssphmgstmktwkped.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tem1zc3BobWdzdG1rdHdrcGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDUwNTUsImV4cCI6MjEwMDM4MTA1NX0.T8PqHJsBQWhoiuHCBmXV1xUcvx6M-7ZWzNQAWZaEUTw';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    
+    async function testSupabase() {
+      const status = document.getElementById('status');
+      const results = document.getElementById('results');
+      
+      try {
+        status.textContent = 'Test de connexion Supabase...';
+        
+        // Test 1: Read data
+        console.log('Test 1: Reading data from stand_reservations...');
+        const { data, error } = await supabase
+          .from('stand_reservations')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        if (error) {
+          status.textContent = 'Erreur lecture: ' + error.message;
+          results.innerHTML = '<pre>' + JSON.stringify(error, null, 2) + '</pre>';
+          return;
+        }
+        
+        status.textContent = 'Connexion réussie !';
+        results.innerHTML = '<h3>Résultats:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        
+        console.log('Supabase data:', data);
+      } catch (error) {
+        status.textContent = 'Erreur: ' + error.message;
+        results.innerHTML = '<pre>' + JSON.stringify(error, null, 2) + '</pre>';
+        console.error('Test error:', error);
+      }
+    }
+    
+    testSupabase();
+  </script>
+</body>
+</html>
