@@ -3781,15 +3781,19 @@ toggleAdminPassword?.addEventListener('click', () => {
 });
 
 function setCompactMode(enabled) {
-  document.body.classList.toggle('admin-compact', enabled);
+  if (document.body) {
+    document.body.classList.toggle('admin-compact', enabled);
+  }
   if (compactToggleBtn) {
     compactToggleBtn.textContent = enabled ? 'Mode normal' : 'Mode compact';
   }
   localStorage.setItem('adminCompact', enabled ? '1' : '0');
 }
 
-const storedCompact = localStorage.getItem('adminCompact') === '1';
-setCompactMode(storedCompact);
+document.addEventListener('DOMContentLoaded', () => {
+  const storedCompact = localStorage.getItem('adminCompact') === '1';
+  setCompactMode(storedCompact);
+});
 
 compactToggleBtn?.addEventListener('click', () => {
   const enabled = !document.body.classList.contains('admin-compact');
