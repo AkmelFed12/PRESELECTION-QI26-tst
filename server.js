@@ -6241,7 +6241,7 @@ app.post('/api/stand-reservation', async (req, res) => {
 });
 
 // Get all stand reservations (admin only)
-app.get('/api/stand-reservations', async (req, res) => {
+app.get('/api/stand-reservations', verifyAdmin, async (req, res) => {
   try {
     try {
       const result = await pool.query(`
@@ -6263,7 +6263,7 @@ app.get('/api/stand-reservations', async (req, res) => {
 });
 
 // Get single stand reservation
-app.get('/api/stand-reservations/:id', async (req, res) => {
+app.get('/api/stand-reservations/:id', verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -6298,49 +6298,82 @@ app.get('/api/stand-reservations/:id', async (req, res) => {
 });
 
 // Update stand reservation status
-app.patch('/api/stand-reservations/:id', async (req, res) => {
+app.patch('/api/stand-reservations/:id', verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, receipt_verified } = req.body;
     
-    const result = await pool.query(`
-      UPDATE stand_reservations 
-      SET status = COALESCE($1, status),
-          receipt_verified = COALESCE($2, receipt_verified),
-          updated_at = NOW()
-      WHERE id = $3
-      RETURNING *
-    `, [status, receipt_verified, id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Réservation non trouvée' });
+    try {
+      const result = await pool.query(`
+        UPDATE stand_reservations 
+        SET status = COALESCE($1, status),
+            receipt_verified = COALESCE($2, receipt_verified),
+            updated_at = NOW()
+        WHERE id = $3
+        RETURNING *
+      `, [status, receipt_verified, id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Réservation non trouvée' });
+      }
+      
+      res.json({ message: 'Réservation mise à jour', reservation: result.rows[0] });
+    } catch (dbError) {
+      console.log('Database error, using in-memory fallback:', dbError.message);
+      
+      // In-memory fallback for Vercel serverless
+      const reservations = global.standReservations || [];
+      const index = reservations.findIndex(r => r.id === parseInt(id));
+      
+      if (index === -1) {
+        return res.status(404).json({ error: 'Réservation non trouvée' });
+      }
+      
+      if (status !== undefined) reservations[index].status = status;
+      if (receipt_verified !== undefined) reservations[index].receipt_verified = receipt_verified;
+      
+      res.json({ message: 'Réservation mise à jour (mémoire)', reservation: reservations[index] });
     }
-    
-    res.json({ message: 'Réservation mise à jour', reservation: result.rows[0] });
   } catch (error) {
     console.error('Error updating stand reservation:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur lors de la mise à jour' });
   }
 });
 
 // Delete stand reservation
-app.delete('/api/stand-reservations/:id', async (req, res) => {
+app.delete('/api/stand-reservations/:id', verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(`
-      DELETE FROM stand_reservations 
-      WHERE id = $1
-      RETURNING *
-    `, [id]);
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Réservation non trouvée' });
+    try {
+      const result = await pool.query(`
+        DELETE FROM stand_reservations 
+        WHERE id = $1
+        RETURNING *
+      `, [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Réservation non trouvée' });
+      }
+      
+      res.json({ message: 'Réservation supprimée avec succès' });
+    } catch (dbError) {
+      console.log('Database error, using in-memory fallback:', dbError.message);
+      
+      // In-memory fallback for Vercel serverless
+      const reservations = global.standReservations || [];
+      const index = reservations.findIndex(r => r.id === parseInt(id));
+      
+      if (index === -1) {
+        return res.status(404).json({ error: 'Réservation non trouvée' });
+      }
+      
+      reservations.splice(index, 1);
+      res.json({ message: 'Réservation supprimée avec succès (mémoire)' });
     }
-    
-    res.json({ message: 'Réservation supprimée' });
   } catch (error) {
     console.error('Error deleting stand reservation:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur lors de la suppression' });
   }
 });
 
