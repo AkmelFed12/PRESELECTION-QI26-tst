@@ -4,6 +4,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const receiptSection = document.getElementById('receiptSection');
     const successMessage = document.getElementById('successMessage');
     
+    const TOTAL_STANDS = 15;
+    let currentReservations = 0;
+    
+    // Load current reservation count from localStorage
+    const savedCount = localStorage.getItem('standReservationsCount');
+    if (savedCount) {
+        currentReservations = parseInt(savedCount, 10);
+    }
+    updateAvailabilityDisplay();
+    
+    function updateAvailabilityDisplay() {
+        const availableStands = TOTAL_STANDS - currentReservations;
+        const percentage = (currentReservations / TOTAL_STANDS) * 100;
+        
+        document.getElementById('availableStands').textContent = availableStands;
+        document.getElementById('availabilityProgressFill').style.width = percentage + '%';
+        
+        // Change color if nearly full
+        const progressFill = document.getElementById('availabilityProgressFill');
+        if (availableStands <= 3) {
+            progressFill.style.background = '#dc3545'; // Red
+        } else if (availableStands <= 7) {
+            progressFill.style.background = '#ffc107'; // Yellow
+        } else {
+            progressFill.style.background = '#ffd700'; // Gold
+        }
+    }
+    
+    function incrementReservationCount() {
+        currentReservations++;
+        localStorage.setItem('standReservationsCount', currentReservations.toString());
+        updateAvailabilityDisplay();
+    }
+    
     // Real-time field validation
     const requiredFields = ['nom', 'telephone', 'activite', 'nom_activite', 'description'];
     
@@ -125,6 +159,35 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     async function submitReservation(data) {
+        // Check if stands are available
+        const availableStands = TOTAL_STANDS - currentReservations;
+        if (availableStands <= 0) {
+            alert('Désolé, il n\'y a plus de places disponibles pour les stands.');
+            return;
+        }
+        
+        // Try to send to API for admin tracking (non-blocking)
+        try {
+            const response = await fetch('/api/stand-reservation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                console.log('Reservation saved to database');
+            } else {
+                console.log('API call failed, but continuing with WhatsApp');
+            }
+        } catch (error) {
+            console.log('API error, but continuing with WhatsApp:', error);
+        }
+        
+        // Increment reservation count regardless of API success
+        incrementReservationCount();
+        
         // Show summary before WhatsApp
         displayReservationSummary(data);
         
