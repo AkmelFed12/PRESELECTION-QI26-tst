@@ -365,7 +365,9 @@ let newsImages = [];
 let isEditing = false;
 let lastEditAt = 0;
 let finalPhaseLocked = false;
-let assistModeEnabled = true;
+if (typeof assistModeEnabled === 'undefined') {
+  var assistModeEnabled = true;
+}
 const OFFLINE_SCORE_QUEUE_KEY = 'offlineScoreQueue';
 let throttlePage = 1;
 let throttleHasNextPage = false;
@@ -577,7 +579,9 @@ function hideAdmin() {
 }
 
 function applySuperAdminUI() {
-  document.body.classList.toggle('super-admin-locked', !superAdminUnlocked);
+  if (document.body) {
+    document.body.classList.toggle('super-admin-locked', !superAdminUnlocked);
+  }
   if (superAdminStatus) {
     superAdminStatus.textContent = superAdminUnlocked ? 'Accès complet.' : 'Accès limité.';
   }
