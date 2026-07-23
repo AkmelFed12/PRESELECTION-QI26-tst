@@ -369,9 +369,9 @@ document.addEventListener('DOMContentLoaded', function() {
             downloadReservationPDF(data);
         });
         
-        // Add JSON export functionality
-        document.getElementById('exportJsonBtn').addEventListener('click', function() {
-            exportReservationJson(data);
+        // Add QR code download functionality
+        document.getElementById('downloadQrBtn').addEventListener('click', function() {
+            downloadQRCode(data);
         });
         
         // Add social media sharing functionality
@@ -381,26 +381,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 shareOnSocialMedia(platform, data);
             });
         });
+        
+        // Generate QR code
+        generateQRCode(data);
     }
     
-    function exportReservationJson(data) {
-        const exportData = {
-            ...data,
-            exportDate: new Date().toISOString(),
-            exportType: 'stand_reservation'
-        };
+    function generateQRCode(data) {
+        if (typeof QRCode === 'undefined') {
+            console.error('QRCode library not loaded');
+            return;
+        }
         
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reservation-stand-${Date.now()}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const qrData = JSON.stringify({
+            id: data.timestamp || Date.now(),
+            nom: data.nom,
+            telephone: data.telephone,
+            activite: data.activite,
+            nom_activite: data.nom_activite
+        });
         
-        alert('Fichier JSON exporté avec succès ! Envoyez ce fichier à l\'admin pour validation.');
+        const qrContainer = document.getElementById('qrCodeContainer');
+        qrContainer.innerHTML = '';
+        
+        QRCode.toCanvas(qrData, { width: 200, margin: 2 }, function(error, canvas) {
+            if (error) {
+                console.error('QR code generation error:', error);
+                return;
+            }
+            canvas.id = 'qrCodeCanvas';
+            qrContainer.appendChild(canvas);
+            document.getElementById('qrCodeSection').style.display = 'block';
+        });
+    }
+    
+    function downloadQRCode(data) {
+        const canvas = document.getElementById('qrCodeCanvas');
+        if (!canvas) {
+            alert('Code QR non disponible');
+            return;
+        }
+        
+        const link = document.createElement('a');
+        link.download = `qr-reservation-${data.nom.replace(/\s+/g, '-')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
     }
     
     function shareOnSocialMedia(platform, data) {
