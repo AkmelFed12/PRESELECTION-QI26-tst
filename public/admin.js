@@ -217,9 +217,11 @@ let standReservationsChart = null;
 const supabaseUrl = 'https://mmzmssphmgstmktwkped.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tem1zc3BobWdzdG1rdHdrcGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDUwNTUsImV4cCI6MjEwMDM4MTA1NX0.T8PqHJsBQWhoiuHCBmXV1xUcvx6M-7ZWzNQAWZaEUTw';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+// QI26 Comments elements
 const qi26CommentsPending = document.getElementById('qi26CommentsPending');
-const qi26CommentsApproved = document.getElementById('qi26CommentsApproved');
-const qi26CommentsRejected = document.getElementById('qi26CommentsRejected');
+const qi26CommentsApprovedEl = document.getElementById('qi26CommentsApproved');
+const qi26CommentsRejectedEl = document.getElementById('qi26CommentsRejected');
 const qi26CommentStatusFilter = document.getElementById('qi26CommentStatusFilter');
 const qi26CommentsRefresh = document.getElementById('qi26CommentsRefresh');
 const qi26CommentsTable = document.querySelector('#qi26CommentsTable tbody');
@@ -1577,8 +1579,8 @@ function renderQi26Comments(data = {}) {
   const comments = Array.isArray(data.comments) ? data.comments : [];
   qi26CommentsCache = comments;
   if (qi26CommentsPending) qi26CommentsPending.textContent = summary.pending ?? 0;
-  if (qi26CommentsApproved) qi26CommentsApproved.textContent = summary.approved ?? 0;
-  if (qi26CommentsRejected) qi26CommentsRejected.textContent = summary.rejected ?? 0;
+  if (qi26CommentsApprovedEl) qi26CommentsApprovedEl.textContent = summary.approved ?? 0;
+  if (qi26CommentsRejectedEl) qi26CommentsRejectedEl.textContent = summary.rejected ?? 0;
   if (!qi26CommentsTable) return;
   qi26CommentsTable.innerHTML = comments.length
     ? comments.map((item) => `
