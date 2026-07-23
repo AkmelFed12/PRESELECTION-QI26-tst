@@ -1,23 +1,27 @@
 {
   "version": 2,
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/server.js"
-    },
-    {
-      "source": "/galerie-2024/(.*)",
-      "destination": "/server.js"
-    },
-    {
-      "source": "/galerie-2025/(.*)",
-      "destination": "/server.js"
-    }
-  ],
   "builds": [
     {
       "src": "server.js",
       "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/galerie-2024/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/galerie-2025/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
     }
   ],
   "headers": [
@@ -39,13 +43,5 @@
         }
       ]
     }
-  ],
-  "functions": {
-    "server.js": {
-      "excludeFiles": "public/galerie-2024/**"
-    }
-  },
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
