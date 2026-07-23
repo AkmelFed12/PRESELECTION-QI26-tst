@@ -1634,15 +1634,22 @@ window.addEventListener('load', () => {
 async function loadStandReservations() {
   if (!standReservationsSection) return;
   
+  console.log('Loading stand reservations...');
+  
   // Try Supabase first
   try {
+    console.log('Attempting to load from Supabase...');
     const { data, error } = await supabase
       .from('stand_reservations')
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
     
+    console.log('Supabase data loaded:', data);
     standReservationsCache = data || [];
     renderStandReservations();
     updateStandReservationsChart();
@@ -1650,11 +1657,12 @@ async function loadStandReservations() {
     return;
   } catch (error) {
     console.error('Supabase error:', error);
-    setStatus(standReservationsMsg, 'Erreur Supabase, fallback à localStorage');
+    setStatus(standReservationsMsg, 'Erreur Supabase: ' + error.message + ', fallback à localStorage');
   }
   
   // Fallback to localStorage
   try {
+    console.log('Falling back to localStorage...');
     const localReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
     standReservationsCache = localReservations;
     renderStandReservations();
@@ -5027,15 +5035,23 @@ document.addEventListener('click', async (e) => {
   
   if (deleteBtn) {
     const id = deleteBtn.dataset.standReservationDelete;
+    console.log('Delete button clicked, ID:', id);
+    
     if (confirm('Supprimer cette réservation ? Cela libérera une place de stand.')) {
       try {
+        console.log('Attempting to delete from Supabase, ID:', parseInt(id));
+        
         const { error } = await supabase
           .from('stand_reservations')
           .delete()
           .eq('id', parseInt(id));
         
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase delete error:', error);
+          throw error;
+        }
         
+        console.log('Successfully deleted from Supabase');
         setStatus(standReservationsMsg, 'Réservation supprimée et place libérée.');
         
         // Update local counter
@@ -5052,7 +5068,7 @@ document.addEventListener('click', async (e) => {
         await loadStandReservations();
       } catch (error) {
         console.error('Error deleting reservation:', error);
-        setStatus(standReservationsMsg, 'Erreur lors de la suppression.');
+        setStatus(standReservationsMsg, 'Erreur lors de la suppression: ' + error.message);
       }
     }
   }
