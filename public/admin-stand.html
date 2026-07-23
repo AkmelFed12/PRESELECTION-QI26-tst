@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Réservations de Stands</title>
+  <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .login-section {
+      max-width: 400px;
+      margin: 100px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .login-section input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .login-section button {
+      width: 100%;
+      padding: 12px;
+      background: #0b6f4f;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .admin-section {
+      display: none;
+    }
+    .stats {
+      display: flex;
+      gap: 20px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    .stat-box {
+      flex: 1;
+      min-width: 200px;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .stat-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #666;
+    }
+    .stat-box .number {
+      font-size: 32px;
+      font-weight: bold;
+      color: #0b6f4f;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background: #0b6f4f;
+      color: white;
+      font-weight: bold;
+    }
+    tr:hover {
+      background: #f5f5f5;
+    }
+    button.action-btn {
+      padding: 6px 12px;
+      margin: 2px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn-delete {
+      background: #dc3545;
+      color: white;
+    }
+    .btn-verify {
+      background: #28a745;
+      color: white;
+    }
+    .btn-refresh {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+    .status-msg {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      display: none;
+    }
+    .status-success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-info {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Login Section -->
+    <div class="login-section" id="loginSection">
+      <h2 style="text-align: center; margin-bottom: 20px;">Admin Réservations de Stands</h2>
+      <input type="text" id="username" placeholder="Identifiant" />
+      <input type="password" id="password" placeholder="Mot de passe" />
+      <button onclick="login()">Connexion</button>
+      <p id="loginError" style="color: red; text-align: center; margin-top: 10px; display: none;"></p>
+    </div>
+
+    <!-- Admin Section -->
+    <div class="admin-section" id="adminSection">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1>Gestion des Réservations de Stands</h1>
+        <button class="action-btn btn-refresh" onclick="loadReservations()">Actualiser</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat-box">
+          <h3>Total Réservations</h3>
+          <div class="number" id="totalCount">0</div>
+        </div>
+        <div class="stat-box">
+          <h3>Paiements Confirmés</h3>
+          <div class="number" id="paymentCount">0</div>
+        </div>
+        <div class="stat-box">
+          <h3>Reçus Vérifiés</h3>
+          <div class="number" id="receiptCount">0</div>
+        </div>
+      </div>
+
+      <div class="status-msg" id="statusMsg"></div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Téléphone</th>
+              <th>Email</th>
+              <th>Activité</th>
+              <th>Entreprise</th>
+              <th>Paiement</th>
+              <th>Reçu</th>
+              <th>Statut</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="reservationsTable"></tbody>
+        </table>
+      </div>
+
+      <button onclick="logout()" style="margin-top: 20px; padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Déconnexion</button>
+    </div>
+  </div>
+
+  <script>
+    // Supabase configuration
+    const supabaseUrl = 'https://mmzmssphmgstmktwkped.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tem1zc3BobWdzdG1rdHdrcGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDUwNTUsImV4cCI6MjEwMDM4MTA1NX0.T8PqHJsBQWhoiuHCBmXV1xUcvx6M-7ZWzNQAWZaEUTw';
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Admin credentials
+    const ADMIN_USERNAME = 'asaa2026';
+    const ADMIN_PASSWORD = 'ASAALMO2026';
+
+    let reservations = [];
+
+    function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('loginError');
+
+      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('adminSection').style.display = 'block';
+        loadReservations();
+      } else {
+        errorEl.textContent = 'Identifiants incorrects';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function logout() {
+      document.getElementById('loginSection').style.display = 'block';
+      document.getElementById('adminSection').style.display = 'none';
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+    }
+
+    async function loadReservations() {
+      showStatus('Chargement des réservations...', 'info');
+      
+      try {
+        const { data, error } = await supabaseClient
+          .from('stand_reservations')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        reservations = data || [];
+        renderReservations();
+        updateStats();
+        showStatus('Données chargées depuis Supabase', 'success');
+      } catch (error) {
+        console.error('Error loading reservations:', error);
+        showStatus('Erreur: ' + error.message, 'error');
+      }
+    }
+
+    function renderReservations() {
+      const tbody = document.getElementById('reservationsTable');
+      
+      if (reservations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">Aucune réservation</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = reservations.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${escapeHtml(r.nom)}</td>
+          <td>${escapeHtml(r.telephone)}</td>
+          <td>${escapeHtml(r.email || '-')}</td>
+          <td>${escapeHtml(r.activite)}</td>
+          <td>${escapeHtml(r.nom_activite)}</td>
+          <td>${r.payment_confirmed ? '✓' : '✗'}</td>
+          <td>${r.receipt_verified ? '✓' : '✗'}</td>
+          <td>${escapeHtml(r.status || '-')}</td>
+          <td>${formatDate(r.created_at)}</td>
+          <td>
+            <button class="action-btn btn-verify" onclick="verifyReceipt(${r.id})" ${r.receipt_verified ? 'disabled' : ''}>Vérifier</button>
+            <button class="action-btn btn-delete" onclick="deleteReservation(${r.id})">Supprimer</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateStats() {
+      const total = reservations.length;
+      const payment = reservations.filter(r => r.payment_confirmed).length;
+      const receipt = reservations.filter(r => r.receipt_verified).length;
+
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('paymentCount').textContent = payment;
+      document.getElementById('receiptCount').textContent = receipt;
+    }
+
+    async function verifyReceipt(id) {
+      if (!confirm('Vérifier le reçu de cette réservation ?')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('stand_reservations')
+          .update({ receipt_verified: true, status: 'confirme' })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        showStatus('Reçu vérifié avec succès', 'success');
+        loadReservations();
+      } catch (error) {
+        console.error('Error verifying receipt:', error);
+        showStatus('Erreur: ' + error.message, 'error');
+      }
+    }
+
+    async function deleteReservation(id) {
+      if (!confirm('Supprimer cette réservation ?')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('stand_reservations')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        showStatus('Réservation supprimée avec succès', 'success');
+        loadReservations();
+      } catch (error) {
+        console.error('Error deleting reservation:', error);
+        showStatus('Erreur: ' + error.message, 'error');
+      }
+    }
+
+    function showStatus(message, type) {
+      const msgEl = document.getElementById('statusMsg');
+      msgEl.textContent = message;
+      msgEl.className = 'status-msg status-' + type;
+      msgEl.style.display = 'block';
+
+      setTimeout(() => {
+        msgEl.style.display = 'none';
+      }, 5000);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Handle Enter key on login
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>
