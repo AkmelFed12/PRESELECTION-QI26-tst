@@ -227,6 +227,7 @@ const firebaseConfig = {
 // Initialize Firebase
 let db = null;
 let app = null;
+let standReservationsChart = null;
 
 window.addEventListener('load', async () => {
   try {
@@ -234,6 +235,9 @@ window.addEventListener('load', async () => {
       app = firebase.initializeApp(firebaseConfig);
       db = firebase.firestore();
       console.log('Firebase initialized successfully in admin');
+      
+      // Initialize chart when Firebase is ready
+      initializeStandReservationsChart();
     }
   } catch (error) {
     console.error('Firebase initialization error in admin:', error);
@@ -1667,6 +1671,7 @@ async function loadStandReservations() {
       });
       
       renderStandReservations();
+      updateStandReservationsChart();
       setStatus(standReservationsMsg, 'Données chargées depuis Firebase');
       return;
     } catch (error) {
@@ -1680,10 +1685,67 @@ async function loadStandReservations() {
     const localReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
     standReservationsCache = localReservations;
     renderStandReservations();
+    updateStandReservationsChart();
     setStatus(standReservationsMsg, 'Données chargées depuis le stockage local');
   } catch {
     setStatus(standReservationsMsg, 'Aucune réservation disponible');
   }
+}
+
+function initializeStandReservationsChart() {
+  const canvas = document.getElementById('standReservationsChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  
+  const ctx = canvas.getContext('2d');
+  standReservationsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Total', 'Paiements confirmés', 'Reçus vérifiés'],
+      datasets: [{
+        label: 'Réservations',
+        data: [0, 0, 0],
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.8)',
+          'rgba(75, 192, 192, 0.8)',
+          'rgba(255, 206, 86, 0.8)'
+        ],
+        borderColor: [
+          'rgba(54, 162, 235, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(255, 206, 86, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+  }
+  });
+}
+
+function updateStandReservationsChart() {
+  if (!standReservationsChart) return;
+  
+  const total = standReservationsCache.length;
+  const paymentConfirmed = standReservationsCache.filter(r => r.payment_confirmed).length;
+  const receiptVerified = standReservationsCache.filter(r => r.receipt_verified).length;
+  
+  standReservationsChart.data.datasets[0].data = [total, paymentConfirmed, receiptVerified];
+  standReservationsChart.update();
 }
 
 function renderStandReservations() {

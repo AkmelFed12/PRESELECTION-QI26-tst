@@ -67,6 +67,58 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // IP-based rate limiting
+    async function checkRateLimit() {
+        const rateLimitKey = 'standReservationRateLimit';
+        const maxReservationsPerDay = 3;
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        
+        try {
+            const rateLimitData = JSON.parse(localStorage.getItem(rateLimitKey) || '{}');
+            const today = new Date().toDateString();
+            
+            if (rateLimitData.date !== today) {
+                // Reset counter for new day
+                rateLimitData.date = today;
+                rateLimitData.count = 0;
+                rateLimitData.lastReservation = null;
+            }
+            
+            if (rateLimitData.count >= maxReservationsPerDay) {
+                const lastReservationTime = rateLimitData.lastReservation;
+                const timeRemaining = oneDayMs - (Date.now() - lastReservationTime);
+                const hoursRemaining = Math.ceil(timeRemaining / (60 * 60 * 1000));
+                
+                alert(`Vous avez atteint la limite de ${maxReservationsPerDay} réservations par jour. Réessayez dans ${hoursRemaining} heure(s).`);
+                return false;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Rate limit check error:', error);
+            return true; // Allow reservation if rate limit check fails
+        }
+    }
+    
+    function incrementRateLimit() {
+        const rateLimitKey = 'standReservationRateLimit';
+        try {
+            const rateLimitData = JSON.parse(localStorage.getItem(rateLimitKey) || '{}');
+            const today = new Date().toDateString();
+            
+            if (rateLimitData.date !== today) {
+                rateLimitData.date = today;
+                rateLimitData.count = 0;
+            }
+            
+            rateLimitData.count++;
+            rateLimitData.lastReservation = Date.now();
+            localStorage.setItem(rateLimitKey, JSON.stringify(rateLimitData));
+        } catch (error) {
+            console.error('Rate limit increment error:', error);
+        }
+    }
+    
     async function saveReservationInfo(data) {
         if (!db) {
             // Fallback to localStorage if Firebase not available
@@ -159,6 +211,33 @@ document.addEventListener('DOMContentLoaded', function() {
         updateAvailabilityDisplay();
     }
     
+    // Strict phone number validation
+    function validatePhoneNumber(phone) {
+        // Remove all non-numeric characters
+        const cleanPhone = phone.replace(/\D/g, '');
+        
+        // Check if it's a valid Ivory Coast phone number
+        // Format: +225 or 225 followed by 7-9 digits
+        const ivoryCoastPattern = /^(\+?225|0)?[0-9]{7,9}$/;
+        
+        if (!ivoryCoastPattern.test(cleanPhone)) {
+            return {
+                valid: false,
+                message: 'Numéro de téléphone invalide. Format attendu: +225XXXXXXXXX ou 0XXXXXXXXX'
+            };
+        }
+        
+        // Check if the number has the right length for Ivory Coast
+        if (cleanPhone.length < 8 || cleanPhone.length > 12) {
+            return {
+                valid: false,
+                message: 'Numéro de téléphone invalide. Doit contenir entre 8 et 12 chiffres.'
+            };
+        }
+        
+        return { valid: true };
+    }
+    
     // Real-time field validation
     const requiredFields = ['nom', 'telephone', 'activite', 'nom_activite', 'description'];
     
@@ -185,8 +264,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorMessage = 'Le nom doit contenir au moins 2 caractères';
                 break;
             case 'telephone':
-                isValid = /^[\d\s\+\-]{8,20}$/.test(value.replace(/\s/g, ''));
-                errorMessage = 'Numéro de téléphone invalide (8-20 chiffres)';
+                const phoneValidation = validatePhoneNumber(value);
+                isValid = phoneValidation.valid;
+                errorMessage = phoneValidation.message || 'Numéro de téléphone invalide';
                 break;
             case 'email':
                 if (value) {
@@ -280,6 +360,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     async function submitReservation(data) {
+        // Rate limiting check
+        const canProceed = await checkRateLimit();
+        if (!canProceed) return;
+        
         // Anti-fraud: Check for existing reservations
         const hasExisting = await checkExistingReservation(data.telephone, data.email);
         if (hasExisting) {
@@ -296,6 +380,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Save reservation info for anti-fraud tracking
         await saveReservationInfo(data);
+        
+        // Increment rate limit counter
+        incrementRateLimit();
         
         // Increment reservation count regardless of Firebase success
         incrementReservationCount();

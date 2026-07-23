@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css" />
     <script type="module" src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   </head>
   <body>
     <header class="hero">
@@ -640,6 +641,12 @@
         <div style="margin-top:16px; margin-bottom:16px;">
           <h3>Statistiques par type d'activité</h3>
           <div id="standActivityStats" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;"></div>
+        </div>
+        <div style="margin-top:20px; margin-bottom:16px;">
+          <h3>Graphique en temps réel</h3>
+          <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+            <canvas id="standReservationsChart" style="max-height: 300px;"></canvas>
+          </div>
         </div>
         <div class="hero-actions" style="margin-top:16px;">
           <button class="btn-primary" type="button" id="standReservationsRefresh">Actualiser</button>
