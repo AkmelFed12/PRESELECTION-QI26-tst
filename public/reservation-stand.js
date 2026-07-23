@@ -311,11 +311,6 @@ document.addEventListener('DOMContentLoaded', function() {
             downloadReservationPDF(data);
         });
         
-        // Add JSON export functionality
-        document.getElementById('exportJsonBtn').addEventListener('click', function() {
-            exportReservationJson(data);
-        });
-        
         // Add social media sharing functionality
         document.querySelectorAll('.social-share-btn').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -323,26 +318,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 shareOnSocialMedia(platform, data);
             });
         });
-    }
-    
-    function exportReservationJson(data) {
-        const exportData = {
-            ...data,
-            exportDate: new Date().toISOString(),
-            exportType: 'stand_reservation'
-        };
-        
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reservation-stand-${Date.now()}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        alert('Fichier JSON exporté avec succès ! Envoyez ce fichier à l\'admin pour validation.');
     }
     
     function shareOnSocialMedia(platform, data) {
