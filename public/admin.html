@@ -6,6 +6,8 @@
     <title>ASAA Officiel — Admin — Quiz Islamique 2026</title>
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="style.css" />
+    <script type="module" src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"></script>
   </head>
   <body>
     <header class="hero">
@@ -643,8 +645,6 @@
           <button class="btn-primary" type="button" id="standReservationsRefresh">Actualiser</button>
           <button class="btn-primary" type="button" id="standReservationsExport">Exporter CSV</button>
           <button class="btn-primary" type="button" id="standReservationsExportPdf">Exporter PDF</button>
-          <button class="btn-primary" type="button" id="standReservationsImport">Importer JSON</button>
-          <input type="file" id="standReservationsImportFile" accept=".json" style="display:none;" />
         </div>
         <div style="margin-top:12px;">
           <label>Filtrer par statut:</label>
@@ -655,9 +655,9 @@
             <option value="annule">Annulé</option>
           </select>
         </div>
-        <div style="margin-top:12px; padding:10px; background:#e3f2fd; border-radius:8px; border-left:4px solid #2196f3;">
-          <p style="margin:0; font-size:13px; color:#0d47a1;">
-            <strong>Mode actuel :</strong> Stockage local. Les réservations s'affichent si faites sur le même appareil. Utilisez "Importer JSON" pour charger les réservations d'autres appareils.
+        <div style="margin-top:12px; padding:10px; background:#d4edda; border-radius:8px; border-left:4px solid #28a745;">
+          <p style="margin:0; font-size:13px; color:#155724;">
+            <strong>Mode actuel :</strong> Firebase (temps réel). Les réservations s'affichent automatiquement sans action manuelle.
           </p>
         </div>
         <h3 style="margin-top:16px;">Réservations</h3>

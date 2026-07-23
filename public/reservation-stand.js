@@ -4,25 +4,101 @@ document.addEventListener('DOMContentLoaded', function() {
     const receiptSection = document.getElementById('receiptSection');
     const successMessage = document.getElementById('successMessage');
     
+    // Firebase configuration and initialization
+    const firebaseConfig = {
+      apiKey: "AIzaSyAOqfky5gUgfHNYp1wB9OZDwOrieeytmQY",
+      authDomain: "asaaofficiel-d37ac.firebaseapp.com",
+      databaseURL: "https://asaaofficiel-d37ac-default-rtdb.firebaseio.com",
+      projectId: "asaaofficiel-d37ac",
+      storageBucket: "asaaofficiel-d37ac.firebasestorage.app",
+      messagingSenderId: "737701974010",
+      appId: "1:737701974010:web:5c041f129ad521d5af5e43",
+      measurementId: "G-QPW6QV044W"
+    };
+    
+    // Initialize Firebase (will be loaded from the CDN in HTML)
+    let db = null;
+    let app = null;
+    
+    // Wait for Firebase to load
+    window.addEventListener('load', async () => {
+      try {
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+          app = firebase.initializeApp(firebaseConfig);
+          db = firebase.firestore();
+          console.log('Firebase initialized successfully');
+        }
+      } catch (error) {
+        console.error('Firebase initialization error:', error);
+      }
+    });
+    
     const TOTAL_STANDS = 15;
     let currentReservations = 0;
     
     // Anti-fraud: Check for existing reservations from same phone/email
-    function checkExistingReservation(phone, email) {
-        const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
-        return existingReservations.some(r => 
-            r.telephone === phone || (email && r.email === email)
-        );
+    async function checkExistingReservation(phone, email) {
+        if (!db) {
+            // Fallback to localStorage if Firebase not available
+            const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+            return existingReservations.some(r => 
+                r.telephone === phone || (email && r.email === email)
+            );
+        }
+        
+        try {
+            const snapshot = await db.collection('stand_reservations')
+                .where('telephone', '==', phone)
+                .get();
+            
+            if (!snapshot.empty) return true;
+            
+            if (email) {
+                const emailSnapshot = await db.collection('stand_reservations')
+                    .where('email', '==', email)
+                    .get();
+                if (!emailSnapshot.empty) return true;
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('Error checking existing reservation:', error);
+            return false;
+        }
     }
     
-    function saveReservationInfo(data) {
-        const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
-        existingReservations.push({
-            ...data,
-            timestamp: Date.now(),
-            status: 'pending_verification'
-        });
-        localStorage.setItem('standReservations', JSON.stringify(existingReservations));
+    async function saveReservationInfo(data) {
+        if (!db) {
+            // Fallback to localStorage if Firebase not available
+            const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+            existingReservations.push({
+                ...data,
+                timestamp: Date.now(),
+                status: 'pending_verification'
+            });
+            localStorage.setItem('standReservations', JSON.stringify(existingReservations));
+            return;
+        }
+        
+        try {
+            await db.collection('stand_reservations').add({
+                ...data,
+                timestamp: Date.now(),
+                status: 'pending_verification',
+                created_at: new Date().toISOString()
+            });
+            console.log('Reservation saved to Firebase');
+        } catch (error) {
+            console.error('Error saving to Firebase:', error);
+            // Fallback to localStorage
+            const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+            existingReservations.push({
+                ...data,
+                timestamp: Date.now(),
+                status: 'pending_verification'
+            });
+            localStorage.setItem('standReservations', JSON.stringify(existingReservations));
+        }
     }
     
     // Load current reservation count from localStorage
@@ -205,7 +281,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function submitReservation(data) {
         // Anti-fraud: Check for existing reservations
-        if (checkExistingReservation(data.telephone, data.email)) {
+        const hasExisting = await checkExistingReservation(data.telephone, data.email);
+        if (hasExisting) {
             alert('Une réservation existe déjà pour ce numéro de téléphone ou email. Contactez-nous si vous avez besoin de modifier votre réservation.');
             return;
         }
@@ -218,28 +295,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Save reservation info for anti-fraud tracking
-        saveReservationInfo(data);
+        await saveReservationInfo(data);
         
-        // Try to send to API for admin tracking (non-blocking)
-        try {
-            const response = await fetch('/api/stand-reservation', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            
-            if (response.ok) {
-                console.log('Reservation saved to database');
-            } else {
-                console.log('API call failed, but continuing with WhatsApp');
-            }
-        } catch (error) {
-            console.log('API error, but continuing with WhatsApp:', error);
-        }
-        
-        // Increment reservation count regardless of API success
+        // Increment reservation count regardless of Firebase success
         incrementReservationCount();
         
         // Show summary before WhatsApp
