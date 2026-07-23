@@ -12,6 +12,62 @@
         margin: 0 auto;
         padding: 20px;
       }
+      @media (max-width: 768px) {
+        .stand-form-container {
+          padding: 15px;
+        }
+        .stand-form-container h1 {
+          font-size: 24px;
+        }
+        .stand-form-container .form-group {
+          margin-bottom: 15px;
+        }
+        .stand-form-container input,
+        .stand-form-container select,
+        .stand-form-container textarea {
+          font-size: 16px;
+          padding: 12px;
+        }
+        .stand-form-container .btn-primary {
+          font-size: 16px;
+          padding: 14px 20px;
+        }
+        .availability-banner {
+          padding: 15px;
+        }
+        .availability-count {
+          font-size: 24px;
+        }
+        .stand-form-container .whatsapp-btn {
+          width: 100%;
+          justify-content: center;
+          padding: 14px 20px;
+        }
+        .stand-form-container .btn-secondary {
+          width: 100%;
+          margin-right: 0;
+          margin-bottom: 10px;
+        }
+        .hero-actions {
+          flex-direction: column;
+          gap: 10px;
+        }
+        .hero-actions .btn {
+          width: 100%;
+        }
+      }
+      @media (max-width: 480px) {
+        .stand-form-container h1 {
+          font-size: 20px;
+        }
+        .availability-count {
+          font-size: 20px;
+        }
+        .stand-form-container .btn-primary {
+          font-size: 14px;
+          padding: 12px 16px;
+        }
+      }
       .stand-form-container .card {
         background: white;
         border-radius: 12px;
@@ -374,6 +430,9 @@
                 <input type="file" id="receipt" name="receipt" accept="image/*" required onchange="previewFile(this)" />
               </div>
               <img id="receiptPreview" class="file-preview" alt="Aperçu du reçu" />
+              <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                Votre réservation ne sera validée qu'après vérification du paiement
+              </p>
             </div>
 
             <div class="form-group">
@@ -400,6 +459,14 @@
                 </svg>
                 Envoyer sur WhatsApp
               </a>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+              <p style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">📢 Partagez votre réservation :</p>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="social-share-btn" data-platform="facebook" style="background: #1877f2; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">Facebook</button>
+                <button class="social-share-btn" data-platform="twitter" style="background: #1da1f2; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">Twitter</button>
+                <button class="social-share-btn" data-platform="linkedin" style="background: #0077b5; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">LinkedIn</button>
+              </div>
             </div>
             <p style="font-size: 12px; margin-top: 8px; color: #666;">
               Message pré-rempli avec vos informations de réservation

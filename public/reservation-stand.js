@@ -7,6 +7,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const TOTAL_STANDS = 15;
     let currentReservations = 0;
     
+    // Anti-fraud: Check for existing reservations from same phone/email
+    function checkExistingReservation(phone, email) {
+        const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+        return existingReservations.some(r => 
+            r.telephone === phone || (email && r.email === email)
+        );
+    }
+    
+    function saveReservationInfo(data) {
+        const existingReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+        existingReservations.push({
+            ...data,
+            timestamp: Date.now(),
+            status: 'pending_verification'
+        });
+        localStorage.setItem('standReservations', JSON.stringify(existingReservations));
+    }
+    
     // Load current reservation count from localStorage
     const savedCount = localStorage.getItem('standReservationsCount');
     if (savedCount) {
@@ -159,12 +177,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     async function submitReservation(data) {
+        // Anti-fraud: Check for existing reservations
+        if (checkExistingReservation(data.telephone, data.email)) {
+            alert('Une réservation existe déjà pour ce numéro de téléphone ou email. Contactez-nous si vous avez besoin de modifier votre réservation.');
+            return;
+        }
+        
         // Check if stands are available
         const availableStands = TOTAL_STANDS - currentReservations;
         if (availableStands <= 0) {
             alert('Désolé, il n\'y a plus de places disponibles pour les stands.');
             return;
         }
+        
+        // Save reservation info for anti-fraud tracking
+        saveReservationInfo(data);
         
         // Try to send to API for admin tracking (non-blocking)
         try {
@@ -256,6 +283,37 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('downloadPdfBtn').addEventListener('click', function() {
             downloadReservationPDF(data);
         });
+        
+        // Add social media sharing functionality
+        document.querySelectorAll('.social-share-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const platform = this.dataset.platform;
+                shareOnSocialMedia(platform, data);
+            });
+        });
+    }
+    
+    function shareOnSocialMedia(platform, data) {
+        const url = encodeURIComponent('https://asaaofficiel.vercel.app/reservation-stand.html');
+        const text = encodeURIComponent(`🏪 J'ai réservé mon stand pour le Quiz Islamique 2026 ! Rejoignez-moi à la 4ᵉ édition de cet événement exceptionnel. #ASAAQI26 #QuizIslamique2026`);
+        
+        let shareUrl = '';
+        
+        switch(platform) {
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+                break;
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+                break;
+            case 'linkedin':
+                shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+                break;
+        }
+        
+        if (shareUrl) {
+            window.open(shareUrl, '_blank', 'width=600,height=400');
+        }
     }
     
     function downloadReservationPDF(data) {
@@ -263,69 +321,77 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentDate = new Date().toLocaleDateString('fr-FR');
         
         const pdfContent = `
-================================================================================
-                    RÉSERVATION DE STAND - QUIZ ISLAMIQUE 2026
-                              4ᵉ ÉDITION
-================================================================================
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║           🏆 CERTIFICAT DE RÉSERVATION DE STAND 🏆                           ║
+║                                                                              ║
+║                    QUIZ ISLAMIQUE 2026 - 4ᵉ ÉDITION                         ║
+║                                                                              ║
+║                    LES SERVITEURS D'ALLAH (ASAA)                              ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-NUMÉRO DE RÉSERVATION: ${reservationNumber}
-DATE: ${currentDate}
+📋 NUMÉRO DE RÉSERVATION: ${reservationNumber}
+📅 DATE: ${currentDate}
 
-================================================================================
-INFORMATIONS DU RÉSERVATAIRE
-================================================================================
+═══════════════════════════════════════════════════════════════════════════════
+
+👤 INFORMATIONS DU RÉSERVATAIRE
+═══════════════════════════════════════════════════════════════════════════════
 
 Nom complet: ${data.nom}
 Téléphone: ${data.telephone}
 Email: ${data.email || 'Non renseigné'}
 
-================================================================================
-DÉTAILS DE L'ACTIVITÉ
-================================================================================
+🏢 DÉTAILS DE L'ACTIVITÉ
+═══════════════════════════════════════════════════════════════════════════════
 
 Type d'activité: ${data.activite}
-Nom de l'activité/entreprise: ${data.nom_activite}
+Nom de l'entreprise: ${data.nom_activite}
 
 Description:
 ${data.description}
 
 Besoins spécifiques: ${data.besoins || 'Aucun'}
 
-================================================================================
-INFORMATIONS DE PAIEMENT
-================================================================================
+💰 INFORMATIONS DE PAIEMENT
+═══════════════════════════════════════════════════════════════════════════════
 
 Montant: 10 000 FCFA
 Méthode de paiement: Wave
 Statut: Paiement confirmé par l'utilisateur
+Validation: En attente de vérification par l'administration
 
-================================================================================
-IMPORTANT
-================================================================================
+⚠️ IMPORTANT
+═══════════════════════════════════════════════════════════════════════════════
 
+• Ce certificat confirme votre pré-réservation de stand
+• La réservation sera définitivement validée après vérification du paiement
 • Veuillez envoyer votre reçu de paiement via WhatsApp au +2250150070083
 • Conservez ce document comme preuve de votre réservation
-• Présentez ce document le jour de l'événement
+• Présentez ce certificat le jour de l'événement
 
-================================================================================
-CONTACTS
-================================================================================
+📞 CONTACTS
+═══════════════════════════════════════════════════════════════════════════════
 
 ☎️ 07 79 38 22 33
 ☎️ 07 49 97 44 90
 ☎️ 07 89 03 60 52
 
-================================================================================
-                        LES SERVITEURS D'ALLAH (ASAA)
-                            Quiz Islamique 2026
-================================================================================
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║              🌟 MERCI DE VOTRE PARTICIPATION 🌟                             ║
+║                                                                              ║
+║              Nous avons hâte de vous accueillir !                            ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
         `;
         
         const blob = new Blob([pdfContent], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `reservation-stand-${reservationNumber}.txt`;
+        a.download = `certificat-reservation-${reservationNumber}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
