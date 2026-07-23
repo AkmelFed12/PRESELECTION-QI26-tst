@@ -643,6 +643,8 @@
           <button class="btn-primary" type="button" id="standReservationsRefresh">Actualiser</button>
           <button class="btn-primary" type="button" id="standReservationsExport">Exporter CSV</button>
           <button class="btn-primary" type="button" id="standReservationsExportPdf">Exporter PDF</button>
+          <button class="btn-primary" type="button" id="standReservationsImport">Importer JSON</button>
+          <input type="file" id="standReservationsImportFile" accept=".json" style="display:none;" />
         </div>
         <div style="margin-top:12px;">
           <label>Filtrer par statut:</label>
@@ -652,6 +654,11 @@
             <option value="confirme">Confirmé</option>
             <option value="annule">Annulé</option>
           </select>
+        </div>
+        <div style="margin-top:12px; padding:10px; background:#e3f2fd; border-radius:8px; border-left:4px solid #2196f3;">
+          <p style="margin:0; font-size:13px; color:#0d47a1;">
+            <strong>Mode actuel :</strong> Stockage local. Les réservations s'affichent si faites sur le même appareil. Utilisez "Importer JSON" pour charger les réservations d'autres appareils.
+          </p>
         </div>
         <h3 style="margin-top:16px;">Réservations</h3>
         <table class="table" id="standReservationsTable">

@@ -203,6 +203,8 @@ const standReceiptVerified = document.getElementById('standReceiptVerified');
 const standReservationsRefresh = document.getElementById('standReservationsRefresh');
 const standReservationsExport = document.getElementById('standReservationsExport');
 const standReservationsExportPdf = document.getElementById('standReservationsExportPdf');
+const standReservationsImport = document.getElementById('standReservationsImport');
+const standReservationsImportFile = document.getElementById('standReservationsImportFile');
 const standStatusFilter = document.getElementById('standStatusFilter');
 const standActivityStats = document.getElementById('standActivityStats');
 const standReservationsTable = document.querySelector('#standReservationsTable tbody');
@@ -1622,19 +1624,70 @@ async function loadQi26Comments() {
 
 async function loadStandReservations() {
   if (!standReservationsSection) return;
+  
+  // Try API first
   try {
     const res = await authedFetch('/api/stand-reservations');
     const data = await res.json().catch(() => []);
-    if (!res.ok) {
-      setStatus(standReservationsMsg, data.error || 'Réservations indisponibles.');
+    if (res.ok && Array.isArray(data)) {
+      standReservationsCache = data;
+      renderStandReservations();
       return;
     }
-    standReservationsCache = Array.isArray(data) ? data : [];
-    renderStandReservations();
   } catch {
-    setStatus(standReservationsMsg, 'Réseau indisponible pour les réservations.');
+    console.log('API not available, using localStorage');
+  }
+  
+  // Fallback to localStorage
+  try {
+    const localReservations = JSON.parse(localStorage.getItem('standReservations') || '[]');
+    standReservationsCache = localReservations;
+    renderStandReservations();
+    setStatus(standReservationsMsg, 'Données chargées depuis le stockage local');
+  } catch {
+    setStatus(standReservationsMsg, 'Aucune réservation disponible');
   }
 }
+
+// Import JSON functionality
+standReservationsImport?.addEventListener('click', () => {
+  standReservationsImportFile.click();
+});
+
+standReservationsImportFile?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const importedData = JSON.parse(event.target.result);
+      
+      // Handle single reservation or array
+      const reservations = Array.isArray(importedData) ? importedData : [importedData];
+      
+      // Add to cache
+      standReservationsCache = [...standReservationsCache, ...reservations];
+      
+      // Save to localStorage
+      localStorage.setItem('standReservations', JSON.stringify(standReservationsCache));
+      
+      // Update counter
+      const currentCount = parseInt(localStorage.getItem('standReservationsCount') || '0', 10);
+      localStorage.setItem('standReservationsCount', (currentCount + reservations.length).toString());
+      
+      renderStandReservations();
+      setStatus(standReservationsMsg, `${reservations.length} réservation(s) importée(s) avec succès.`);
+      
+      // Reset file input
+      standReservationsImportFile.value = '';
+    } catch (error) {
+      setStatus(standReservationsMsg, 'Erreur lors de l\'import du fichier JSON.');
+      console.error('Import error:', error);
+    }
+  };
+  reader.readAsText(file);
+});
 
 function renderStandReservations() {
   const filterValue = standStatusFilter?.value || '';
