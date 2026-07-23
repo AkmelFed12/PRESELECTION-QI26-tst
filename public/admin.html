@@ -7,6 +7,23 @@
     <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -16px;
+        padding: 0 16px;
+      }
+      @media (min-width: 600px) {
+        .table-wrapper {
+          margin: 0;
+          padding: 0;
+        }
+      }
+      .table {
+        min-width: 800px;
+      }
+    </style>
   </head>
   <body>
     <header class="hero">
@@ -666,23 +683,25 @@
           </p>
         </div>
         <h3 style="margin-top:16px;">Réservations</h3>
-        <table class="table" id="standReservationsTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nom</th>
-              <th>Téléphone</th>
-              <th>Activité</th>
-              <th>Entreprise</th>
-              <th>Paiement</th>
-              <th>Reçu</th>
-              <th>Statut</th>
-              <th>Date</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-wrapper">
+          <table class="table" id="standReservationsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Téléphone</th>
+                <th>Activité</th>
+                <th>Entreprise</th>
+                <th>Paiement</th>
+                <th>Reçu</th>
+                <th>Statut</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
         <p id="standReservationsMsg" class="status"></p>
       </section>
 
